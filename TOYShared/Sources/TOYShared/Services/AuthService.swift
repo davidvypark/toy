@@ -76,9 +76,7 @@ public final class SupabaseAuthService: AuthServiceProtocol {
                 password: password
             )
 
-            guard let authUser = response.user else {
-                throw AuthError.unknown("Sign up succeeded but no user returned")
-            }
+            let authUser = response.user
 
             // Create profile in database
             try await createProfile(for: authUser)
@@ -119,31 +117,31 @@ public final class SupabaseAuthService: AuthServiceProtocol {
 
     public func observeAuthState() -> AsyncStream<AuthState> {
         AsyncStream { continuation in
-            // Check initial state
-            Task {
+            let task = Task {
+                // Check initial state
                 if let user = await getCurrentUser() {
                     continuation.yield(.signedIn(user))
                 } else {
                     continuation.yield(.signedOut)
                 }
-            }
 
-            // Listen for changes
-            let subscription = supabase.auth.onAuthStateChange { event, session in
-                switch event {
-                case .signedIn, .tokenRefreshed:
-                    if let authUser = session?.user {
-                        continuation.yield(.signedIn(User(from: authUser)))
+                // Listen for changes
+                for await (event, session) in supabase.auth.authStateChanges {
+                    switch event {
+                    case .signedIn, .tokenRefreshed:
+                        if let authUser = session?.user {
+                            continuation.yield(.signedIn(User(from: authUser)))
+                        }
+                    case .signedOut:
+                        continuation.yield(.signedOut)
+                    default:
+                        break
                     }
-                case .signedOut:
-                    continuation.yield(.signedOut)
-                default:
-                    break
                 }
             }
 
             continuation.onTermination = { _ in
-                subscription.remove()
+                task.cancel()
             }
         }
     }
