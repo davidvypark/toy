@@ -6,64 +6,72 @@
 //
 
 import SwiftUI
+import AuthenticationServices
 import TOYShared
 
 struct LoginView: View {
     @Bindable var viewModel: AuthViewModel
-    @State private var showSignUp = false
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 32) {
-                    // Header
-                    VStack(spacing: 8) {
-                        TOYLabel.largeTitle("Welcome Back")
-                        TOYLabel("Sign in to continue", style: .subheadline, color: .toyTextSecondary)
-                    }
-                    .padding(.top, 40)
+        VStack(spacing: 0) {
+            Spacer()
 
-                    // Form
-                    VStack(spacing: 16) {
-                        TOYTextField("Email", text: $viewModel.email, icon: "envelope")
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
+            // Logo and tagline
+            VStack(spacing: 16) {
+                TOYLabel.largeTitle("Thinking Of You")
 
-                        TOYTextField("Password", text: $viewModel.password, isSecure: true, icon: "lock")
-                            .textContentType(.password)
+                TOYLabel("Create heartfelt group video messages", style: .subheadline, color: .toyTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 40)
 
-                        if let error = viewModel.errorMessage {
-                            Text(error)
-                                .font(.toyCaption())
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer()
+
+            // Sign in with Apple button
+            VStack(spacing: 16) {
+                SignInWithAppleButton(
+                    onRequest: { request in
+                        let nonce = viewModel.generateNonce()
+                        request.requestedScopes = [.fullName, .email]
+                        request.nonce = viewModel.sha256(nonce)
+                    },
+                    onCompletion: { result in
+                        Task {
+                            await viewModel.handleAppleSignIn(result)
                         }
                     }
+                )
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .frame(height: 50)
+                .cornerRadius(12)
 
-                    // Sign In Button
-                    TOYButton("Sign In", style: .primary, size: .large, isLoading: viewModel.isLoading) {
-                        Task { await viewModel.signIn() }
-                    }
-
-                    // Sign Up Link
-                    HStack {
-                        TOYLabel("Don't have an account?", style: .footnote, color: .toyTextSecondary)
-                        Button("Sign Up") {
-                            showSignUp = true
-                        }
-                        .font(.toyFootnote())
-                        .foregroundColor(.toyPrimary)
-                    }
-
-                    Spacer()
+                if let error = viewModel.errorMessage {
+                    Text(error)
+                        .font(.toyCaption())
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
                 }
-                .padding(.horizontal, 24)
+
+                if viewModel.isLoading {
+                    ProgressView()
+                        .padding(.top, 8)
+                }
             }
-            .background(Color.toyBackground)
-            .navigationDestination(isPresented: $showSignUp) {
-                SignUpView(viewModel: viewModel)
-            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 40)
+
+            // Terms
+            TOYLabel("By signing in, you agree to our Terms of Service and Privacy Policy", style: .caption, color: .toyTextSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+                .padding(.bottom, 20)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.toyBackground)
     }
+}
+
+#Preview {
+    LoginView(viewModel: AuthViewModel())
 }

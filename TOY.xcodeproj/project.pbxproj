@@ -225,7 +225,7 @@
 			mainGroup = FF67B6EE2F2F6236007DAF2C;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOYShared" */,
+				FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOY/TOYShared" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FF67B6F82F2F6236007DAF2C /* Products */;
@@ -595,7 +595,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOYShared" */ = {
+		FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOY/TOYShared" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = TOY/TOYShared;
 		};

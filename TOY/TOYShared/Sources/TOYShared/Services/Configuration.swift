@@ -4,31 +4,13 @@ public enum Configuration {
     // MARK: - Supabase
 
     public static var supabaseURL: String {
-        guard let urlString = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String,
-              !urlString.isEmpty,
-              urlString != "$(SUPABASE_URL)" else {
-            #if DEBUG
-            // Fallback for development - using values from .env
-            return "https://wlsaolscclwarmxzqjqs.supabase.co"
-            #else
-            fatalError("SUPABASE_URL not configured in Info.plist")
-            #endif
-        }
-        return urlString
+        // Hardcoded for now - TODO: restore Info.plist logic later
+        return "https://wlsaolscclwarmxzqjqs.supabase.co"
     }
 
     public static var supabaseAnonKey: String {
-        guard let key = Bundle.main.infoDictionary?["SUPABASE_ANON_KEY"] as? String,
-              !key.isEmpty,
-              key != "$(SUPABASE_ANON_KEY)" else {
-            #if DEBUG
-            // Fallback for development - legacy JWT anon key from Supabase dashboard
-            return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indsc2FvbHNjY2x3YXJteHpxanFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NTExMDksImV4cCI6MjA4NTUyNzEwOX0.jByHR8TuH6ghNI6-zq7giusgvcAN8CRebTUtBFmUYhc"
-            #else
-            fatalError("SUPABASE_ANON_KEY not configured in Info.plist")
-            #endif
-        }
-        return key
+        // Hardcoded for now - TODO: restore Info.plist logic later
+        return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indsc2FvbHNjY2x3YXJteHpxanFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NTExMDksImV4cCI6MjA4NTUyNzEwOX0.jByHR8TuH6ghNI6-zq7giusgvcAN8CRebTUtBFmUYhc"
     }
 
     // MARK: - App Info

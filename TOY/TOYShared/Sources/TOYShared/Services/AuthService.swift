@@ -24,17 +24,20 @@ public enum AuthState: Equatable, Sendable {
 // MARK: - Auth Error
 
 public enum AuthError: LocalizedError, Sendable {
-    case invalidCredentials
-    case emailNotConfirmed
+    case appleSignInFailed
+    case appleSignInCancelled
+    case missingIdentityToken
     case networkError(String)
     case unknown(String)
 
     public var errorDescription: String? {
         switch self {
-        case .invalidCredentials:
-            return "Invalid email or password"
-        case .emailNotConfirmed:
-            return "Please confirm your email before signing in"
+        case .appleSignInFailed:
+            return "Apple Sign-In failed. Please try again."
+        case .appleSignInCancelled:
+            return "Apple Sign-In was cancelled."
+        case .missingIdentityToken:
+            return "Could not retrieve identity token from Apple."
         case .networkError(let message):
             return "Network error: \(message)"
         case .unknown(let message):
@@ -47,11 +50,8 @@ public enum AuthError: LocalizedError, Sendable {
 
 /// Protocol defining authentication operations
 public protocol AuthServiceProtocol: Sendable {
-    /// Sign up a new user with email and password
-    func signUp(email: String, password: String) async throws -> User
-
-    /// Sign in an existing user
-    func signIn(email: String, password: String) async throws -> User
+    /// Sign in with Apple identity token
+    func signInWithApple(idToken: String, nonce: String, fullName: PersonNameComponents?) async throws -> User
 
     /// Sign out the current user
     func signOut() async throws
@@ -69,34 +69,24 @@ public protocol AuthServiceProtocol: Sendable {
 public final class SupabaseAuthService: AuthServiceProtocol {
     public init() {}
 
-    public func signUp(email: String, password: String) async throws -> User {
+    public func signInWithApple(idToken: String, nonce: String, fullName: PersonNameComponents?) async throws -> User {
         do {
-            let response = try await supabase.auth.signUp(
-                email: email,
-                password: password
+            let session = try await supabase.auth.signInWithIdToken(
+                credentials: .init(
+                    provider: .apple,
+                    idToken: idToken,
+                    nonce: nonce
+                )
             )
 
-            let authUser = response.user
+            let authUser = session.user
 
-            // Create profile in database
-            try await createProfile(for: authUser)
+            // Update profile with name if provided (Apple only sends name on first sign-in)
+            if let fullName = fullName {
+                try await updateProfile(for: authUser, fullName: fullName)
+            }
 
-            return User(authUser: authUser)
-        } catch let error as AuthError {
-            throw error
-        } catch {
-            throw mapSupabaseError(error)
-        }
-    }
-
-    public func signIn(email: String, password: String) async throws -> User {
-        do {
-            let session = try await supabase.auth.signIn(
-                email: email,
-                password: password
-            )
-
-            return User(authUser: session.user)
+            return User(authUser: authUser, fullName: fullName)
         } catch {
             throw mapSupabaseError(error)
         }
@@ -148,28 +138,28 @@ public final class SupabaseAuthService: AuthServiceProtocol {
 
     // MARK: - Private Helpers
 
-    private func createProfile(for authUser: Auth.User) async throws {
-        struct ProfileInsert: Encodable {
-            let id: UUID
-            let email: String?
+    private func updateProfile(for authUser: Auth.User, fullName: PersonNameComponents) async throws {
+        struct ProfileUpdate: Encodable {
+            let display_name: String?
         }
 
-        let profile = ProfileInsert(id: authUser.id, email: authUser.email)
+        let displayName = [fullName.givenName, fullName.familyName]
+            .compactMap { $0 }
+            .joined(separator: " ")
+
+        guard !displayName.isEmpty else { return }
 
         try await supabase
             .from("profiles")
-            .insert(profile)
+            .update(ProfileUpdate(display_name: displayName))
+            .eq("id", value: authUser.id)
             .execute()
     }
 
     private func mapSupabaseError(_ error: Error) -> AuthError {
         let message = error.localizedDescription.lowercased()
 
-        if message.contains("invalid login") || message.contains("invalid credentials") {
-            return .invalidCredentials
-        } else if message.contains("email not confirmed") {
-            return .emailNotConfirmed
-        } else if message.contains("network") || message.contains("connection") {
+        if message.contains("network") || message.contains("connection") {
             return .networkError(error.localizedDescription)
         } else {
             return .unknown(error.localizedDescription)

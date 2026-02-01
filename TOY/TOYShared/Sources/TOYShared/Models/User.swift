@@ -28,6 +28,27 @@ public struct User: Identifiable, Codable, Sendable, Equatable {
         self.id = authUser.id
         self.email = authUser.email
         self.displayName = authUser.userMetadata["display_name"]?.stringValue
+            ?? authUser.userMetadata["full_name"]?.stringValue
+        self.avatarURL = authUser.userMetadata["avatar_url"]?.stringValue.flatMap { URL(string: $0) }
+        self.createdAt = authUser.createdAt
+    }
+
+    /// Creates a User from Supabase auth user with Apple Sign-In name
+    public init(authUser: Auth.User, fullName: PersonNameComponents?) {
+        self.id = authUser.id
+        self.email = authUser.email
+
+        // Prefer the name from Apple Sign-In, fall back to metadata
+        if let fullName = fullName {
+            let name = [fullName.givenName, fullName.familyName]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            self.displayName = name.isEmpty ? nil : name
+        } else {
+            self.displayName = authUser.userMetadata["display_name"]?.stringValue
+                ?? authUser.userMetadata["full_name"]?.stringValue
+        }
+
         self.avatarURL = authUser.userMetadata["avatar_url"]?.stringValue.flatMap { URL(string: $0) }
         self.createdAt = authUser.createdAt
     }
