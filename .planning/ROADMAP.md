@@ -36,13 +36,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 7 plans in 4 waves
 
 Plans:
-- [ ] 01-01-PLAN.md — Create TOYShared Swift Package (Wave 1)
-- [ ] 01-02-PLAN.md — Database Schema Design (Wave 1)
-- [ ] 01-03-PLAN.md — Theme System & Typography (Wave 2)
-- [ ] 01-04-PLAN.md — Supabase Client & Configuration (Wave 2)
-- [ ] 01-05-PLAN.md — Reusable UI Components (Wave 3)
-- [ ] 01-06-PLAN.md — Auth Service Layer (Wave 3)
-- [ ] 01-07-PLAN.md — Wire & Verify Foundation (Wave 4)
+- [x] 01-01-PLAN.md — Create TOYShared Swift Package (Wave 1)
+- [x] 01-02-PLAN.md — Database Schema Design (Wave 1)
+- [x] 01-03-PLAN.md — Theme System & Typography (Wave 2)
+- [x] 01-04-PLAN.md — Supabase Client & Configuration (Wave 2)
+- [x] 01-05-PLAN.md — Reusable UI Components (Wave 3)
+- [x] 01-06-PLAN.md — Auth Service Layer (Wave 3)
+- [x] 01-07-PLAN.md — Wire & Verify Foundation (Wave 4)
 
 ### Phase 2: Recording Pipeline
 **Goal**: Users can record 7-second Vine-style video clips with preview and re-record capability
@@ -54,11 +54,15 @@ Plans:
   3. User can start over and re-record from scratch
   4. User can preview their complete recording before any action
   5. Video outputs as H.264, 720p, 30fps (consistent format)
-**Plans**: TBD
+**Plans**: 6 plans in 4 waves
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Core Capture Infrastructure (Wave 1)
+- [ ] 02-02-PLAN.md — Video Merging & Preview Playback (Wave 1)
+- [ ] 02-03-PLAN.md — Camera Preview & Permission Config (Wave 2)
+- [ ] 02-04-PLAN.md — Recording Coordinator (Wave 2)
+- [ ] 02-05-PLAN.md — Recording UI & ViewModel (Wave 3)
+- [ ] 02-06-PLAN.md — Wire & Verify Recording Flow (Wave 4)
 
 ### Phase 3: Data Layer & Upload
 **Goal**: Recorded clips can be uploaded to Supabase storage with progress tracking and deep link support
@@ -164,7 +168,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Architecture | 7/7 | Complete | 2026-02-01 |
-| 2. Recording Pipeline | 0/TBD | Not started | - |
+| 2. Recording Pipeline | 0/6 | Not started | - |
 | 3. Data Layer & Upload | 0/TBD | Not started | - |
 | 4. Host Card Creation | 0/TBD | Not started | - |
 | 5. Host Card Management | 0/TBD | Not started | - |
