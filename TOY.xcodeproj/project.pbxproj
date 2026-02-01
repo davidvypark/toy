@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FFAABBCC112233440000002 /* TOYShared in Frameworks */ = {isa = PBXBuildFile; productRef = FFAABBCC112233440000003 /* TOYShared */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		FF67B7082F2F6238007DAF2C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		FF67B6F72F2F6236007DAF2C /* TOY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TOY.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B7072F2F6238007DAF2C /* TOYTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B7112F2F6238007DAF2C /* TOYUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FFAABBCC112233440000001 /* TOYShared */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = TOYShared; path = TOYShared; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FFAABBCC112233440000002 /* TOYShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +84,7 @@
 				FF67B6F92F2F6236007DAF2C /* TOY */,
 				FF67B70A2F2F6238007DAF2C /* TOYTests */,
 				FF67B7142F2F6238007DAF2C /* TOYUITests */,
+				FFAABBCC112233440000001 /* TOYShared */,
 				FF67B6F82F2F6236007DAF2C /* Products */,
 			);
 			sourceTree = "<group>";
@@ -112,6 +119,7 @@
 			);
 			name = TOY;
 			packageProductDependencies = (
+				FFAABBCC112233440000003 /* TOYShared */,
 			);
 			productName = TOY;
 			productReference = FF67B6F72F2F6236007DAF2C /* TOY.app */;
@@ -197,6 +205,9 @@
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FF67B6F82F2F6236007DAF2C /* Products */;
+			packageReferences = (
+				FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOYShared" */,
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -558,6 +569,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOYShared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = TOYShared;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FFAABBCC112233440000003 /* TOYShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TOYShared;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = FF67B6EF2F2F6236007DAF2C /* Project object */;
 }
