@@ -6,19 +6,34 @@
 //
 
 import SwiftUI
+import TOYShared
 
 struct ContentView: View {
+    @Bindable var authViewModel: AuthViewModel
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            switch authViewModel.authState {
+            case .unknown:
+                // Loading state
+                VStack {
+                    ProgressView()
+                    TOYLabel("Loading...", style: .caption, color: .toyTextSecondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.toyBackground)
+
+            case .signedOut:
+                LoginView(viewModel: authViewModel)
+
+            case .signedIn:
+                HomeView(viewModel: authViewModel)
+            }
         }
-        .padding()
+        .animation(.easeInOut, value: authViewModel.authState)
     }
 }
 
 #Preview {
-    ContentView()
+    ContentView(authViewModel: AuthViewModel())
 }

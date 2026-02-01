@@ -10,13 +10,17 @@ import TOYShared
 
 @main
 struct TOYApp: App {
-    init() {
-        print("TOYShared version: \(TOYShared.version)")
-    }
+    @State private var themeManager = ThemeManager()
+    @State private var authViewModel = AuthViewModel()
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(authViewModel: authViewModel)
+                .environment(themeManager)
+                .preferredColorScheme(themeManager.colorScheme)
+                .task {
+                    await authViewModel.checkAuthState()
+                }
         }
     }
 }

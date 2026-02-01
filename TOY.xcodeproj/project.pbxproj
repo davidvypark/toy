@@ -31,12 +31,26 @@
 		FF67B6F72F2F6236007DAF2C /* TOY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TOY.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B7072F2F6238007DAF2C /* TOYTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B7112F2F6238007DAF2C /* TOYUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FFAABBCC112233440000001 /* TOYShared */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = TOYShared; path = TOYShared; sourceTree = SOURCE_ROOT; };
+		FF67B8002F2F7000007DAF2C /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "TOY/Debug.xcconfig"; sourceTree = SOURCE_ROOT; };
+		FFAABBCC112233440000001 /* TOYShared */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = TOYShared; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FF67B9002F2F7100007DAF2C /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = FF67B6F62F2F6236007DAF2C /* TOY */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		FF67B6F92F2F6236007DAF2C /* TOY */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FF67B9002F2F7100007DAF2C /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
 			path = TOY;
 			sourceTree = "<group>";
 		};
@@ -203,11 +217,11 @@
 			);
 			mainGroup = FF67B6EE2F2F6236007DAF2C;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
-			productRefGroup = FF67B6F82F2F6236007DAF2C /* Products */;
 			packageReferences = (
 				FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOYShared" */,
 			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FF67B6F82F2F6236007DAF2C /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -401,6 +415,7 @@
 		};
 		FF67B71C2F2F6238007DAF2C /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = FF67B8002F2F7000007DAF2C /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -410,6 +425,7 @@
 				DEVELOPMENT_TEAM = ZH8H29HA3J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TOY/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -439,6 +455,7 @@
 				DEVELOPMENT_TEAM = ZH8H29HA3J;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TOY/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
