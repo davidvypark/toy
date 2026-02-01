@@ -4,25 +4,22 @@ import Supabase
 /// Shared Supabase client instance for all backend operations.
 /// This is the single source of truth for Supabase connectivity.
 public let supabase: SupabaseClient = {
-    let url = URL(string: Configuration.supabaseURL)!
+    let urlString = Configuration.supabaseURL
     let key = Configuration.supabaseAnonKey
 
+    guard let url = URL(string: urlString) else {
+        fatalError("Invalid Supabase URL: \(urlString)")
+    }
+
+    #if DEBUG
+    print("🔧 Supabase URL: \(urlString)")
+    print("🔧 Supabase Key: \(key.prefix(20))...")
+    #endif
+
+    // Use simple initialization with defaults
     return SupabaseClient(
         supabaseURL: url,
-        supabaseKey: key,
-        options: SupabaseClientOptions(
-            auth: .init(
-                storage: KeychainLocalStorage(),
-                flowType: .pkce,
-                autoRefreshToken: true
-            ),
-            global: .init(
-                headers: [
-                    "x-app-version": Configuration.appVersion,
-                    "x-app-build": Configuration.buildNumber
-                ]
-            )
-        )
+        supabaseKey: key
     )
 }()
 
