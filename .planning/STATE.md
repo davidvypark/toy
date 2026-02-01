@@ -10,27 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 2 of 8 (Recording Pipeline)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-01 - Completed Phase 1 (Foundation & Architecture)
+Plan: 1 of 6 in current phase
+Status: In progress
+Last activity: 2026-02-02 - Completed 02-01-PLAN.md (Core Video Capture)
 
-Progress: [##--------] 12.5% (1/8 phases complete)
+Progress: [##--------] ~16% (1/8 phases + 1/6 plans in Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: ~8 minutes
-- Total execution time: ~56 minutes
+- Total plans completed: 8
+- Average duration: ~7 minutes
+- Total execution time: ~59 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 7/7 | ~56min | ~8min |
+| 2 | 1/6 | ~3min | ~3min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (~8min), 01-04 (~5min), 01-05 (~2min), 01-06 (~3min), 01-07 (~45min*)
+- Last 5 plans: 01-05 (~2min), 01-06 (~3min), 01-07 (~45min*), 02-01 (~3min)
 - *01-07 included Apple Sign-In pivot and backend configuration
 - Trend: On track
 
@@ -57,6 +58,9 @@ Recent decisions affecting current work:
 | AUTH-002 | Profile creation in AuthService | Backup to DB trigger ensures profiles table stays in sync | 01-06 |
 | AUTH-003 | Apple Sign-In instead of email/password | Captures user name, no SMS costs, better iOS UX | 01-07 |
 | AUTH-004 | Nonce-based security for Apple tokens | Required by Apple/Supabase for token validation | 01-07 |
+| REC-001 | AVCaptureVideoDataOutput over MovieFileOutput | Sample buffer access enables seamless multi-clip recording | 02-01 |
+| REC-002 | Portrait dimensions with transform | Camera captures landscape; transform handles rotation + front camera mirroring | 02-01 |
+| REC-003 | Dedicated sessionQueue for capture operations | startRunning() blocks until hardware ready; must never block main thread | 02-01 |
 
 ### Pending Todos
 
@@ -68,8 +72,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-01
-Stopped at: Completed Phase 1
+Last session: 2026-02-02
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -107,3 +111,10 @@ After Phase 1 completion:
   - ContentView routing based on auth state
   - Apple Developer configured (App ID, Service ID, Key)
   - Supabase Apple provider configured with JWT client secret
+
+After 02-01 (Core Video Capture):
+- **Recording infrastructure:**
+  - RecordingError enum with 10 error cases covering full pipeline
+  - CaptureSession wrapper with 720p preset, front camera, background queue
+  - ClipWriter wrapper with H.264 encoding, AAC audio, portrait transform
+  - Sample buffer delegate pattern for real-time capture
