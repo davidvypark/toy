@@ -22,8 +22,8 @@ public enum Configuration {
               !key.isEmpty,
               key != "$(SUPABASE_ANON_KEY)" else {
             #if DEBUG
-            // Fallback for development - using values from .env
-            return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indsc2FvbHNjY2x3YXJteHpxanFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgyNDcwNDMsImV4cCI6MjA1MzgyMzA0M30.S8uPtWV4edalpiaO"
+            // Fallback for development - publishable key from Supabase dashboard
+            return "sb_publishable_CKfGaxrgMU7g28K0LfNEYA_3eGWysNW"
             #else
             fatalError("SUPABASE_ANON_KEY not configured in Info.plist")
             #endif
