@@ -16,7 +16,6 @@ public let supabase: SupabaseClient = {
     print("🔧 Supabase Key: \(key.prefix(20))...")
     #endif
 
-    // Use simple initialization with defaults
     return SupabaseClient(
         supabaseURL: url,
         supabaseKey: key
