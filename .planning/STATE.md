@@ -10,30 +10,30 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 2 of 8 (Recording Pipeline)
-Plan: 2 of 6 in current phase
+Plan: 3 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 02-02-PLAN.md (Video Merging and Preview)
+Last activity: 2026-02-02 - Completed 02-03-PLAN.md (Camera Preview and Permissions)
 
-Progress: [##--------] ~17% (1/8 phases + 2/6 plans in Phase 2)
+Progress: [##--------] ~18% (1/8 phases + 3/6 plans in Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: ~7 minutes
-- Total execution time: ~62 minutes
+- Total plans completed: 10
+- Average duration: ~6 minutes
+- Total execution time: ~63 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 7/7 | ~56min | ~8min |
-| 2 | 2/6 | ~6min | ~3min |
+| 2 | 3/6 | ~7min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 01-06 (~3min), 01-07 (~45min*), 02-01 (~3min), 02-02 (~3min)
+- Last 5 plans: 01-07 (~45min*), 02-01 (~3min), 02-02 (~3min), 02-03 (~1min)
 - *01-07 included Apple Sign-In pivot and backend configuration
-- Trend: On track
+- Trend: On track, accelerating through Phase 2
 
 *Updated after each plan completion*
 
@@ -75,7 +75,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 02-02-PLAN.md
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -128,3 +128,12 @@ After 02-02 (Video Merging and Preview):
   - VideoPreviewView with SwiftUI VideoPlayer and loop playback
   - Retake/Confirm actions using TOYButton component
   - Recording directory structure in TOY/Features/Recording/
+
+After 02-03 (Camera Preview and Permissions):
+- **Camera preview:**
+  - CameraPreview UIViewRepresentable for SwiftUI integration
+  - PreviewView with layerClass override for AVCaptureVideoPreviewLayer
+  - resizeAspectFill video gravity for full-frame preview
+- **Privacy permissions:**
+  - NSCameraUsageDescription in Info.plist
+  - NSMicrophoneUsageDescription in Info.plist
