@@ -32,7 +32,6 @@
 		FF67B7072F2F6238007DAF2C /* TOYTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B7112F2F6238007DAF2C /* TOYUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B8002F2F7000007DAF2C /* TOY/Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = TOY/Debug.xcconfig; sourceTree = SOURCE_ROOT; };
-		FFAABBCC112233440000001 /* TOYShared */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = TOYShared; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -98,7 +97,6 @@
 				FF67B6F92F2F6236007DAF2C /* TOY */,
 				FF67B70A2F2F6238007DAF2C /* TOYTests */,
 				FF67B7142F2F6238007DAF2C /* TOYUITests */,
-				FFAABBCC112233440000001 /* TOYShared */,
 				FF67B6F82F2F6236007DAF2C /* Products */,
 				FF67B8512F2FA521007DAF2C /* Recovered References */,
 			);
@@ -599,7 +597,7 @@
 /* Begin XCLocalSwiftPackageReference section */
 		FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOYShared" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = TOYShared;
+			relativePath = TOY/TOYShared;
 		};
 /* End XCLocalSwiftPackageReference section */
 
