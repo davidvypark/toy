@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 1 of 8 (Foundation & Architecture)
-Plan: 5 of 7 in current phase
+Plan: 6 of 7 in current phase
 Status: In progress
-Last activity: 2026-02-01 - Completed 01-05-PLAN.md (UI Component Library)
+Last activity: 2026-02-01 - Completed 01-06-PLAN.md (Authentication Service)
 
-Progress: [#####-----] 71% (5/7 plans in Phase 1)
+Progress: [######----] 86% (6/7 plans in Phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: ~7 minutes
-- Total execution time: ~33 minutes
+- Total plans completed: 6
+- Average duration: ~6 minutes
+- Total execution time: ~36 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 | 5/7 | ~33min | ~7min |
+| 1 | 6/7 | ~36min | ~6min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~5min), 01-02 (~13min), 01-03 (~8min), 01-04 (~5min), 01-05 (~2min)
+- Last 5 plans: 01-02 (~13min), 01-03 (~8min), 01-04 (~5min), 01-05 (~2min), 01-06 (~3min)
 - Trend: On track
 
 *Updated after each plan completion*
@@ -52,6 +52,8 @@ Recent decisions affecting current work:
 | INFRA-001 | Keychain storage for auth tokens | More secure than UserDefaults, prevents token exposure if device compromised | 01-04 |
 | INFRA-002 | DEBUG fallback values for credentials | Allows SwiftUI previews and tests to run without configured credentials | 01-04 |
 | UI-003 | Component style enums for variants | Enables type-safe styling with computed properties for each variant | 01-05 |
+| AUTH-001 | AsyncStream for auth state observation | Native Swift concurrency over Combine for simpler async/await integration | 01-06 |
+| AUTH-002 | Profile creation in AuthService | Backup to DB trigger ensures profiles table stays in sync | 01-06 |
 
 ### Pending Todos
 
@@ -63,13 +65,13 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-01 15:03 UTC
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-02-01 15:06 UTC
+Stopped at: Completed 01-06-PLAN.md
 Resume file: None
 
 ## What's Available
 
-After 01-05 completion:
+After 01-06 completion:
 - TOYShared Swift Package at /TOYShared/ with supabase-swift dependency
 - Package integrated with main app target
 - Directory structure ready for Models, Services, Theme, Components
@@ -96,3 +98,9 @@ After 01-05 completion:
   - TOYTextField with SF Symbol icons, focus state animations, error message display
   - TOYLabel with 10 typography styles and convenience factory methods
   - All components consume theme colors and typography
+- **Authentication Service:**
+  - AuthServiceProtocol defining signUp, signIn, signOut, getCurrentUser, observeAuthState
+  - SupabaseAuthService implementation using global supabase singleton
+  - User model with conversion from Supabase Auth.User
+  - AsyncStream-based auth state observation for reactive UI
+  - SwiftUI @Entry environment key for dependency injection
