@@ -1,0 +1,27 @@
+# Xcode
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.build/
+Package.resolved
+*.d
+*.o
+*.swiftdeps
+*.swiftdeps~
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Environment and secrets
+.env
+*.xcconfig
+
+# Local development files
+TOY/Debug.xcconfig
+
+# Claude artifacts
+.claude/
