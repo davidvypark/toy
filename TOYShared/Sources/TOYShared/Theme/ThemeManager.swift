@@ -15,7 +15,8 @@ public enum AppTheme: String, CaseIterable, Sendable {
 }
 
 @Observable
-public final class ThemeManager: Sendable {
+@MainActor
+public final class ThemeManager {
     @ObservationIgnored
     @AppStorage("selectedTheme") private var storedTheme: String = AppTheme.system.rawValue
 

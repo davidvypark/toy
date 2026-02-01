@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "TOYShared",
-    platforms: [.iOS(.v17), .macOS(.v10_15)],
+    platforms: [.iOS(.v17), .macOS(.v14)],
     products: [
         .library(
             name: "TOYShared",
