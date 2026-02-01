@@ -22,8 +22,8 @@ public enum Configuration {
               !key.isEmpty,
               key != "$(SUPABASE_ANON_KEY)" else {
             #if DEBUG
-            // Fallback for development - publishable key from Supabase dashboard
-            return "sb_publishable_CKfGaxrgMU7g28K0LfNEYA_3eGWysNW"
+            // Fallback for development - legacy JWT anon key from Supabase dashboard
+            return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indsc2FvbHNjY2x3YXJteHpxanFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NTExMDksImV4cCI6MjA4NTUyNzEwOX0.jByHR8TuH6ghNI6-zq7giusgvcAN8CRebTUtBFmUYhc"
             #else
             fatalError("SUPABASE_ANON_KEY not configured in Info.plist")
             #endif
