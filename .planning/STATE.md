@@ -10,29 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 2 of 8 (Recording Pipeline)
-Plan: 4 of 6 in current phase
+Plan: 5 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 02-04-PLAN.md (Multi-clip Recording Coordinator)
+Last activity: 2026-02-02 - Completed 02-05-PLAN.md (Recording UI with Hold-to-Record)
 
-Progress: [##--------] ~19% (1/8 phases + 4/6 plans in Phase 2)
+Progress: [##--------] ~21% (1/8 phases + 5/6 plans in Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: ~6 minutes
-- Total execution time: ~66 minutes
+- Total execution time: ~68 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 7/7 | ~56min | ~8min |
-| 2 | 4/6 | ~10min | ~2.5min |
+| 2 | 5/6 | ~12min | ~2.4min |
 
 **Recent Trend:**
-- Last 5 plans: 01-07 (~45min*), 02-01 (~3min), 02-02 (~3min), 02-03 (~1min), 02-04 (~3min)
-- *01-07 included Apple Sign-In pivot and backend configuration
+- Last 5 plans: 02-01 (~3min), 02-02 (~3min), 02-03 (~1min), 02-04 (~3min), 02-05 (~2min)
 - Trend: On track, accelerating through Phase 2
 
 *Updated after each plan completion*
@@ -65,6 +64,7 @@ Recent decisions affecting current work:
 | REC-005 | Loop playback in preview | NotificationCenter observer for AVPlayerItemDidPlayToEndTime creates continuous preview | 02-02 |
 | REC-006 | Wall clock time for UI updates | Timer uses CACurrentMediaTime() for smooth UI; actual duration from asset | 02-04 |
 | REC-007 | 0.5s minimum clip duration | Discards accidental taps to prevent tiny clip fragments | 02-04 |
+| UI-004 | DragGesture for hold-to-record | onChanged starts recording, onEnded stops, enables Vine-style interaction | 02-05 |
 
 ### Pending Todos
 
@@ -77,7 +77,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 02-04-PLAN.md
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -149,3 +149,15 @@ After 02-04 (Multi-clip Recording Coordinator):
   - Auto-stop when time limit reached
   - startOver functionality to reset and clean up
   - progress and remainingTime computed properties for UI
+
+After 02-05 (Recording UI with Hold-to-Record):
+- **Recording UI:**
+  - RecordingViewModel bridging VideoRecorder to SwiftUI with permission handling
+  - RecordingView with full-screen camera preview
+  - DragGesture-based hold-to-record button (Vine-style interaction)
+  - Progress ring showing elapsed time toward 7-second limit
+  - Start Over button visible when hasContent
+  - Done button visible when canFinish
+  - Time display with recording indicator
+  - Permission denied state with Settings link
+  - Transition to VideoPreviewView on completion
