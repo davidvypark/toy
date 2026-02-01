@@ -107,13 +107,47 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be populated by roadmap) | | |
+| ARCH-01 | Phase 1 | Pending |
+| ARCH-02 | Phase 1 | Pending |
+| ARCH-03 | Phase 1 | Pending |
+| ARCH-04 | Phase 1 | Pending |
+| TECH-01 | Phase 1 | Pending |
+| TECH-02 | Phase 1 | Pending |
+| PART-02 | Phase 2 | Pending |
+| PART-03 | Phase 2 | Pending |
+| PART-04 | Phase 2 | Pending |
+| PART-05 | Phase 2 | Pending |
+| TECH-03 | Phase 3 | Pending |
+| TECH-05 | Phase 3 | Pending |
+| TECH-08 | Phase 3 | Pending |
+| PART-06 | Phase 3 | Pending |
+| PART-07 | Phase 3 | Pending |
+| HOST-01 | Phase 4 | Pending |
+| HOST-02 | Phase 4 | Pending |
+| HOST-03 | Phase 4 | Pending |
+| HOST-04 | Phase 5 | Pending |
+| HOST-05 | Phase 5 | Pending |
+| HOST-06 | Phase 5 | Pending |
+| HOST-07 | Phase 6 | Pending |
+| HOST-08 | Phase 6 | Pending |
+| HOST-09 | Phase 6 | Pending |
+| TECH-04 | Phase 6 | Pending |
+| TECH-07 | Phase 6 | Pending |
+| TECH-06 | Phase 7 | Pending |
+| PART-01 | Phase 7 | Pending |
+| RCPT-01 | Phase 8 | Pending |
+| RCPT-02 | Phase 8 | Pending |
+| RCPT-03 | Phase 8 | Pending |
+| RCPT-04 | Phase 8 | Pending |
+| MNTZ-01 | Phase 8 | Pending |
+| MNTZ-02 | Phase 8 | Pending |
+| TECH-09 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26 ⚠️
+- v1 requirements: 35 total
+- Mapped to phases: 35
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after initial definition*
+*Last updated: 2026-02-01 after roadmap creation*
