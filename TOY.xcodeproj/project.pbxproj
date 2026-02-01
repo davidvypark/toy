@@ -31,12 +31,12 @@
 		FF67B6F72F2F6236007DAF2C /* TOY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TOY.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B7072F2F6238007DAF2C /* TOYTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B7112F2F6238007DAF2C /* TOYUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FF67B8002F2F7000007DAF2C /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "TOY/Debug.xcconfig"; sourceTree = SOURCE_ROOT; };
+		FF67B8002F2F7000007DAF2C /* TOY/Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = TOY/Debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		FFAABBCC112233440000001 /* TOYShared */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = TOYShared; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		FF67B9002F2F7100007DAF2C /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		FF67B9002F2F7100007DAF2C /* Exceptions for "TOY" folder in "TOY" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -49,7 +49,7 @@
 		FF67B6F92F2F6236007DAF2C /* TOY */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				FF67B9002F2F7100007DAF2C /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				FF67B9002F2F7100007DAF2C /* Exceptions for "TOY" folder in "TOY" target */,
 			);
 			path = TOY;
 			sourceTree = "<group>";
@@ -100,6 +100,7 @@
 				FF67B7142F2F6238007DAF2C /* TOYUITests */,
 				FFAABBCC112233440000001 /* TOYShared */,
 				FF67B6F82F2F6236007DAF2C /* Products */,
+				FF67B8512F2FA521007DAF2C /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -111,6 +112,14 @@
 				FF67B7112F2F6238007DAF2C /* TOYUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		FF67B8512F2FA521007DAF2C /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				FF67B8002F2F7000007DAF2C /* TOY/Debug.xcconfig */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -415,7 +424,7 @@
 		};
 		FF67B71C2F2F6238007DAF2C /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = FF67B8002F2F7000007DAF2C /* Debug.xcconfig */;
+			baseConfigurationReference = FF67B8002F2F7000007DAF2C /* TOY/Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
