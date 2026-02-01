@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 1 of 8 (Foundation & Architecture)
-Plan: 3 of 7 in current phase
+Plan: 4 of 7 in current phase
 Status: In progress
-Last activity: 2026-02-01 - Completed 01-03-PLAN.md (Theme System)
+Last activity: 2026-02-01 - Completed 01-04-PLAN.md (Supabase Client Configuration)
 
-Progress: [###-------] 43% (3/7 plans in Phase 1)
+Progress: [####------] 57% (4/7 plans in Phase 1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~9 minutes
-- Total execution time: ~26 minutes
+- Total plans completed: 4
+- Average duration: ~8 minutes
+- Total execution time: ~31 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1 | 3/7 | ~26min | ~9min |
+| 1 | 4/7 | ~31min | ~8min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~5min), 01-02 (~13min), 01-03 (~8min)
+- Last 5 plans: 01-01 (~5min), 01-02 (~13min), 01-03 (~8min), 01-04 (~5min)
 - Trend: On track
 
 *Updated after each plan completion*
@@ -49,6 +49,8 @@ Recent decisions affecting current work:
 | DB-002 | RLS allows public read of published cards with share_token | Enables recipient viewing without authentication | 01-02 |
 | UI-001 | @MainActor for ThemeManager instead of Sendable | AppStorage requires main actor isolation | 01-03 |
 | UI-002 | DM Serif Display for headings, System Rounded for body | Elegant editorial headings with friendly readable body text | 01-03 |
+| INFRA-001 | Keychain storage for auth tokens | More secure than UserDefaults, prevents token exposure if device compromised | 01-04 |
+| INFRA-002 | DEBUG fallback values for credentials | Allows SwiftUI previews and tests to run without configured credentials | 01-04 |
 
 ### Pending Todos
 
@@ -60,13 +62,13 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-01 14:59 UTC
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-02-01 15:00 UTC
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None
 
 ## What's Available
 
-After 01-03 completion:
+After 01-04 completion:
 - TOYShared Swift Package at /TOYShared/ with supabase-swift dependency
 - Package integrated with main app target
 - Directory structure ready for Models, Services, Theme, Components
@@ -82,3 +84,9 @@ After 01-03 completion:
   - Typography: DM Serif Display headings, System Rounded body with Dynamic Type
   - Asset catalog colorsets with light/dark mode variants
   - Custom fonts registered in Info.plist
+- **Supabase client configured:**
+  - Configuration.swift loads URL and anon key from Info.plist
+  - SupabaseClient.swift with global `supabase` singleton
+  - Keychain-based auth token storage (KeychainLocalStorage)
+  - Debug.xcconfig template for local development
+  - Info.plist with SUPABASE_URL and SUPABASE_ANON_KEY placeholders
