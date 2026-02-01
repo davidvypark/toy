@@ -10,6 +10,7 @@ import TOYShared
 
 struct HomeView: View {
     @Bindable var viewModel: AuthViewModel
+    @State private var showRecording = false
 
     var body: some View {
         NavigationStack {
@@ -39,6 +40,11 @@ struct HomeView: View {
                         // TODO: Navigate to card creation (Phase 4)
                     }
                     .padding(.top, 8)
+
+                    // Temporary: Record Video button for testing (Phase 2)
+                    TOYButton("Record Video", style: .secondary, size: .medium) {
+                        showRecording = true
+                    }
                 }
                 .padding(.horizontal, 40)
 
@@ -52,6 +58,9 @@ struct HomeView: View {
             }
             .padding(.horizontal, 24)
             .background(Color.toyBackground)
+            .fullScreenCover(isPresented: $showRecording) {
+                RecordingView()
+            }
         }
     }
 }
