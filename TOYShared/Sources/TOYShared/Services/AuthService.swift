@@ -81,7 +81,7 @@ public final class SupabaseAuthService: AuthServiceProtocol {
             // Create profile in database
             try await createProfile(for: authUser)
 
-            return User(from: authUser)
+            return User(authUser: authUser)
         } catch let error as AuthError {
             throw error
         } catch {
@@ -96,7 +96,7 @@ public final class SupabaseAuthService: AuthServiceProtocol {
                 password: password
             )
 
-            return User(from: session.user)
+            return User(authUser: session.user)
         } catch {
             throw mapSupabaseError(error)
         }
@@ -109,7 +109,7 @@ public final class SupabaseAuthService: AuthServiceProtocol {
     public func getCurrentUser() async -> User? {
         do {
             let session = try await supabase.auth.session
-            return User(from: session.user)
+            return User(authUser: session.user)
         } catch {
             return nil
         }
@@ -130,7 +130,7 @@ public final class SupabaseAuthService: AuthServiceProtocol {
                     switch event {
                     case .signedIn, .tokenRefreshed:
                         if let authUser = session?.user {
-                            continuation.yield(.signedIn(User(from: authUser)))
+                            continuation.yield(.signedIn(User(authUser: authUser)))
                         }
                     case .signedOut:
                         continuation.yield(.signedOut)

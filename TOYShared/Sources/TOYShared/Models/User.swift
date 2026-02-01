@@ -24,7 +24,7 @@ public struct User: Identifiable, Codable, Sendable, Equatable {
     }
 
     /// Creates a User from Supabase auth user
-    public init(from authUser: Auth.User) {
+    public init(authUser: Auth.User) {
         self.id = authUser.id
         self.email = authUser.email
         self.displayName = authUser.userMetadata["display_name"]?.stringValue
