@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 2 of 8 (Recording Pipeline)
-Plan: 3 of 6 in current phase
+Plan: 4 of 6 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 02-03-PLAN.md (Camera Preview and Permissions)
+Last activity: 2026-02-02 - Completed 02-04-PLAN.md (Multi-clip Recording Coordinator)
 
-Progress: [##--------] ~18% (1/8 phases + 3/6 plans in Phase 2)
+Progress: [##--------] ~19% (1/8 phases + 4/6 plans in Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: ~6 minutes
-- Total execution time: ~63 minutes
+- Total execution time: ~66 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 7/7 | ~56min | ~8min |
-| 2 | 3/6 | ~7min | ~2min |
+| 2 | 4/6 | ~10min | ~2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 01-07 (~45min*), 02-01 (~3min), 02-02 (~3min), 02-03 (~1min)
+- Last 5 plans: 01-07 (~45min*), 02-01 (~3min), 02-02 (~3min), 02-03 (~1min), 02-04 (~3min)
 - *01-07 included Apple Sign-In pivot and backend configuration
 - Trend: On track, accelerating through Phase 2
 
@@ -63,6 +63,8 @@ Recent decisions affecting current work:
 | REC-003 | Dedicated sessionQueue for capture operations | startRunning() blocks until hardware ready; must never block main thread | 02-01 |
 | REC-004 | Single clip returns without export | Avoids unnecessary export processing when only one clip exists | 02-02 |
 | REC-005 | Loop playback in preview | NotificationCenter observer for AVPlayerItemDidPlayToEndTime creates continuous preview | 02-02 |
+| REC-006 | Wall clock time for UI updates | Timer uses CACurrentMediaTime() for smooth UI; actual duration from asset | 02-04 |
+| REC-007 | 0.5s minimum clip duration | Discards accidental taps to prevent tiny clip fragments | 02-04 |
 
 ### Pending Todos
 
@@ -75,7 +77,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 02-03-PLAN.md
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -137,3 +139,13 @@ After 02-03 (Camera Preview and Permissions):
 - **Privacy permissions:**
   - NSCameraUsageDescription in Info.plist
   - NSMicrophoneUsageDescription in Info.plist
+
+After 02-04 (Multi-clip Recording Coordinator):
+- **Recording coordinator:**
+  - RecordingState enum with 6 states (idle, recording, paused, completed, previewing, error)
+  - Helper properties: canStartRecording, isRecording, hasContent
+  - VideoRecorder @MainActor coordinator with ObservableObject
+  - Multi-clip management with 7-second maxDuration
+  - Auto-stop when time limit reached
+  - startOver functionality to reset and clean up
+  - progress and remainingTime computed properties for UI
