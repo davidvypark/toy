@@ -123,6 +123,31 @@ public actor CardService {
         }
     }
 
+    /// Publishes a card with the final montage video URL.
+    /// - Parameters:
+    ///   - cardId: The ID of the card to publish
+    ///   - videoUrl: The storage path of the uploaded montage
+    /// - Throws: `CardError.updateFailed` if update fails
+    public func publishCard(cardId: UUID, videoUrl: String) async throws {
+        do {
+            try await supabase
+                .from("cards")
+                .update([
+                    "status": "published",
+                    "video_url": videoUrl,
+                    "published_at": ISO8601DateFormatter().string(from: Date())
+                ])
+                .eq("id", value: cardId)
+                .execute()
+
+            #if DEBUG
+            print("✅ Published card \(cardId) with video: \(videoUrl)")
+            #endif
+        } catch {
+            throw CardError.updateFailed(error.localizedDescription)
+        }
+    }
+
     // MARK: - Clip Operations
 
     /// Creates a new clip record in the database.
