@@ -17,24 +17,31 @@ struct CardDetailView: View {
     private var allContributors: [ContributorRow] {
         var contributors: [ContributorRow] = []
 
-        // Host is always first
-        let hostClip = viewModel.clips.first { $0.orderPosition == 0 }
+        // Host is always first - identify by participantId matching hostId
+        let hostClip = viewModel.clips.first { $0.participantId == card.hostId }
+        let hostDuration = hostClip.flatMap { viewModel.effectiveDuration(for: $0) }
         contributors.append(ContributorRow(
             id: card.hostId,
             name: "You (Host)",
             clip: hostClip,
-            isHost: true
+            isHost: true,
+            effectiveDuration: hostDuration
         ))
 
-        // Add participants with their clips
+        // Add participants with their clips (exclude host from participants list)
         for participant in viewModel.participants {
+            // Skip if this participant is the host (they're already shown)
+            guard participant.id != card.hostId else { continue }
+
             let participantClip = viewModel.clips.first { $0.participantId == participant.id }
+            let participantDuration = participantClip.flatMap { viewModel.effectiveDuration(for: $0) }
             contributors.append(ContributorRow(
                 id: participant.id,
                 name: participant.email ?? "Invited Guest",
                 clip: participantClip,
                 isHost: false,
-                participant: participant
+                participant: participant,
+                effectiveDuration: participantDuration
             ))
         }
 
@@ -46,10 +53,10 @@ struct CardDetailView: View {
         allContributors.filter { $0.clip != nil }.count
     }
 
-    /// Total duration of all clips in seconds
+    /// Total duration of all clips in seconds, using loaded values when DB is nil
     private var totalDuration: Double {
-        viewModel.clips.compactMap { $0.durationSeconds }
-            .reduce(0) { $0 + NSDecimalNumber(decimal: $1).doubleValue }
+        viewModel.clips.compactMap { viewModel.effectiveDuration(for: $0) }
+            .reduce(0, +)
     }
 
     /// Formatted total duration string
@@ -192,6 +199,7 @@ private struct ContributorRow: Identifiable {
     let clip: Clip?
     let isHost: Bool
     var participant: Participant?
+    var effectiveDuration: Double?
 }
 
 // MARK: - Contributor Clip Row
@@ -236,7 +244,7 @@ private struct ContributorClipRow: View {
 
                 // Clip thumbnail or empty state
                 if let clip = contributor.clip {
-                    ClipThumbnailView(clip: clip)
+                    ClipThumbnailView(clip: clip, effectiveDuration: contributor.effectiveDuration)
                 } else {
                     // Empty thumbnail placeholder
                     RoundedRectangle(cornerRadius: 8)
@@ -337,6 +345,7 @@ private struct ContributorSkeletonRow: View {
 /// A view that loads and displays a video thumbnail from a signed URL
 private struct ClipThumbnailView: View {
     let clip: Clip
+    let effectiveDuration: Double?
 
     @State private var thumbnail: UIImage?
     @State private var isLoading = true
@@ -381,10 +390,10 @@ private struct ClipThumbnailView: View {
             }
 
             // Duration label at bottom
-            if let duration = clip.durationSeconds {
+            if let duration = effectiveDuration {
                 VStack {
                     Spacer()
-                    Text(formatDuration(NSDecimalNumber(decimal: duration).doubleValue))
+                    Text(formatDuration(duration))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.white)
                         .padding(.horizontal, 4)

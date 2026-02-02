@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import SwiftUI
 import TOYShared
@@ -14,6 +15,10 @@ final class CardDetailViewModel {
     var clips: [Clip] = []
     var isLoading = false
     var errorMessage: String?
+
+    /// Loaded durations for clips where durationSeconds is nil in DB
+    /// Key is clip ID, value is duration in seconds
+    var loadedDurations: [UUID: Double] = [:]
 
     // MARK: - Dependencies
 
@@ -46,6 +51,9 @@ final class CardDetailViewModel {
                 print("[DURATION DEBUG] Clip \(clip.id): duration = \(String(describing: clip.durationSeconds))")
             }
             #endif
+
+            // Load durations for clips that don't have them in the database
+            await loadMissingDurations()
         } catch {
             #if DEBUG
             print("Failed to load card data: \(error)")
@@ -88,5 +96,68 @@ final class CardDetailViewModel {
     /// - Throws: UploadError if URL generation fails
     func getSignedURL(for clip: Clip) async throws -> URL {
         return try await storageService.createSignedURL(path: clip.videoUrl)
+    }
+
+    /// Gets the effective duration for a clip, using loaded duration if DB value is nil.
+    /// - Parameter clip: The clip to get duration for
+    /// - Returns: Duration in seconds, or nil if not available
+    func effectiveDuration(for clip: Clip) -> Double? {
+        if let dbDuration = clip.durationSeconds {
+            return NSDecimalNumber(decimal: dbDuration).doubleValue
+        }
+        return loadedDurations[clip.id]
+    }
+
+    // MARK: - Private Methods
+
+    /// Loads durations from video assets for clips that don't have duration in the database.
+    private func loadMissingDurations() async {
+        let clipsNeedingDuration = clips.filter { $0.durationSeconds == nil }
+
+        guard !clipsNeedingDuration.isEmpty else {
+            #if DEBUG
+            print("[DURATION] All clips have duration in database")
+            #endif
+            return
+        }
+
+        #if DEBUG
+        print("[DURATION] Loading duration for \(clipsNeedingDuration.count) clips")
+        #endif
+
+        // Load durations concurrently
+        await withTaskGroup(of: (UUID, Double?).self) { group in
+            for clip in clipsNeedingDuration {
+                group.addTask {
+                    do {
+                        let signedURL = try await self.storageService.createSignedURL(path: clip.videoUrl)
+                        let asset = AVAsset(url: signedURL)
+                        let duration = try await asset.load(.duration)
+                        let seconds = CMTimeGetSeconds(duration)
+
+                        #if DEBUG
+                        print("[DURATION] Loaded duration for clip \(clip.id): \(seconds)s")
+                        #endif
+
+                        return (clip.id, seconds.isNaN ? nil : seconds)
+                    } catch {
+                        #if DEBUG
+                        print("[DURATION] Failed to load duration for clip \(clip.id): \(error)")
+                        #endif
+                        return (clip.id, nil)
+                    }
+                }
+            }
+
+            for await (clipId, duration) in group {
+                if let duration {
+                    loadedDurations[clipId] = duration
+                }
+            }
+        }
+
+        #if DEBUG
+        print("[DURATION] Loaded \(loadedDurations.count) durations from video assets")
+        #endif
     }
 }

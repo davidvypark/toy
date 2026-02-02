@@ -10,10 +10,12 @@ struct ClipPreviewSheet: View {
 
     @State private var signedURL: URL?
     @State private var isLoading = true
+    @State private var isPlayerReady = false
     @State private var loadError: String?
     @State private var showDeleteConfirmation = false
     @State private var player: AVPlayer?
     @State private var isDeleting = false
+    @State private var playerStatusObserver: NSKeyValueObservation?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -24,14 +26,14 @@ struct ClipPreviewSheet: View {
             VStack(spacing: 24) {
                 // Video player area
                 ZStack {
-                    // Always show skeleton as base layer while loading or no player
-                    if isLoading || (player == nil && loadError == nil) {
+                    // Show skeleton until player is ready to play
+                    if isLoading || !isPlayerReady {
                         loadingView
                     }
 
                     if let error = loadError {
                         errorView(error)
-                    } else if let player {
+                    } else if let player, isPlayerReady {
                         ClipVideoPlayer(player: player)
                             .aspectRatio(9/16, contentMode: .fit)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -148,7 +150,29 @@ struct ClipPreviewSheet: View {
 
     private func setupPlayer(with url: URL) {
         let newPlayer = AVPlayer(url: url)
-        newPlayer.play()
+
+        // Observe player item status to know when video is ready
+        playerStatusObserver = newPlayer.currentItem?.observe(\.status, options: [.new]) { [weak newPlayer] item, _ in
+            DispatchQueue.main.async {
+                switch item.status {
+                case .readyToPlay:
+                    #if DEBUG
+                    print("Player ready to play")
+                    #endif
+                    isPlayerReady = true
+                    newPlayer?.play()
+                case .failed:
+                    #if DEBUG
+                    print("Player failed: \(item.error?.localizedDescription ?? "unknown")")
+                    #endif
+                    loadError = item.error?.localizedDescription ?? "Failed to load video"
+                case .unknown:
+                    break
+                @unknown default:
+                    break
+                }
+            }
+        }
 
         // Loop playback
         NotificationCenter.default.addObserver(
@@ -164,8 +188,11 @@ struct ClipPreviewSheet: View {
     }
 
     private func cleanupPlayer() {
+        playerStatusObserver?.invalidate()
+        playerStatusObserver = nil
         player?.pause()
         player = nil
+        isPlayerReady = false
     }
 
     private func handleDelete() async {
