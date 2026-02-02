@@ -41,5 +41,5 @@ public enum Configuration {
 
     /// RevenueCat API key - replace with your key from RevenueCat Dashboard
     /// Dashboard -> API Keys -> Public App-Specific API Keys -> iOS
-    public static let revenueCatAPIKey = "appl_REPLACE_WITH_YOUR_KEY"
+    public static let revenueCatAPIKey = "test_DPeFpcaJgDSjkeMkilxMVppyqqf"
 }
