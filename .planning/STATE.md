@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 7 of 8 (App Clip Integration)
-Plan: 1 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 07-01-PLAN.md
+Last activity: 2026-02-02 - Completed 07-03-PLAN.md
 
-Progress: [########--] 78% (25/32 plans complete)
+Progress: [#########-] 84% (27/32 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25
-- Average duration: ~4.8 minutes
-- Total execution time: ~119 minutes
+- Total plans completed: 27
+- Average duration: ~4.6 minutes
+- Total execution time: ~125 minutes
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [########--] 78% (25/32 plans complete)
 | 4 | 4/4 | ~22min | ~5.5min |
 | 5 | 3/3 | ~8min | ~2.7min |
 | 6 | 4/4 | ~22min | ~5.5min |
-| 7 | 1/4 | ~3min | ~3min |
+| 7 | 3/4 | ~9min | ~3min |
 
 **Recent Trend:**
-- Last 5 plans: 06-02 (~2min), 06-03 (~3min), 06-04 (~15min), 07-01 (~3min)
-- Trend: Phase 7 started - Backend support for App Clip share token lookup
+- Last 5 plans: 06-03 (~3min), 06-04 (~15min), 07-01 (~3min), 07-03 (~6min)
+- Trend: Phase 7 App Clip integration - entry point and recording flow complete
 
 *Updated after each plan completion*
 
@@ -102,6 +102,9 @@ Recent decisions affecting current work:
 | UI-010 | Custom AVPlayerLayer for montage preview | Removes unwanted AVKit controls (AirPlay, skip buttons) for cleaner preview | 06-04 |
 | URL-001 | Recipient URL domain: sendtoycard.com | User-specified domain for production | 06-04 |
 | RLS-002 | Permissive SELECT on cards for anon role | share_token acts as capability token - knowing UUID grants read access | 07-01 |
+| CLIP-004 | Move Recording UI to TOYShared for code sharing | Enables code sharing between main app and App Clip | 07-03 |
+| CLIP-005 | onContinueUserActivity(NSUserActivityTypeBrowsingWeb) for App Clip URLs | Required for App Clips - onOpenURL does not work | 07-03 |
+| CLIP-006 | RecordingView accepts external viewModel | Allows App Clip to monitor upload state changes | 07-03 |
 
 ### Pending Todos
 
@@ -114,7 +117,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 07-01-PLAN.md (Backend Support for Share Token Lookup)
+Stopped at: Completed 07-03-PLAN.md (App Clip Entry Point and Recording Flow)
 Resume file: None
 
 ## What's Available
@@ -395,3 +398,24 @@ After 07-01 (Backend Support for Share Token Lookup):
   - RLS policy allowing anon role to SELECT from cards table
   - Migration at supabase/migrations/005_public_card_lookup.sql
   - share_token acts as capability token (UUID is unguessable)
+
+After 07-03 (App Clip Entry Point and Recording Flow):
+- **App Clip entry point:**
+  - TOYClipApp.swift with onContinueUserActivity URL handling
+  - LoadState enum (loading, ready, invalidLink) for UI state management
+  - DeepLinkService.parse() integration for URL parsing
+- **Participant recording flow:**
+  - ParticipantRecordingFlow coordinator loads card by share token
+  - Generates participant UUID for each session
+  - Uses RecordingView with card context (cardId, participantId, isHostClip: false)
+  - Monitors upload state and transitions to UploadSuccessView on completion
+- **Error handling:**
+  - InvalidLinkView for URL parsing failures
+  - Error view with retry capability for card loading failures
+- **Success view:**
+  - UploadSuccessView basic version (SKOverlay in Plan 04)
+  - App promotion messaging
+- **Code sharing:**
+  - Recording UI files moved to TOYShared/Recording/UI/
+  - RecordingView, RecordingViewModel, VideoPreviewView, UploadProgressView now shared
+  - Both main app and App Clip use same recording components
