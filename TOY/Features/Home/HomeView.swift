@@ -10,7 +10,16 @@ import TOYShared
 
 struct HomeView: View {
     @Bindable var viewModel: AuthViewModel
+
+    // Standalone recording (temporary for testing)
     @State private var showRecording = false
+
+    // Card creation flow state
+    @State private var showCreateCard = false
+    @State private var cardInProgress: Card? = nil
+    @State private var showHostRecording = false
+    @State private var completedCard: Card? = nil
+    @State private var showCardCreated = false
 
     var body: some View {
         NavigationStack {
@@ -37,11 +46,11 @@ struct HomeView: View {
                         .multilineTextAlignment(.center)
 
                     TOYButton("Create Card", style: .primary, size: .large) {
-                        // TODO: Navigate to card creation (Phase 4)
+                        showCreateCard = true
                     }
                     .padding(.top, 8)
 
-                    // Temporary: Record Video button for testing (Phase 2)
+                    // Temporary - for testing standalone recording (Phase 2)
                     TOYButton("Record Video", style: .secondary, size: .medium) {
                         showRecording = true
                     }
@@ -60,6 +69,44 @@ struct HomeView: View {
             .background(Color.toyBackground)
             .fullScreenCover(isPresented: $showRecording) {
                 RecordingView()
+            }
+            // Card creation sheet
+            .sheet(isPresented: $showCreateCard) {
+                if let user = viewModel.authState.user {
+                    CreateCardView(hostId: user.id) { createdCard in
+                        // Card created, navigate to recording
+                        cardInProgress = createdCard
+                        showCreateCard = false
+                        showHostRecording = true
+                    }
+                }
+            }
+            // Host recording cover
+            .fullScreenCover(isPresented: $showHostRecording) {
+                if let card = cardInProgress, let user = viewModel.authState.user {
+                    RecordingView(
+                        cardId: card.id,
+                        participantId: user.id,
+                        isHostClip: true
+                    )
+                    .onDisappear {
+                        // Recording complete (dismissed via upload success)
+                        if cardInProgress != nil {
+                            completedCard = cardInProgress
+                            cardInProgress = nil
+                            showCardCreated = true
+                        }
+                    }
+                }
+            }
+            // Card created sheet
+            .sheet(isPresented: $showCardCreated) {
+                if let card = completedCard {
+                    CardCreatedView(card: card) {
+                        completedCard = nil
+                        showCardCreated = false
+                    }
+                }
             }
         }
     }
