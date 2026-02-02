@@ -1,4 +1,5 @@
 import AVFoundation
+import Combine
 import SwiftUI
 import TOYShared
 
@@ -13,6 +14,7 @@ public final class RecordingViewModel: ObservableObject {
     // MARK: - Dependencies
 
     public let recorder = VideoRecorder()
+    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Permission Status
 
@@ -25,7 +27,15 @@ public final class RecordingViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    public init() {}
+    public init() {
+        // Forward changes from nested ObservableObject to trigger view updates
+        recorder.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+    }
 
     // MARK: - Lifecycle
 
