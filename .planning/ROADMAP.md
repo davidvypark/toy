@@ -13,7 +13,7 @@ TOY enables anyone to create heartfelt group video messages in minutes. The road
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Architecture** - Project structure, Supabase setup, theme system ✓
-- [ ] **Phase 2: Recording Pipeline** - Vine-style video capture with preview and re-record
+- [x] **Phase 2: Recording Pipeline** - Vine-style video capture with preview and re-record ✓
 - [ ] **Phase 3: Data Layer & Upload** - Storage, deep linking, video upload with progress
 - [ ] **Phase 4: Host Card Creation** - Create cards, record host clip, generate invites
 - [ ] **Phase 5: Host Card Management** - View participants, preview clips, manage submissions
@@ -57,12 +57,12 @@ Plans:
 **Plans**: 6 plans in 4 waves
 
 Plans:
-- [ ] 02-01-PLAN.md — Core Capture Infrastructure (Wave 1)
-- [ ] 02-02-PLAN.md — Video Merging & Preview Playback (Wave 1)
-- [ ] 02-03-PLAN.md — Camera Preview & Permission Config (Wave 2)
-- [ ] 02-04-PLAN.md — Recording Coordinator (Wave 2)
-- [ ] 02-05-PLAN.md — Recording UI & ViewModel (Wave 3)
-- [ ] 02-06-PLAN.md — Wire & Verify Recording Flow (Wave 4)
+- [x] 02-01-PLAN.md — Core Capture Infrastructure (Wave 1)
+- [x] 02-02-PLAN.md — Video Merging & Preview Playback (Wave 1)
+- [x] 02-03-PLAN.md — Camera Preview & Permission Config (Wave 2)
+- [x] 02-04-PLAN.md — Recording Coordinator (Wave 2)
+- [x] 02-05-PLAN.md — Recording UI & ViewModel (Wave 3)
+- [x] 02-06-PLAN.md — Wire & Verify Recording Flow (Wave 4)
 
 ### Phase 3: Data Layer & Upload
 **Goal**: Recorded clips can be uploaded to Supabase storage with progress tracking and deep link support
@@ -168,7 +168,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Architecture | 7/7 | Complete | 2026-02-01 |
-| 2. Recording Pipeline | 0/6 | Not started | - |
+| 2. Recording Pipeline | 6/6 | Complete | 2026-02-02 |
 | 3. Data Layer & Upload | 0/TBD | Not started | - |
 | 4. Host Card Creation | 0/TBD | Not started | - |
 | 5. Host Card Management | 0/TBD | Not started | - |

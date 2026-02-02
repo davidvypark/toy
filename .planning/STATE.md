@@ -9,30 +9,30 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 
 ## Current Position
 
-Phase: 2 of 8 (Recording Pipeline)
-Plan: 5 of 6 in current phase
-Status: In progress
-Last activity: 2026-02-02 - Completed 02-05-PLAN.md (Recording UI with Hold-to-Record)
+Phase: 2 of 8 (Recording Pipeline) - COMPLETE
+Plan: 6 of 6 in current phase
+Status: Phase 2 complete, ready for Phase 3
+Last activity: 2026-02-02 - Completed 02-06-PLAN.md (Wire & Verify Recording Flow)
 
-Progress: [##--------] ~21% (1/8 phases + 5/6 plans in Phase 2)
+Progress: [###-------] ~25% (2/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: ~6 minutes
-- Total execution time: ~68 minutes
+- Total execution time: ~75 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 7/7 | ~56min | ~8min |
-| 2 | 5/6 | ~12min | ~2.4min |
+| 2 | 6/6 | ~19min | ~3.2min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (~3min), 02-02 (~3min), 02-03 (~1min), 02-04 (~3min), 02-05 (~2min)
-- Trend: On track, accelerating through Phase 2
+- Last 5 plans: 02-02 (~3min), 02-03 (~1min), 02-04 (~3min), 02-05 (~2min), 02-06 (~7min with fixes)
+- Trend: Phase 2 complete with human-verified recording pipeline
 
 *Updated after each plan completion*
 
@@ -65,6 +65,9 @@ Recent decisions affecting current work:
 | REC-006 | Wall clock time for UI updates | Timer uses CACurrentMediaTime() for smooth UI; actual duration from asset | 02-04 |
 | REC-007 | 0.5s minimum clip duration | Discards accidental taps to prevent tiny clip fragments | 02-04 |
 | UI-004 | DragGesture for hold-to-record | onChanged starts recording, onEnded stops, enables Vine-style interaction | 02-05 |
+| REC-008 | Forward nested ObservableObject changes | Combine subscription forwards objectWillChange for proper SwiftUI updates | 02-06 |
+| REC-009 | Custom AVPlayerLayer for preview | Removes AVKit controls (AirPlay, speed) for cleaner preview experience | 02-06 |
+| REC-010 | Immediate state update on stop | Set state to paused immediately, async work updates if needed; prevents UI stuck | 02-06 |
 
 ### Pending Todos
 
@@ -161,3 +164,13 @@ After 02-05 (Recording UI with Hold-to-Record):
   - Time display with recording indicator
   - Permission denied state with Settings link
   - Transition to VideoPreviewView on completion
+
+After 02-06 (Wire & Verify - Phase 2 Complete):
+- **Verified recording pipeline:**
+  - Navigation from HomeView to RecordingView
+  - Combine subscription forwarding nested ObservableObject changes
+  - Custom AVPlayerLayer preview without AirPlay/speed controls
+  - Race condition fix with isFinishingClip flag
+  - Correct video transform for portrait front camera
+  - Record button hides when 7 seconds reached
+  - All Phase 2 success criteria human-verified on physical device
