@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 4 of 8 (Host Card Creation)
-Plan: 1 of TBD in current phase
+Plan: 2 of TBD in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 04-01-PLAN.md
+Last activity: 2026-02-02 - Completed 04-02-PLAN.md
 
-Progress: [####------] ~40% (3.1/8 phases complete)
+Progress: [####------] ~42% (3.2/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: ~5 minutes
-- Total execution time: ~88 minutes
+- Total execution time: ~90 minutes
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [####------] ~40% (3.1/8 phases complete)
 | 1 | 7/7 | ~56min | ~8min |
 | 2 | 6/6 | ~19min | ~3.2min |
 | 3 | 4/4 | ~11min | ~2.75min |
-| 4 | 1/? | ~2min | ~2min |
+| 4 | 2/? | ~4min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (~2min), 03-02 (~2min), 03-03 (~2min), 03-04 (~5min verification), 04-01 (~2min)
-- Trend: Phase 4 started, execution velocity strong
+- Last 5 plans: 03-02 (~2min), 03-03 (~2min), 03-04 (~5min verification), 04-01 (~2min), 04-02 (~2min)
+- Trend: Phase 4 progressing, execution velocity strong
 
 *Updated after each plan completion*
 
@@ -78,6 +78,8 @@ Recent decisions affecting current work:
 | UX-001 | Navigate to home after successful upload | Prevents user confusion and accidental re-upload of same video | 03-04 |
 | MODEL-001 | NewCard/NewClip separate structs for inserts | Insert structs include only user-provided fields; read models include all fields | 04-01 |
 | SERVICE-001 | Actor isolation for CardService | Thread safety with async CRUD operations, consistent with StorageService | 04-01 |
+| UI-005 | Callback pattern for card creation navigation | onCardCreated closure enables parent view to control navigation | 04-02 |
+| FORM-001 | Trim whitespace on validation and submission | Prevents accidental empty submissions via trailing spaces | 04-02 |
 
 ### Pending Todos
 
@@ -90,7 +92,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 04-01-PLAN.md (Data Models & Card Service)
+Stopped at: Completed 04-02-PLAN.md (Card Creation Form)
 Resume file: None
 
 ## What's Available
@@ -229,3 +231,12 @@ After 04-01 (Data Models & Card Service):
   - CardService actor with createCard, createClip, fetchCardsForHost, updateCardStatus
   - CardError enum with localized error descriptions
   - Pattern: separate insert models (New*) from read models for cleaner API
+
+After 04-02 (Card Creation Form):
+- **Card creation UI:**
+  - CreateCardViewModel with @Observable form state (title, recipientName, occasion)
+  - isFormValid and canSubmit computed properties for validation
+  - createCard(hostId:) method with CardService integration
+  - CreateCardView with TOYTextField inputs for title and recipient name
+  - TOYButton submit with loading state and disabled validation
+  - onCardCreated callback for parent navigation control
