@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation & Architecture** - Project structure, Supabase setup, theme system ✓
 - [x] **Phase 2: Recording Pipeline** - Vine-style video capture with preview and re-record ✓
 - [x] **Phase 3: Data Layer & Upload** - Storage, deep linking, video upload with progress ✓
-- [ ] **Phase 4: Host Card Creation** - Create cards, record host clip, generate invites
+- [x] **Phase 4: Host Card Creation** - Create cards, record host clip, generate invites ✓
 - [ ] **Phase 5: Host Card Management** - View participants, preview clips, manage submissions
 - [ ] **Phase 6: Video Stitching & Publishing** - Montage generation, preview, publish to recipient
 - [ ] **Phase 7: App Clip Integration** - Zero-friction participant recording without app install
@@ -95,10 +95,10 @@ Plans:
 **Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 04-01-PLAN.md — Models & CardService (Wave 1)
-- [ ] 04-02-PLAN.md — Card Creation Form (Wave 2)
-- [ ] 04-03-PLAN.md — Recording with Card Context (Wave 2)
-- [ ] 04-04-PLAN.md — Wire Flow & ShareLink (Wave 3)
+- [x] 04-01-PLAN.md — Models & CardService (Wave 1)
+- [x] 04-02-PLAN.md — Card Creation Form (Wave 2)
+- [x] 04-03-PLAN.md — Recording with Card Context (Wave 2)
+- [x] 04-04-PLAN.md — Wire Flow & ShareLink (Wave 3)
 
 ### Phase 5: Host Card Management
 **Goal**: Hosts can view all participants, preview submitted clips, and manage their card
@@ -109,11 +109,12 @@ Plans:
   2. Host can preview each submitted clip individually
   3. Host can delete unwanted clips from the card
   4. Participant list updates to reflect current submissions
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md — CardService Extensions & ParticipantRow (Wave 1)
+- [ ] 05-02-PLAN.md — CardDetailView & ClipPreviewSheet (Wave 2)
+- [ ] 05-03-PLAN.md — Wire Navigation & Human Verify (Wave 3)
 
 ### Phase 6: Video Stitching & Publishing
 **Goal**: Hosts can preview the full stitched montage and publish the final card for recipients
@@ -174,8 +175,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Foundation & Architecture | 7/7 | Complete | 2026-02-01 |
 | 2. Recording Pipeline | 6/6 | Complete | 2026-02-02 |
 | 3. Data Layer & Upload | 4/4 | Complete | 2026-02-02 |
-| 4. Host Card Creation | 0/4 | In Progress | - |
-| 5. Host Card Management | 0/TBD | Not started | - |
+| 4. Host Card Creation | 4/4 | Complete | 2026-02-02 |
+| 5. Host Card Management | 0/3 | Not started | - |
 | 6. Video Stitching & Publishing | 0/TBD | Not started | - |
 | 7. App Clip Integration | 0/TBD | Not started | - |
 | 8. Recipient Flow & Monetization | 0/TBD | Not started | - |
