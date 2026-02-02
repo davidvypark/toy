@@ -125,8 +125,13 @@ public struct RecordingView: View {
                     .frame(width: 70)
             }
 
-            // Record button (center)
-            recordButton
+            // Record button (center) - hide when max duration reached
+            if viewModel.recorder.progress < 1.0 {
+                recordButton
+            } else {
+                Spacer()
+                    .frame(width: 80)
+            }
 
             // Done button (right)
             if viewModel.canFinish {
