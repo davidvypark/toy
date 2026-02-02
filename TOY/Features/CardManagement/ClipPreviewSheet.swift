@@ -92,8 +92,7 @@ struct ClipPreviewSheet: View {
             .fill(Color.toySurface)
             .aspectRatio(9/16, contentMode: .fit)
             .overlay {
-                ProgressView()
-                    .scaleEffect(1.5)
+                SkeletonLoadingView()
             }
     }
 
@@ -171,6 +170,66 @@ struct ClipPreviewSheet: View {
         await onDelete()
         isDeleting = false
         dismiss()
+    }
+}
+
+// MARK: - Skeleton Loading View
+
+/// A skeleton loading view with animated shimmer effect
+private struct SkeletonLoadingView: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        GeometryReader { geometry in
+            VStack(spacing: 16) {
+                // Simulated video frame skeleton
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.toyTextSecondary.opacity(0.15))
+                    .frame(width: geometry.size.width * 0.6, height: geometry.size.width * 0.4)
+
+                // Play button skeleton
+                Circle()
+                    .fill(Color.toyTextSecondary.opacity(0.15))
+                    .frame(width: 60, height: 60)
+                    .overlay {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.toyTextSecondary.opacity(0.3))
+                    }
+
+                // Text skeleton lines
+                VStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.toyTextSecondary.opacity(0.15))
+                        .frame(width: geometry.size.width * 0.5, height: 12)
+
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.toyTextSecondary.opacity(0.15))
+                        .frame(width: geometry.size.width * 0.3, height: 12)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay {
+                // Shimmer effect
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        .clear,
+                        .white.opacity(0.2),
+                        .clear
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: geometry.size.width * 0.4)
+                .offset(x: isAnimating ? geometry.size.width : -geometry.size.width)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                isAnimating = true
+            }
+        }
     }
 }
 

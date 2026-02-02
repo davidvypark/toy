@@ -20,14 +20,20 @@ struct HomeView: View {
     @State private var completedCard: Card? = nil
 
     // Card list state
-    @State private var cards: [Card] = []
+    @State private var hostedCards: [Card] = []
+    @State private var participatingCards: [Card] = []
     @State private var isLoadingCards = false
 
     private let cardService = CardService()
 
+    /// Whether there are any cards to display
+    private var hasCards: Bool {
+        !hostedCards.isEmpty || !participatingCards.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
+            VStack(spacing: 0) {
                 // Welcome Header
                 VStack(spacing: 8) {
                     TOYLabel.largeTitle("Thinking Of You")
@@ -36,12 +42,13 @@ struct HomeView: View {
                     }
                 }
                 .padding(.top, 40)
+                .padding(.bottom, 24)
 
-                if isLoadingCards && cards.isEmpty {
+                if isLoadingCards && !hasCards {
                     Spacer()
                     ProgressView("Loading cards...")
                     Spacer()
-                } else if cards.isEmpty {
+                } else if !hasCards {
                     // Empty state - Create Your First Card
                     Spacer()
 
@@ -63,18 +70,26 @@ struct HomeView: View {
 
                     Spacer()
                 } else {
-                    // Card list
+                    // Horizontal scrolling card sections
                     ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(cards) { card in
-                                NavigationLink(value: card) {
-                                    CardRowView(card: card)
-                                }
-                                .buttonStyle(.plain)
+                        VStack(alignment: .leading, spacing: 24) {
+                            // My Cards section (hosted)
+                            if !hostedCards.isEmpty {
+                                CardSectionView(
+                                    title: "My Cards",
+                                    cards: hostedCards
+                                )
+                            }
+
+                            // Participating section
+                            if !participatingCards.isEmpty {
+                                CardSectionView(
+                                    title: "Participating",
+                                    cards: participatingCards
+                                )
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
+                        .padding(.vertical, 16)
                     }
 
                     // Create Card button at bottom
@@ -91,7 +106,6 @@ struct HomeView: View {
                 }
                 .padding(.bottom, 20)
             }
-            .padding(.horizontal, 24)
             .background(Color.toyBackground)
             .navigationDestination(for: Card.self) { card in
                 CardDetailView(card: card)
@@ -171,7 +185,12 @@ struct HomeView: View {
         defer { isLoadingCards = false }
 
         do {
-            cards = try await cardService.fetchCardsForHost(hostId: user.id)
+            // Fetch cards where user is host
+            hostedCards = try await cardService.fetchCardsForHost(hostId: user.id)
+
+            // TODO: Fetch cards where user is participant (future feature)
+            // For now, participatingCards remains empty
+            participatingCards = []
         } catch {
             #if DEBUG
             print("Failed to load cards: \(error.localizedDescription)")
@@ -180,46 +199,71 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Card Row View
+// MARK: - Card Section View
 
-private struct CardRowView: View {
+/// A horizontally scrolling section of cards
+private struct CardSectionView: View {
+    let title: String
+    let cards: [Card]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Section header
+            TOYLabel(title, style: .headline)
+                .padding(.horizontal, 24)
+
+            // Horizontal scroll
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 16) {
+                    ForEach(cards) { card in
+                        NavigationLink(value: card) {
+                            CardTileView(card: card)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 24)
+            }
+        }
+    }
+}
+
+// MARK: - Card Tile View
+
+/// A card tile for horizontal scrolling display
+private struct CardTileView: View {
     let card: Card
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Card icon
-            RoundedRectangle(cornerRadius: 8)
+        VStack(alignment: .leading, spacing: 8) {
+            // Card visual
+            RoundedRectangle(cornerRadius: 12)
                 .fill(Color.toySurface)
-                .frame(width: 50, height: 50)
+                .frame(width: 140, height: 100)
                 .overlay {
-                    Image(systemName: "video.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.toyPrimary)
+                    VStack(spacing: 8) {
+                        Image(systemName: "video.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.toyPrimary)
+
+                        StatusBadge(status: card.status)
+                    }
                 }
 
             // Card info
-            VStack(alignment: .leading, spacing: 4) {
-                TOYLabel(card.title, style: .headline)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(card.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.toyText)
+                    .lineLimit(1)
 
-                HStack(spacing: 4) {
-                    TOYLabel("For: ", style: .caption, color: .toyTextSecondary)
-                    TOYLabel(card.recipientName, style: .caption)
-                }
+                Text("For \(card.recipientName)")
+                    .font(.caption)
+                    .foregroundColor(.toyTextSecondary)
+                    .lineLimit(1)
             }
-
-            Spacer()
-
-            // Status badge
-            StatusBadge(status: card.status)
-
-            // Chevron
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.toyTextSecondary)
+            .frame(width: 140, alignment: .leading)
         }
-        .padding(12)
-        .background(Color.toySurface)
-        .cornerRadius(12)
     }
 }
 
