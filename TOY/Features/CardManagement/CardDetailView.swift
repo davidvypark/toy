@@ -10,6 +10,7 @@ struct CardDetailView: View {
     @State private var viewModel = CardDetailViewModel()
     @State private var selectedClip: Clip?
     @State private var showError = false
+    @State private var showMontagePreview = false
 
     // MARK: - Computed Properties
 
@@ -20,12 +21,14 @@ struct CardDetailView: View {
         // Host is always first - identify by participantId matching hostId
         let hostClip = viewModel.clips.first { $0.participantId == card.hostId }
         let hostDuration = hostClip.flatMap { viewModel.effectiveDuration(for: $0) }
+        let hostCachedURL = hostClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
         contributors.append(ContributorRow(
             id: card.hostId,
             name: "You (Host)",
             clip: hostClip,
             isHost: true,
-            effectiveDuration: hostDuration
+            effectiveDuration: hostDuration,
+            cachedURL: hostCachedURL
         ))
 
         // Add participants with their clips (exclude host from participants list)
@@ -35,13 +38,15 @@ struct CardDetailView: View {
 
             let participantClip = viewModel.clips.first { $0.participantId == participant.id }
             let participantDuration = participantClip.flatMap { viewModel.effectiveDuration(for: $0) }
+            let participantCachedURL = participantClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
             contributors.append(ContributorRow(
                 id: participant.id,
                 name: participant.email ?? "Invited Guest",
                 clip: participantClip,
                 isHost: false,
                 participant: participant,
-                effectiveDuration: participantDuration
+                effectiveDuration: participantDuration,
+                cachedURL: participantCachedURL
             ))
         }
 
@@ -142,8 +147,8 @@ struct CardDetailView: View {
 
             // Contributors section (participants + clips combined)
             Section {
-                if allContributors.isEmpty && viewModel.isLoading {
-                    // Skeleton loading placeholders for contributors
+                if viewModel.isLoading {
+                    // Skeleton loading placeholders until data AND cached URLs are ready
                     ForEach(0..<3, id: \.self) { _ in
                         ContributorSkeletonRow()
                     }
@@ -160,6 +165,37 @@ struct CardDetailView: View {
             } header: {
                 TOYLabel("Contributors", style: .caption)
             }
+
+            // Preview Montage section - only show when clips exist
+            if !viewModel.clips.isEmpty {
+                Section {
+                    Button {
+                        showMontagePreview = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "film.stack")
+                                .foregroundColor(.toyPrimary)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                TOYLabel("Preview Montage", style: .body)
+                                TOYLabel(
+                                    "\(viewModel.clips.count) clips - \(formattedDuration) total",
+                                    style: .caption,
+                                    color: .toyTextSecondary
+                                )
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.toyTextSecondary)
+                                .font(.system(size: 14))
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+                } header: {
+                    TOYLabel("Publish", style: .caption)
+                }
+            }
         }
         .listStyle(.insetGrouped)
         .navigationTitle(card.title)
@@ -171,8 +207,25 @@ struct CardDetailView: View {
             await viewModel.loadData(for: card.id)
         }
         .sheet(item: $selectedClip) { clip in
-            ClipPreviewSheet(clip: clip) {
+            ClipPreviewSheet(
+                clip: clip,
+                cachedURL: viewModel.cachedSignedURLs[clip.id]
+            ) {
                 await viewModel.deleteClip(clip)
+            }
+        }
+        .fullScreenCover(isPresented: $showMontagePreview) {
+            NavigationStack {
+                MontagePreviewView(
+                    card: card,
+                    clips: viewModel.clips
+                ) {
+                    // On published: dismiss and potentially refresh
+                    showMontagePreview = false
+                    Task {
+                        await viewModel.loadData(for: card.id)
+                    }
+                }
             }
         }
         .onChange(of: viewModel.errorMessage) { _, newValue in
@@ -200,6 +253,7 @@ private struct ContributorRow: Identifiable {
     let isHost: Bool
     var participant: Participant?
     var effectiveDuration: Double?
+    var cachedURL: URL?
 }
 
 // MARK: - Contributor Clip Row
@@ -244,7 +298,7 @@ private struct ContributorClipRow: View {
 
                 // Clip thumbnail or empty state
                 if let clip = contributor.clip {
-                    ClipThumbnailView(clip: clip, effectiveDuration: contributor.effectiveDuration)
+                    ClipThumbnailView(clip: clip, effectiveDuration: contributor.effectiveDuration, cachedURL: contributor.cachedURL)
                 } else {
                     // Empty thumbnail placeholder
                     RoundedRectangle(cornerRadius: 8)
@@ -346,11 +400,18 @@ private struct ContributorSkeletonRow: View {
 private struct ClipThumbnailView: View {
     let clip: Clip
     let effectiveDuration: Double?
+    let cachedURL: URL?
 
     @State private var thumbnail: UIImage?
     @State private var isLoading = true
 
     private let storageService = StorageService()
+
+    init(clip: Clip, effectiveDuration: Double?, cachedURL: URL? = nil) {
+        self.clip = clip
+        self.effectiveDuration = effectiveDuration
+        self.cachedURL = cachedURL
+    }
 
     var body: some View {
         ZStack {
@@ -415,8 +476,19 @@ private struct ClipThumbnailView: View {
         defer { isLoading = false }
 
         do {
-            // Get signed URL for the video
-            let signedURL = try await storageService.createSignedURL(path: clip.videoUrl)
+            // Use cached URL if available, otherwise fetch
+            let signedURL: URL
+            if let cachedURL {
+                #if DEBUG
+                print("🖼️ Thumbnail using CACHED URL for \(clip.id)")
+                #endif
+                signedURL = cachedURL
+            } else {
+                #if DEBUG
+                print("⚠️ Thumbnail FETCHING URL for \(clip.id) (cache miss)")
+                #endif
+                signedURL = try await storageService.createSignedURL(path: clip.videoUrl)
+            }
 
             // Generate thumbnail from video
             let asset = AVAsset(url: signedURL)
