@@ -40,9 +40,9 @@ public final class ClipWriter {
         videoInput?.expectsMediaDataInRealTime = true
 
         // Front camera transform for portrait display:
-        // Rotate 90° counterclockwise and flip both axes to get correct orientation + mirror
+        // Rotate 90° counterclockwise and flip vertically for proper orientation
         videoInput?.transform = CGAffineTransform(rotationAngle: .pi / 2)
-            .scaledBy(x: -1, y: -1)
+            .scaledBy(x: 1, y: -1)
 
         // Audio settings for AAC
         let audioSettings: [String: Any] = [
