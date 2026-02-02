@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Card
 
 /// Represents a group video greeting card created by a host.
-public struct Card: Codable, Identifiable, Sendable, Equatable {
+public struct Card: Codable, Identifiable, Sendable, Equatable, Hashable {
     public let id: UUID
     public let hostId: UUID
     public let title: String
