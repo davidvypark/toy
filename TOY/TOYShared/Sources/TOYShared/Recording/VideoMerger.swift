@@ -113,10 +113,14 @@ public final class VideoMerger {
             throw RecordingError.noClipsToMerge
         }
 
-        // Single clip - no merge needed, just return it
+        // Single clip - copy to output location (don't return original as it may be deleted)
         if clipURLs.count == 1 {
+            let outputURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("mov")
+            try FileManager.default.copyItem(at: clipURLs[0], to: outputURL)
             await MainActor.run { onProgress(1.0) }
-            return clipURLs[0]
+            return outputURL
         }
 
         let composition = AVMutableComposition()

@@ -34,6 +34,27 @@ struct TOYClipApp: App {
                 }
             }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb, perform: handleActivity)
+            .onOpenURL { url in
+                // Fallback for simulator testing with _XCAppClipURL
+                #if DEBUG
+                print("[AppClip] onOpenURL received: \(url)")
+                #endif
+                processURL(url)
+            }
+            .task {
+                // Check for _XCAppClipURL environment variable in simulator
+                #if DEBUG
+                if let envURL = ProcessInfo.processInfo.environment["_XCAppClipURL"],
+                   let url = URL(string: envURL) {
+                    print("[AppClip] Using _XCAppClipURL: \(envURL)")
+                    // Small delay to let view settle
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    await MainActor.run {
+                        processURL(url)
+                    }
+                }
+                #endif
+            }
         }
     }
 
@@ -44,7 +65,16 @@ struct TOYClipApp: App {
         }
 
         #if DEBUG
-        print("[AppClip] Received URL: \(url)")
+        print("[AppClip] Received activity URL: \(url)")
+        #endif
+
+        processURL(url)
+    }
+
+    private func processURL(_ url: URL) {
+        #if DEBUG
+        print("[AppClip] Processing URL: \(url)")
+        print("[AppClip] Path components: \(url.pathComponents)")
         #endif
 
         let destination = DeepLinkService.parse(url)
@@ -52,8 +82,14 @@ struct TOYClipApp: App {
         case .card(let token):
             shareToken = token
             loadState = .ready
+            #if DEBUG
+            print("[AppClip] Parsed token: \(token)")
+            #endif
         case .unknown:
             loadState = .invalidLink
+            #if DEBUG
+            print("[AppClip] URL parsing returned .unknown")
+            #endif
         }
     }
 }

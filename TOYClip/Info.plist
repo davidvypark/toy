@@ -9,5 +9,9 @@
 		<key>NSAppClipRequestLocationConfirmation</key>
 		<false/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>TOY needs camera access to record your video message.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>TOY needs microphone access to record audio with your video message.</string>
 </dict>
 </plist>

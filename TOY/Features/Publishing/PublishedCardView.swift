@@ -13,7 +13,7 @@ struct PublishedCardView: View {
     private var recipientURL: URL? {
         guard let token = card.shareToken else { return nil }
         // Recipient link (different from invite link pattern)
-        return URL(string: "https://toy.app/watch/\(token)")
+        return URL(string: "https://sendtoycard.com/watch/\(token)")
     }
 
     var body: some View {

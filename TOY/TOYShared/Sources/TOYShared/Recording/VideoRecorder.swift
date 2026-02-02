@@ -54,6 +54,7 @@ public final class VideoRecorder: ObservableObject {
 
     /// Start recording (finger down)
     public func startRecording() {
+        guard isSessionReady else { return } // Can't record without capture session
         guard state.canStartRecording else { return }
         guard !isFinishingClip else { return } // Wait for previous clip to finish
         guard accumulatedDuration < maxDuration else { return }

@@ -7,7 +7,30 @@
 		<key>TOY.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
+			<integer>1</integer>
+		</dict>
+		<key>TOYClip.xcscheme_^#shared#^_</key>
+		<dict>
+			<key>orderHint</key>
 			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>FFB0801C2F30CC1100C5E3B5</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>FFB0802D2F30CC1200C5E3B5</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>FFB080372F30CC1200C5E3B5</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

@@ -77,10 +77,9 @@ struct CardCreatedView: View {
     // MARK: - Helpers
 
     /// Generates the invite URL for participants to join the card.
-    /// Uses the placeholder domain per LINK-001 decision.
     private func inviteURL(for card: Card) -> URL? {
         guard let token = card.shareToken else { return nil }
-        return URL(string: "https://toy.app/card/\(token)")
+        return URL(string: "https://sendtoycard.com/card/\(token)")
     }
 }
 

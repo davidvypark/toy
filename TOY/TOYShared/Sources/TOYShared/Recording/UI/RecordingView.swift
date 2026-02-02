@@ -189,10 +189,12 @@ public struct RecordingView: View {
     // MARK: - Record Button
 
     private var recordButton: some View {
-        ZStack {
+        let isReady = viewModel.recorder.isSessionReady
+
+        return ZStack {
             // Progress ring
             Circle()
-                .stroke(Color.white.opacity(0.3), lineWidth: 6)
+                .stroke(Color.white.opacity(isReady ? 0.3 : 0.1), lineWidth: 6)
                 .frame(width: 80, height: 80)
 
             Circle()
@@ -202,17 +204,28 @@ public struct RecordingView: View {
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 0.1), value: viewModel.recorder.progress)
 
-            // Inner button
-            Circle()
-                .fill(viewModel.recorder.state.isRecording ? Color.red : Color.white)
-                .frame(width: 60, height: 60)
-                .scaleEffect(viewModel.recorder.state.isRecording ? 0.8 : 1.0)
-                .animation(.easeInOut(duration: 0.15), value: viewModel.recorder.state.isRecording)
+            // Inner button - show loading state when session not ready
+            if isReady {
+                Circle()
+                    .fill(viewModel.recorder.state.isRecording ? Color.red : Color.white)
+                    .frame(width: 60, height: 60)
+                    .scaleEffect(viewModel.recorder.state.isRecording ? 0.8 : 1.0)
+                    .animation(.easeInOut(duration: 0.15), value: viewModel.recorder.state.isRecording)
+            } else {
+                Circle()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(width: 60, height: 60)
+                    .overlay {
+                        ProgressView()
+                            .tint(.white)
+                    }
+            }
         }
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
-                    if !viewModel.recorder.state.isRecording && viewModel.recorder.state.canStartRecording {
+                    // Only allow recording when session is ready
+                    if isReady && !viewModel.recorder.state.isRecording && viewModel.recorder.state.canStartRecording {
                         viewModel.startRecording()
                     }
                 }

@@ -95,8 +95,13 @@ public final class ClipWriter {
             throw RecordingError.writerNotReady
         }
 
-        videoInput?.markAsFinished()
-        audioInput?.markAsFinished()
+        // Only mark as finished if the writer was actually started
+        // (status is .writing). If still .unknown, no samples were written
+        // and calling markAsFinished would crash.
+        if writer.status == .writing {
+            videoInput?.markAsFinished()
+            audioInput?.markAsFinished()
+        }
 
         await writer.finishWriting()
 

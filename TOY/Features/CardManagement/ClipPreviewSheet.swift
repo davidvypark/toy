@@ -6,6 +6,7 @@ import TOYShared
 /// Displays looping video playback with delete confirmation.
 struct ClipPreviewSheet: View {
     let clip: Clip
+    let cachedURL: URL?  // Pre-cached URL from ViewModel
     let onDelete: () async -> Void
 
     @State private var signedURL: URL?
@@ -21,22 +22,35 @@ struct ClipPreviewSheet: View {
 
     private let storageService = StorageService()
 
+    init(clip: Clip, cachedURL: URL? = nil, onDelete: @escaping () async -> Void) {
+        self.clip = clip
+        self.cachedURL = cachedURL
+        self.onDelete = onDelete
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
                 // Video player area
                 ZStack {
-                    // Show skeleton until player is ready to play
+                    // Player layer - always present when player exists, hidden behind skeleton
+                    if let player {
+                        ClipVideoPlayer(player: player) {
+                            // Called when layer has actual frames to display
+                            isPlayerReady = true
+                        }
+                        .aspectRatio(9/16, contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .opacity(isPlayerReady ? 1 : 0)  // Hidden until ready
+                    }
+
+                    // Show skeleton until layer is ready to display
                     if isLoading || !isPlayerReady {
                         loadingView
                     }
 
                     if let error = loadError {
                         errorView(error)
-                    } else if let player, isPlayerReady {
-                        ClipVideoPlayer(player: player)
-                            .aspectRatio(9/16, contentMode: .fit)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -126,21 +140,48 @@ struct ClipPreviewSheet: View {
         isLoading = true
         loadError = nil
 
+        #if DEBUG
+        let startTime = CFAbsoluteTimeGetCurrent()
+        print("⏱️ [TIMING] Starting video load for clip: \(clip.id)")
+        #endif
+
         do {
+            let url: URL
+
+            // Use cached URL if available, otherwise fetch
+            if let cachedURL {
+                #if DEBUG
+                print("🔗 [TIMING] Using cached signed URL (0ms)")
+                #endif
+                url = cachedURL
+            } else {
+                #if DEBUG
+                let urlStartTime = CFAbsoluteTimeGetCurrent()
+                #endif
+                url = try await storageService.createSignedURL(path: clip.videoUrl)
+                #if DEBUG
+                let urlEndTime = CFAbsoluteTimeGetCurrent()
+                print("⏳ [TIMING] Signed URL fetch took: \(Int((urlEndTime - urlStartTime) * 1000))ms")
+                #endif
+            }
+
+            signedURL = url
+
             #if DEBUG
-            print("Loading signed URL for clip: \(clip.id)")
+            let playerStartTime = CFAbsoluteTimeGetCurrent()
+            print("🎬 [TIMING] Starting AVPlayer setup...")
             #endif
 
-            let url = try await storageService.createSignedURL(path: clip.videoUrl)
-            signedURL = url
             setupPlayer(with: url)
 
             #if DEBUG
-            print("Signed URL loaded successfully")
+            let playerEndTime = CFAbsoluteTimeGetCurrent()
+            print("✅ [TIMING] Player setup took: \(Int((playerEndTime - playerStartTime) * 1000))ms")
+            print("⏱️ [TIMING] Total so far: \(Int((playerEndTime - startTime) * 1000))ms (waiting for readyToPlay...)")
             #endif
         } catch {
             #if DEBUG
-            print("Failed to load signed URL: \(error)")
+            print("❌ Failed to load signed URL: \(error)")
             #endif
             loadError = error.localizedDescription
         }
@@ -151,19 +192,29 @@ struct ClipPreviewSheet: View {
     private func setupPlayer(with url: URL) {
         let newPlayer = AVPlayer(url: url)
 
-        // Observe player item status to know when video is ready
+        // Don't wait for full buffer - start playing as soon as possible
+        newPlayer.automaticallyWaitsToMinimizeStalling = false
+
+        #if DEBUG
+        let playerCreatedTime = CFAbsoluteTimeGetCurrent()
+        #endif
+
+        // Start playback immediately - don't wait for readyToPlay
+        newPlayer.play()
+
+        // Observe for when we have enough data to display
         playerStatusObserver = newPlayer.currentItem?.observe(\.status, options: [.new]) { [weak newPlayer] item, _ in
             DispatchQueue.main.async {
                 switch item.status {
                 case .readyToPlay:
                     #if DEBUG
-                    print("Player ready to play")
+                    let readyTime = CFAbsoluteTimeGetCurrent()
+                    print("▶️ [TIMING] Player status READY - took \(Int((readyTime - playerCreatedTime) * 1000))ms")
                     #endif
-                    isPlayerReady = true
-                    newPlayer?.play()
+                    // Player is ready, but wait for actual frames - handled by layer observer
                 case .failed:
                     #if DEBUG
-                    print("Player failed: \(item.error?.localizedDescription ?? "unknown")")
+                    print("❌ Player failed: \(item.error?.localizedDescription ?? "unknown")")
                     #endif
                     loadError = item.error?.localizedDescription ?? "Failed to load video"
                 case .unknown:
@@ -267,12 +318,15 @@ private struct SkeletonLoadingView: View {
 // MARK: - Clip Video Player
 
 /// A simple looping video player for clip preview.
+/// Reports when the layer is ready to display via onReadyToDisplay callback.
 private struct ClipVideoPlayer: UIViewRepresentable {
     let player: AVPlayer
+    let onReadyToDisplay: () -> Void
 
     func makeUIView(context: Context) -> ClipPlayerUIView {
         let view = ClipPlayerUIView()
         view.player = player
+        view.onReadyToDisplay = onReadyToDisplay
         return view
     }
 
@@ -282,7 +336,15 @@ private struct ClipVideoPlayer: UIViewRepresentable {
 }
 
 /// UIView subclass using AVPlayerLayer for video rendering.
+/// Observes readyForDisplay to know when actual frames are available.
 private class ClipPlayerUIView: UIView {
+    private var layerObserver: NSKeyValueObservation?
+    var onReadyToDisplay: (() -> Void)?
+
+    #if DEBUG
+    private var createdTime = CFAbsoluteTimeGetCurrent()
+    #endif
+
     override class var layerClass: AnyClass {
         AVPlayerLayer.self
     }
@@ -296,7 +358,35 @@ private class ClipPlayerUIView: UIView {
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
+
+            // Observe when layer actually has frames to display
+            layerObserver?.invalidate()
+            layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in
+                if layer.isReadyForDisplay {
+                    DispatchQueue.main.async {
+                        #if DEBUG
+                        if let self = self {
+                            let readyTime = CFAbsoluteTimeGetCurrent()
+                            print("🖼️ [TIMING] Layer READY FOR DISPLAY - took \(Int((readyTime - self.createdTime) * 1000))ms from view creation")
+                        }
+                        #endif
+                        self?.onReadyToDisplay?()
+                    }
+                }
+            }
+
+            // Check if already ready (in case we missed it)
+            if playerLayer.isReadyForDisplay {
+                #if DEBUG
+                print("🖼️ [TIMING] Layer already ready for display")
+                #endif
+                onReadyToDisplay?()
+            }
         }
+    }
+
+    deinit {
+        layerObserver?.invalidate()
     }
 }
 

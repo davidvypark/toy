@@ -1,4 +1,3 @@
-import AVFoundation
 import Foundation
 import SwiftUI
 import TOYShared
@@ -16,9 +15,9 @@ final class CardDetailViewModel {
     var isLoading = false
     var errorMessage: String?
 
-    /// Loaded durations for clips where durationSeconds is nil in DB
-    /// Key is clip ID, value is duration in seconds
-    var loadedDurations: [UUID: Double] = [:]
+    /// Cached signed URLs for clips (valid for 1 hour)
+    /// Key is clip ID, value is signed URL
+    var cachedSignedURLs: [UUID: URL] = [:]
 
     // MARK: - Dependencies
 
@@ -52,8 +51,11 @@ final class CardDetailViewModel {
             }
             #endif
 
-            // Load durations for clips that don't have them in the database
-            await loadMissingDurations()
+            // Pre-fetch signed URLs for all clips (for faster thumbnail + preview loading)
+            await prefetchSignedURLs()
+
+            // NOTE: We no longer load missing durations from video assets.
+            // If duration is null in DB, we just display "—" instead of re-downloading the video.
         } catch {
             #if DEBUG
             print("Failed to load card data: \(error)")
@@ -91,73 +93,78 @@ final class CardDetailViewModel {
     }
 
     /// Gets a signed URL for accessing a clip's video.
+    /// Uses cached URL if available, otherwise fetches and caches.
     /// - Parameter clip: The clip to get a URL for
     /// - Returns: A time-limited signed URL
     /// - Throws: UploadError if URL generation fails
     func getSignedURL(for clip: Clip) async throws -> URL {
-        return try await storageService.createSignedURL(path: clip.videoUrl)
+        // Return cached URL if available
+        if let cached = cachedSignedURLs[clip.id] {
+            #if DEBUG
+            print("🔗 Using cached signed URL for clip \(clip.id)")
+            #endif
+            return cached
+        }
+
+        // Fetch and cache
+        let url = try await storageService.createSignedURL(path: clip.videoUrl)
+        cachedSignedURLs[clip.id] = url
+        return url
     }
 
-    /// Gets the effective duration for a clip, using loaded duration if DB value is nil.
+    /// Gets the duration for a clip from the database.
     /// - Parameter clip: The clip to get duration for
-    /// - Returns: Duration in seconds, or nil if not available
+    /// - Returns: Duration in seconds, or nil if not stored in DB
     func effectiveDuration(for clip: Clip) -> Double? {
-        if let dbDuration = clip.durationSeconds {
-            return NSDecimalNumber(decimal: dbDuration).doubleValue
+        guard let dbDuration = clip.durationSeconds else {
+            return nil  // Don't try to load - just show "—" in UI
         }
-        return loadedDurations[clip.id]
+        return NSDecimalNumber(decimal: dbDuration).doubleValue
     }
 
     // MARK: - Private Methods
 
-    /// Loads durations from video assets for clips that don't have duration in the database.
-    private func loadMissingDurations() async {
-        let clipsNeedingDuration = clips.filter { $0.durationSeconds == nil }
+    /// Pre-fetches signed URLs for all clips concurrently.
+    /// This speeds up thumbnail loading and preview opening.
+    private func prefetchSignedURLs() async {
+        // Only fetch URLs we don't already have cached
+        let clipsNeedingURLs = clips.filter { cachedSignedURLs[$0.id] == nil }
 
-        guard !clipsNeedingDuration.isEmpty else {
+        guard !clipsNeedingURLs.isEmpty else {
             #if DEBUG
-            print("[DURATION] All clips have duration in database")
+            print("[URL CACHE] All clips already have cached URLs")
             #endif
             return
         }
 
         #if DEBUG
-        print("[DURATION] Loading duration for \(clipsNeedingDuration.count) clips")
+        print("[URL CACHE] Pre-fetching URLs for \(clipsNeedingURLs.count) clips")
         #endif
 
-        // Load durations concurrently
-        await withTaskGroup(of: (UUID, Double?).self) { group in
-            for clip in clipsNeedingDuration {
+        await withTaskGroup(of: (UUID, URL?).self) { group in
+            for clip in clipsNeedingURLs {
                 group.addTask {
                     do {
-                        let signedURL = try await self.storageService.createSignedURL(path: clip.videoUrl)
-                        let asset = AVAsset(url: signedURL)
-                        let duration = try await asset.load(.duration)
-                        let seconds = CMTimeGetSeconds(duration)
-
-                        #if DEBUG
-                        print("[DURATION] Loaded duration for clip \(clip.id): \(seconds)s")
-                        #endif
-
-                        return (clip.id, seconds.isNaN ? nil : seconds)
+                        let url = try await self.storageService.createSignedURL(path: clip.videoUrl)
+                        return (clip.id, url)
                     } catch {
                         #if DEBUG
-                        print("[DURATION] Failed to load duration for clip \(clip.id): \(error)")
+                        print("[URL CACHE] Failed to fetch URL for clip \(clip.id): \(error)")
                         #endif
                         return (clip.id, nil)
                     }
                 }
             }
 
-            for await (clipId, duration) in group {
-                if let duration {
-                    loadedDurations[clipId] = duration
+            for await (clipId, url) in group {
+                if let url {
+                    cachedSignedURLs[clipId] = url
                 }
             }
         }
 
         #if DEBUG
-        print("[DURATION] Loaded \(loadedDurations.count) durations from video assets")
+        print("[URL CACHE] Cached \(cachedSignedURLs.count) signed URLs")
         #endif
     }
 }
