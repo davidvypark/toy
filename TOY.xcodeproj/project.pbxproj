@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		FFAABBCC112233440000002 /* TOYShared in Frameworks */ = {isa = PBXBuildFile; productRef = FFAABBCC112233440000003 /* TOYShared */; };
+		FFB080422F30CC1200C5E3B5 /* TOYClip.app in Embed App Clips */ = {isa = PBXBuildFile; fileRef = FFB0801D2F30CC1100C5E3B5 /* TOYClip.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FFB080502F30CC6400C5E3B5 /* TOYShared in Frameworks */ = {isa = PBXBuildFile; productRef = FFB0804F2F30CC6400C5E3B5 /* TOYShared */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,13 +27,51 @@
 			remoteGlobalIDString = FF67B6F62F2F6236007DAF2C;
 			remoteInfo = TOY;
 		};
+		FFB0802F2F30CC1200C5E3B5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FF67B6EF2F2F6236007DAF2C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FFB0801C2F30CC1100C5E3B5;
+			remoteInfo = TOYClip;
+		};
+		FFB080392F30CC1200C5E3B5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FF67B6EF2F2F6236007DAF2C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FFB0801C2F30CC1100C5E3B5;
+			remoteInfo = TOYClip;
+		};
+		FFB080402F30CC1200C5E3B5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FF67B6EF2F2F6236007DAF2C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FFB0801C2F30CC1100C5E3B5;
+			remoteInfo = TOYClip;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		FFB080472F30CC1200C5E3B5 /* Embed App Clips */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/AppClips";
+			dstSubfolderSpec = 16;
+			files = (
+				FFB080422F30CC1200C5E3B5 /* TOYClip.app in Embed App Clips */,
+			);
+			name = "Embed App Clips";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		FF67B6F72F2F6236007DAF2C /* TOY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TOY.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B7072F2F6238007DAF2C /* TOYTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B7112F2F6238007DAF2C /* TOYUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF67B8002F2F7000007DAF2C /* TOY/Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = TOY/Debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		FFB0801D2F30CC1100C5E3B5 /* TOYClip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TOYClip.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FFB0802E2F30CC1200C5E3B5 /* TOYClipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYClipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FFB080382F30CC1200C5E3B5 /* TOYClipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOYClipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -41,6 +81,13 @@
 				Info.plist,
 			);
 			target = FF67B6F62F2F6236007DAF2C /* TOY */;
+		};
+		FFB080462F30CC1200C5E3B5 /* Exceptions for "TOYClip" folder in "TOYClip" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = FFB0801C2F30CC1100C5E3B5 /* TOYClip */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -61,6 +108,24 @@
 		FF67B7142F2F6238007DAF2C /* TOYUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TOYUITests;
+			sourceTree = "<group>";
+		};
+		FFB0801E2F30CC1100C5E3B5 /* TOYClip */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FFB080462F30CC1200C5E3B5 /* Exceptions for "TOYClip" folder in "TOYClip" target */,
+			);
+			path = TOYClip;
+			sourceTree = "<group>";
+		};
+		FFB080312F30CC1200C5E3B5 /* TOYClipTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TOYClipTests;
+			sourceTree = "<group>";
+		};
+		FFB0803B2F30CC1200C5E3B5 /* TOYClipUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TOYClipUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -88,6 +153,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FFB0801A2F30CC1100C5E3B5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FFB080502F30CC6400C5E3B5 /* TOYShared in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFB0802B2F30CC1200C5E3B5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFB080352F30CC1200C5E3B5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -97,8 +184,12 @@
 				FF67B6F92F2F6236007DAF2C /* TOY */,
 				FF67B70A2F2F6238007DAF2C /* TOYTests */,
 				FF67B7142F2F6238007DAF2C /* TOYUITests */,
+				FFB0801E2F30CC1100C5E3B5 /* TOYClip */,
+				FFB080312F30CC1200C5E3B5 /* TOYClipTests */,
+				FFB0803B2F30CC1200C5E3B5 /* TOYClipUITests */,
 				FF67B6F82F2F6236007DAF2C /* Products */,
 				FF67B8512F2FA521007DAF2C /* Recovered References */,
+				FFB0804E2F30CC6400C5E3B5 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -108,6 +199,9 @@
 				FF67B6F72F2F6236007DAF2C /* TOY.app */,
 				FF67B7072F2F6238007DAF2C /* TOYTests.xctest */,
 				FF67B7112F2F6238007DAF2C /* TOYUITests.xctest */,
+				FFB0801D2F30CC1100C5E3B5 /* TOYClip.app */,
+				FFB0802E2F30CC1200C5E3B5 /* TOYClipTests.xctest */,
+				FFB080382F30CC1200C5E3B5 /* TOYClipUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -120,6 +214,13 @@
 			name = "Recovered References";
 			sourceTree = "<group>";
 		};
+		FFB0804E2F30CC6400C5E3B5 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -130,10 +231,12 @@
 				FF67B6F32F2F6236007DAF2C /* Sources */,
 				FF67B6F42F2F6236007DAF2C /* Frameworks */,
 				FF67B6F52F2F6236007DAF2C /* Resources */,
+				FFB080472F30CC1200C5E3B5 /* Embed App Clips */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				FFB080412F30CC1200C5E3B5 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				FF67B6F92F2F6236007DAF2C /* TOY */,
@@ -192,6 +295,75 @@
 			productReference = FF67B7112F2F6238007DAF2C /* TOYUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		FFB0801C2F30CC1100C5E3B5 /* TOYClip */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FFB080432F30CC1200C5E3B5 /* Build configuration list for PBXNativeTarget "TOYClip" */;
+			buildPhases = (
+				FFB080192F30CC1100C5E3B5 /* Sources */,
+				FFB0801A2F30CC1100C5E3B5 /* Frameworks */,
+				FFB0801B2F30CC1100C5E3B5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				FFB0801E2F30CC1100C5E3B5 /* TOYClip */,
+			);
+			name = TOYClip;
+			packageProductDependencies = (
+				FFB0804F2F30CC6400C5E3B5 /* TOYShared */,
+			);
+			productName = TOYClip;
+			productReference = FFB0801D2F30CC1100C5E3B5 /* TOYClip.app */;
+			productType = "com.apple.product-type.application.on-demand-install-capable";
+		};
+		FFB0802D2F30CC1200C5E3B5 /* TOYClipTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FFB080482F30CC1200C5E3B5 /* Build configuration list for PBXNativeTarget "TOYClipTests" */;
+			buildPhases = (
+				FFB0802A2F30CC1200C5E3B5 /* Sources */,
+				FFB0802B2F30CC1200C5E3B5 /* Frameworks */,
+				FFB0802C2F30CC1200C5E3B5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FFB080302F30CC1200C5E3B5 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FFB080312F30CC1200C5E3B5 /* TOYClipTests */,
+			);
+			name = TOYClipTests;
+			packageProductDependencies = (
+			);
+			productName = TOYClipTests;
+			productReference = FFB0802E2F30CC1200C5E3B5 /* TOYClipTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		FFB080372F30CC1200C5E3B5 /* TOYClipUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FFB0804B2F30CC1200C5E3B5 /* Build configuration list for PBXNativeTarget "TOYClipUITests" */;
+			buildPhases = (
+				FFB080342F30CC1200C5E3B5 /* Sources */,
+				FFB080352F30CC1200C5E3B5 /* Frameworks */,
+				FFB080362F30CC1200C5E3B5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FFB0803A2F30CC1200C5E3B5 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				FFB0803B2F30CC1200C5E3B5 /* TOYClipUITests */,
+			);
+			name = TOYClipUITests;
+			packageProductDependencies = (
+			);
+			productName = TOYClipUITests;
+			productReference = FFB080382F30CC1200C5E3B5 /* TOYClipUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -212,6 +384,17 @@
 					FF67B7102F2F6238007DAF2C = {
 						CreatedOnToolsVersion = 16.2;
 						TestTargetID = FF67B6F62F2F6236007DAF2C;
+					};
+					FFB0801C2F30CC1100C5E3B5 = {
+						CreatedOnToolsVersion = 16.2;
+					};
+					FFB0802D2F30CC1200C5E3B5 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = FFB0801C2F30CC1100C5E3B5;
+					};
+					FFB080372F30CC1200C5E3B5 = {
+						CreatedOnToolsVersion = 16.2;
+						TestTargetID = FFB0801C2F30CC1100C5E3B5;
 					};
 				};
 			};
@@ -235,6 +418,9 @@
 				FF67B6F62F2F6236007DAF2C /* TOY */,
 				FF67B7062F2F6238007DAF2C /* TOYTests */,
 				FF67B7102F2F6238007DAF2C /* TOYUITests */,
+				FFB0801C2F30CC1100C5E3B5 /* TOYClip */,
+				FFB0802D2F30CC1200C5E3B5 /* TOYClipTests */,
+				FFB080372F30CC1200C5E3B5 /* TOYClipUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -255,6 +441,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		FF67B70F2F2F6238007DAF2C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFB0801B2F30CC1100C5E3B5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFB0802C2F30CC1200C5E3B5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFB080362F30CC1200C5E3B5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -285,6 +492,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FFB080192F30CC1100C5E3B5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFB0802A2F30CC1200C5E3B5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FFB080342F30CC1200C5E3B5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -297,6 +525,21 @@
 			isa = PBXTargetDependency;
 			target = FF67B6F62F2F6236007DAF2C /* TOY */;
 			targetProxy = FF67B7122F2F6238007DAF2C /* PBXContainerItemProxy */;
+		};
+		FFB080302F30CC1200C5E3B5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FFB0801C2F30CC1100C5E3B5 /* TOYClip */;
+			targetProxy = FFB0802F2F30CC1200C5E3B5 /* PBXContainerItemProxy */;
+		};
+		FFB0803A2F30CC1200C5E3B5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FFB0801C2F30CC1100C5E3B5 /* TOYClip */;
+			targetProxy = FFB080392F30CC1200C5E3B5 /* PBXContainerItemProxy */;
+		};
+		FFB080412F30CC1200C5E3B5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FFB0801C2F30CC1100C5E3B5 /* TOYClip */;
+			targetProxy = FFB080402F30CC1200C5E3B5 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -555,6 +798,142 @@
 			};
 			name = Release;
 		};
+		FFB080442F30CC1200C5E3B5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TOYClip/TOYClip.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"TOYClip/Preview Content\"";
+				DEVELOPMENT_TEAM = ZH8H29HA3J;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TOYClip/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TOY;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY.Clip;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FFB080452F30CC1200C5E3B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TOYClip/TOYClip.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"TOYClip/Preview Content\"";
+				DEVELOPMENT_TEAM = ZH8H29HA3J;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TOYClip/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TOY;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY.Clip;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		FFB080492F30CC1200C5E3B5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZH8H29HA3J;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY.TOYClipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TOYClip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TOYClip";
+			};
+			name = Debug;
+		};
+		FFB0804A2F30CC1200C5E3B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZH8H29HA3J;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY.TOYClipTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TOYClip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TOYClip";
+			};
+			name = Release;
+		};
+		FFB0804C2F30CC1200C5E3B5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZH8H29HA3J;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY.TOYClipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TOYClip;
+			};
+			name = Debug;
+		};
+		FFB0804D2F30CC1200C5E3B5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZH8H29HA3J;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY.TOYClipUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TOYClip;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -594,6 +973,33 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		FFB080432F30CC1200C5E3B5 /* Build configuration list for PBXNativeTarget "TOYClip" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FFB080442F30CC1200C5E3B5 /* Debug */,
+				FFB080452F30CC1200C5E3B5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FFB080482F30CC1200C5E3B5 /* Build configuration list for PBXNativeTarget "TOYClipTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FFB080492F30CC1200C5E3B5 /* Debug */,
+				FFB0804A2F30CC1200C5E3B5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FFB0804B2F30CC1200C5E3B5 /* Build configuration list for PBXNativeTarget "TOYClipUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FFB0804C2F30CC1200C5E3B5 /* Debug */,
+				FFB0804D2F30CC1200C5E3B5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -606,6 +1012,11 @@
 /* Begin XCSwiftPackageProductDependency section */
 		FFAABBCC112233440000003 /* TOYShared */ = {
 			isa = XCSwiftPackageProductDependency;
+			productName = TOYShared;
+		};
+		FFB0804F2F30CC6400C5E3B5 /* TOYShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOY/TOYShared" */;
 			productName = TOYShared;
 		};
 /* End XCSwiftPackageProductDependency section */
