@@ -11,6 +11,7 @@ struct CardDetailView: View {
     @State private var selectedClip: Clip?
     @State private var showError = false
     @State private var showMontagePreview = false
+    @State private var showUpgradeSheet = false
 
     // MARK: - Computed Properties
 
@@ -77,7 +78,18 @@ struct CardDetailView: View {
     /// Invite URL for sharing
     private var inviteURL: URL? {
         guard let token = card.shareToken else { return nil }
-        return URL(string: "https://toy.app/card/\(token)")
+        return URL(string: "https://sendtoycard.com/card/\(token)")
+    }
+
+    /// Whether the card needs an upgrade (at or over limit and not already upgraded)
+    private var needsUpgrade: Bool {
+        // Show upgrade prompt if at or over limit and not already upgraded to unlimited (999)
+        viewModel.participants.count >= card.maxParticipants && card.maxParticipants < 999
+    }
+
+    /// Whether the card is at the free tier limit
+    private var isAtFreeLimit: Bool {
+        card.maxParticipants == 8 && viewModel.participants.count >= 8
     }
 
     // MARK: - Body
@@ -143,6 +155,39 @@ struct CardDetailView: View {
                     }
                 }
                 .padding(.vertical, 4)
+            }
+
+            // Upgrade banner - show when at or over participant limit
+            if needsUpgrade {
+                Section {
+                    Button {
+                        showUpgradeSheet = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.toyPrimary)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Card is full")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                Text("Upgrade for unlimited participants")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.toyPrimary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+                    .listRowBackground(Color.toyPrimary.opacity(0.1))
+                }
             }
 
             // Contributors section (participants + clips combined)
@@ -227,6 +272,12 @@ struct CardDetailView: View {
                     }
                 }
             }
+        }
+        .sheet(isPresented: $showUpgradeSheet) {
+            CardUpgradeView(
+                card: card,
+                currentParticipantCount: viewModel.participants.count
+            )
         }
         .onChange(of: viewModel.errorMessage) { _, newValue in
             showError = newValue != nil
