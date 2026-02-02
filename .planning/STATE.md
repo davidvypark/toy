@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 4 of 8 (Host Card Creation)
-Plan: 2 of TBD in current phase
+Plan: 3 of TBD in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 04-02-PLAN.md
+Last activity: 2026-02-02 - Completed 04-03-PLAN.md
 
-Progress: [####------] ~42% (3.2/8 phases complete)
+Progress: [####------] ~43% (3.3/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
+- Total plans completed: 20
 - Average duration: ~5 minutes
-- Total execution time: ~90 minutes
+- Total execution time: ~93 minutes
 
 **By Phase:**
 
@@ -30,10 +30,10 @@ Progress: [####------] ~42% (3.2/8 phases complete)
 | 1 | 7/7 | ~56min | ~8min |
 | 2 | 6/6 | ~19min | ~3.2min |
 | 3 | 4/4 | ~11min | ~2.75min |
-| 4 | 2/? | ~4min | ~2min |
+| 4 | 3/? | ~7min | ~2.3min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (~2min), 03-03 (~2min), 03-04 (~5min verification), 04-01 (~2min), 04-02 (~2min)
+- Last 5 plans: 03-03 (~2min), 03-04 (~5min verification), 04-01 (~2min), 04-02 (~2min), 04-03 (~3min)
 - Trend: Phase 4 progressing, execution velocity strong
 
 *Updated after each plan completion*
@@ -80,6 +80,8 @@ Recent decisions affecting current work:
 | SERVICE-001 | Actor isolation for CardService | Thread safety with async CRUD operations, consistent with StorageService | 04-01 |
 | UI-005 | Callback pattern for card creation navigation | onCardCreated closure enables parent view to control navigation | 04-02 |
 | FORM-001 | Trim whitespace on validation and submission | Prevents accidental empty submissions via trailing spaces | 04-02 |
+| CLIP-001 | Best-effort clip record creation | Video upload succeeds even if clip record fails; prevents frustrating UX | 04-03 |
+| CLIP-002 | Host clips orderPosition = 0 | Host intro appears first in montage; participants default to 1 | 04-03 |
 
 ### Pending Todos
 
@@ -92,7 +94,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 04-02-PLAN.md (Card Creation Form)
+Stopped at: Completed 04-03-PLAN.md (Recording Integration)
 Resume file: None
 
 ## What's Available
@@ -240,3 +242,12 @@ After 04-02 (Card Creation Form):
   - CreateCardView with TOYTextField inputs for title and recipient name
   - TOYButton submit with loading state and disabled validation
   - onCardCreated callback for parent navigation control
+
+After 04-03 (Recording Integration):
+- **Recording with card context:**
+  - RecordingViewModel accepts cardId, participantId, isHostClip parameters
+  - CardService integration creates clip record after successful upload
+  - Host clips created with orderPosition = 0 (first in montage)
+  - Card status updated to 'collecting' after host records
+  - Best-effort clip creation (upload succeeds even if clip record fails)
+  - Backward compatibility maintained for standalone recording
