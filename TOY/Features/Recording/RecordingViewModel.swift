@@ -12,12 +12,20 @@ public final class RecordingViewModel: ObservableObject {
     @Published public var showPreview: Bool = false
     @Published public var uploadState: UploadState? = nil
     @Published public var uploadedPath: String? = nil
+    @Published public var createdClip: Clip? = nil
+
+    // MARK: - Card Context
+
+    public var cardId: UUID?
+    public var participantId: UUID?
+    public var isHostClip: Bool
 
     // MARK: - Dependencies
 
     public let recorder = VideoRecorder()
     private var cancellables = Set<AnyCancellable>()
     private let storageService = StorageService()
+    private let cardService = CardService()
 
     // MARK: - Upload State
 
@@ -36,7 +44,11 @@ public final class RecordingViewModel: ObservableObject {
 
     // MARK: - Initialization
 
-    public init() {
+    public init(cardId: UUID? = nil, participantId: UUID? = nil, isHostClip: Bool = false) {
+        self.cardId = cardId
+        self.participantId = participantId
+        self.isHostClip = isHostClip
+
         // Forward changes from nested ObservableObject to trigger view updates
         recorder.objectWillChange
             .receive(on: RunLoop.main)
@@ -156,6 +168,31 @@ public final class RecordingViewModel: ObservableObject {
             uploadedPath = path
             uploadState = .success(storagePath: path)
             print("Upload successful: \(path)")
+
+            // Create clip record if we have card context
+            if let cardId = cardId, let participantId = participantId {
+                do {
+                    // Host clip = orderPosition 0 (appears first in montage)
+                    let orderPosition = isHostClip ? 0 : 1
+                    let clip = try await cardService.createClip(
+                        cardId: cardId,
+                        participantId: participantId,
+                        videoUrl: path,
+                        durationSeconds: nil,
+                        orderPosition: orderPosition,
+                        status: "uploaded"
+                    )
+                    createdClip = clip
+
+                    // If host clip, update card status to 'collecting'
+                    if isHostClip {
+                        try await cardService.updateCardStatus(cardId: cardId, status: "collecting")
+                    }
+                } catch {
+                    // Best-effort: don't fail the upload if clip record fails
+                    print("Failed to create clip record: \(error)")
+                }
+            }
         } catch {
             let message = (error as? UploadError)?.errorDescription ?? error.localizedDescription
             uploadState = .failed(error: message)
