@@ -1,6 +1,12 @@
+//
+//  VideoPreviewView.swift
+//  TOYShared
+//
+//  View for previewing a recorded video before submission.
+//
+
 import AVFoundation
 import SwiftUI
-import TOYShared
 
 /// View for previewing a recorded video before submission.
 public struct VideoPreviewView: View {

@@ -1,8 +1,14 @@
+//
+//  UploadProgressView.swift
+//  TOYShared
+//
+//  Full-screen overlay showing upload progress.
+//
+
 import SwiftUI
-import TOYShared
 
 /// States for the upload progress view.
-public enum UploadState {
+public enum UploadState: Equatable {
     case uploading
     case success(storagePath: String)
     case failed(error: String)
@@ -54,7 +60,7 @@ public struct UploadProgressView: View {
                     TOYLabel("Upload Failed", style: .headline)
                     TOYLabel(error, style: .body)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.toyTextSecondary)
+                        .foregroundStyle(Color.toyTextSecondary)
                     HStack(spacing: 16) {
                         TOYButton("Cancel", style: .secondary, size: .medium, action: onDismiss)
                         TOYButton("Retry", style: .primary, size: .medium, action: onRetry)

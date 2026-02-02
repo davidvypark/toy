@@ -1,6 +1,12 @@
+//
+//  RecordingView.swift
+//  TOYShared
+//
+//  Main view for the video recording experience.
+//
+
 import AVFoundation
 import SwiftUI
-import TOYShared
 
 public struct RecordingView: View {
     @StateObject private var viewModel: RecordingViewModel
@@ -12,6 +18,11 @@ public struct RecordingView: View {
             participantId: participantId,
             isHostClip: isHostClip
         ))
+    }
+
+    /// Initializer that accepts an external view model (used by App Clip).
+    public init(viewModel: RecordingViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
     }
 
     public var body: some View {

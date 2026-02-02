@@ -1,7 +1,13 @@
+//
+//  RecordingViewModel.swift
+//  TOYShared
+//
+//  ViewModel for the recording screen.
+//
+
 import AVFoundation
 import Combine
 import SwiftUI
-import TOYShared
 
 /// ViewModel for the recording screen.
 @MainActor
