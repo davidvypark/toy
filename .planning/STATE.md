@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 8 of 8 (Recipient Flow & Monetization)
-Plan: 3 of 6 complete
+Plan: 5 of 6 complete
 Status: In progress
-Last activity: 2026-02-02 - Completed 08-03-PLAN.md
+Last activity: 2026-02-02 - Completed 08-05-PLAN.md
 
-Progress: [##########] 89% (34/38 plans complete)
+Progress: [##########] 95% (36/38 plans complete)
 
 ## Performance Metrics
 
@@ -36,8 +36,8 @@ Progress: [##########] 89% (34/38 plans complete)
 | 7 | 4/4 | ~24min | ~6min |
 
 **Recent Trend:**
-- Last 5 plans: 07-03 (~6min), 07-04 (~15min), 08-01 (~4min), 08-03 (~9min)
-- Trend: Phase 8 in progress - RevenueCat SDK integrated
+- Last 5 plans: 07-04 (~15min), 08-01 (~4min), 08-03 (~9min), 08-05 (~10min)
+- Trend: Phase 8 in progress - PostHog analytics integrated
 
 *Updated after each plan completion*
 
@@ -112,6 +112,9 @@ Recent decisions affecting current work:
 | MONETIZE-001 | RevenueCat for IAP management over raw StoreKit | Handles receipt validation, cross-platform sync, analytics | 08-03 |
 | MONETIZE-002 | Actor isolation for PurchaseService | Thread-safe async operations consistent with other services | 08-03 |
 | MONETIZE-003 | Exclude RevenueCat from TOYClip | App Clip size limit (15MB); purchases not allowed in App Clips | 08-03 |
+| ANALYTICS-001 | PostHog SDK to TOY target only | App Clip size limit; analytics is main app functionality | 08-05 |
+| ANALYTICS-002 | Singleton AnalyticsService | Matches existing service patterns (PurchaseService, CardService) | 08-05 |
+| ANALYTICS-003 | Type-safe AnalyticsEvent enum | Prevents event name typos, provides autocomplete | 08-05 |
 
 ### Pending Todos
 
@@ -124,7 +127,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 08-03-PLAN.md (RevenueCat SDK Setup)
+Stopped at: Completed 08-05-PLAN.md (PostHog Analytics Integration)
 Resume file: None
 
 ## What's Available
@@ -472,3 +475,26 @@ After 08-03 (RevenueCat SDK Setup):
 - **Ready for:**
   - Upgrade UI integration (08-04)
   - User setup: RevenueCat dashboard config, API key
+
+After 08-05 (PostHog Analytics Integration):
+- **Analytics infrastructure:**
+  - PostHog iOS SDK v3.38 added to TOY target only (not TOYClip)
+  - Configuration.postHogAPIKey and postHogHost placeholders in TOYShared
+  - PostHogSDK.shared.setup() called in TOYApp.init()
+  - Lifecycle events and screen views captured automatically
+  - Debug logging enabled in DEBUG builds
+- **AnalyticsService singleton:**
+  - identify(userId:email:name:) - Identify user on sign-in
+  - reset() - Clear identity on sign-out
+  - track(_:properties:) - Track any event with properties
+  - trackCardCreated(cardId:occasion:) - Card creation event
+  - trackCardPublished(cardId:participantCount:clipCount:) - Publish event
+  - trackUpgradePromptShown/trackUpgradePurchased - Ready for upgrade UI
+- **Events wired to:**
+  - CreateCardViewModel - card_created on successful creation
+  - PublishViewModel - card_published on successful publish
+  - AuthViewModel - identify on sign-in/returning user, reset on sign-out
+- **Ready for:**
+  - Feature flags via PostHog
+  - A/B testing and user behavior analysis
+  - User setup: PostHog project creation, API key
