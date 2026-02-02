@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 8 of 8 (Recipient Flow & Monetization)
-Plan: 5 of 6 complete
-Status: In progress
-Last activity: 2026-02-02 - Completed 08-05-PLAN.md
+Plan: 6 of 6 complete (08-02 done)
+Status: In progress - Executing Wave 2
+Last activity: 2026-02-02 - Completed 08-02-PLAN.md (Video Viewer Page)
 
-Progress: [##########] 95% (36/38 plans complete)
+Progress: [##########] 97% (37/38 plans complete)
 
 ## Performance Metrics
 
@@ -36,8 +36,8 @@ Progress: [##########] 95% (36/38 plans complete)
 | 7 | 4/4 | ~24min | ~6min |
 
 **Recent Trend:**
-- Last 5 plans: 07-04 (~15min), 08-01 (~4min), 08-03 (~9min), 08-05 (~10min)
-- Trend: Phase 8 in progress - PostHog analytics integrated
+- Last 5 plans: 08-01 (~4min), 08-03 (~9min), 08-05 (~10min), 08-02 (~3min)
+- Trend: Phase 8 in progress - Web video viewer page complete
 
 *Updated after each plan completion*
 
@@ -115,6 +115,8 @@ Recent decisions affecting current work:
 | ANALYTICS-001 | PostHog SDK to TOY target only | App Clip size limit; analytics is main app functionality | 08-05 |
 | ANALYTICS-002 | Singleton AnalyticsService | Matches existing service patterns (PurchaseService, CardService) | 08-05 |
 | ANALYTICS-003 | Type-safe AnalyticsEvent enum | Prevents event name typos, provides autocomplete | 08-05 |
+| WEB-003 | Video auto-plays muted with playsInline | Mobile Safari requires muted + playsInline for auto-play | 08-02 |
+| WEB-004 | Web Share API with fallback to direct platform buttons | Native share on supported devices, fallback to social buttons | 08-02 |
 
 ### Pending Todos
 
@@ -127,7 +129,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 08-05-PLAN.md (PostHog Analytics Integration)
+Stopped at: Completed 08-02-PLAN.md (Video Viewer Page)
 Resume file: None
 
 ## What's Available
@@ -498,3 +500,16 @@ After 08-05 (PostHog Analytics Integration):
   - Feature flags via PostHog
   - A/B testing and user behavior analysis
   - User setup: PostHog project creation, API key
+
+After 08-02 (Video Viewer Page):
+- **Recipient video viewer:**
+  - /watch/[token] page with server-side card lookup and signed URL generation
+  - VideoPlayer component with auto-play muted, playsInline, loop
+  - Unmute toggle button (bottom left) with speaker icons
+  - Subtle "Made with TOY" branding overlay (bottom right)
+  - ShareButtons with Web Share API, Twitter/X, Facebook, WhatsApp, Copy link
+  - Custom not-found page for invalid/unpublished cards
+  - Dynamic metadata for OpenGraph and Twitter cards
+- **Ready for:**
+  - Vercel deployment configuration (08-06)
+  - Full recipient viewing experience at sendtoycard.com/watch/{token}
