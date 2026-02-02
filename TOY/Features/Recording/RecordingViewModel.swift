@@ -10,11 +10,20 @@ public final class RecordingViewModel: ObservableObject {
 
     @Published public var permissionStatus: PermissionStatus = .unknown
     @Published public var showPreview: Bool = false
+    @Published public var uploadState: UploadState? = nil
+    @Published public var uploadedPath: String? = nil
 
     // MARK: - Dependencies
 
     public let recorder = VideoRecorder()
     private var cancellables = Set<AnyCancellable>()
+    private let storageService = StorageService()
+
+    // MARK: - Upload State
+
+    private var currentVideoURL: URL?
+    private var uploadRetryCount = 0
+    private let maxRetries = 3
 
     // MARK: - Permission Status
 
@@ -125,10 +134,54 @@ public final class RecordingViewModel: ObservableObject {
     }
 
     public func confirmVideo() {
-        // Will be wired to submission in Phase 3
-        // For now, just mark as done
         guard case .completed(let url) = recorder.state else { return }
-        print("Video confirmed at: \(url)")
+        currentVideoURL = url
+        uploadRetryCount = 0
+        uploadState = .uploading
+        Task {
+            await performUpload()
+        }
+    }
+
+    private func performUpload() async {
+        guard let videoURL = currentVideoURL else {
+            uploadState = .failed(error: "No video to upload")
+            return
+        }
+
+        let clipId = UUID()
+
+        do {
+            let path = try await storageService.uploadVideo(fileURL: videoURL, clipId: clipId)
+            uploadedPath = path
+            uploadState = .success(storagePath: path)
+            print("Upload successful: \(path)")
+        } catch {
+            let message = (error as? UploadError)?.errorDescription ?? error.localizedDescription
+            uploadState = .failed(error: message)
+            print("Upload failed: \(error)")
+        }
+    }
+
+    public func retryUpload() {
+        guard uploadRetryCount < maxRetries else {
+            uploadState = .failed(error: "Maximum retries exceeded")
+            return
+        }
+
+        uploadRetryCount += 1
+        let delay = pow(2.0, Double(uploadRetryCount)) // 2s, 4s, 8s
+
+        uploadState = .uploading
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            await performUpload()
+        }
+    }
+
+    public func dismissUpload() {
+        uploadState = nil
+        // Could navigate away or reset here if needed
     }
 
     // MARK: - Computed Properties
