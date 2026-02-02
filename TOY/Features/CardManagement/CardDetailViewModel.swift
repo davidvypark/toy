@@ -42,6 +42,9 @@ final class CardDetailViewModel {
 
             #if DEBUG
             print("Loaded \(participants.count) participants and \(clips.count) clips")
+            for clip in clips {
+                print("[DURATION DEBUG] Clip \(clip.id): duration = \(String(describing: clip.durationSeconds))")
+            }
             #endif
         } catch {
             #if DEBUG

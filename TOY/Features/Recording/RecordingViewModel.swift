@@ -166,6 +166,10 @@ public final class RecordingViewModel: ObservableObject {
         do {
             // Calculate video duration before upload
             let duration = await getVideoDuration(url: videoURL)
+            #if DEBUG
+            print("[DURATION DEBUG] Video URL: \(videoURL)")
+            print("[DURATION DEBUG] Calculated duration: \(String(describing: duration))")
+            #endif
 
             let path = try await storageService.uploadVideo(fileURL: videoURL, clipId: clipId)
             uploadedPath = path
@@ -177,6 +181,10 @@ public final class RecordingViewModel: ObservableObject {
                 do {
                     // Host clip = orderPosition 0 (appears first in montage)
                     let orderPosition = isHostClip ? 0 : 1
+                    #if DEBUG
+                    print("[DURATION DEBUG] Creating clip with duration: \(String(describing: duration))")
+                    print("[DURATION DEBUG] cardId: \(cardId), participantId: \(participantId)")
+                    #endif
                     let clip = try await cardService.createClip(
                         cardId: cardId,
                         participantId: participantId,
@@ -186,6 +194,9 @@ public final class RecordingViewModel: ObservableObject {
                         status: "uploaded"
                     )
                     createdClip = clip
+                    #if DEBUG
+                    print("[DURATION DEBUG] Created clip, returned duration: \(String(describing: clip.durationSeconds))")
+                    #endif
 
                     // If host clip, update card status to 'collecting'
                     if isHostClip {
@@ -195,6 +206,10 @@ public final class RecordingViewModel: ObservableObject {
                     // Best-effort: don't fail the upload if clip record fails
                     print("Failed to create clip record: \(error)")
                 }
+            } else {
+                #if DEBUG
+                print("[DURATION DEBUG] No card context - cardId: \(String(describing: cardId)), participantId: \(String(describing: participantId))")
+                #endif
             }
         } catch {
             let message = (error as? UploadError)?.errorDescription ?? error.localizedDescription
@@ -211,11 +226,26 @@ public final class RecordingViewModel: ObservableObject {
         do {
             let duration = try await asset.load(.duration)
             let seconds = CMTimeGetSeconds(duration)
-            guard seconds.isFinite && seconds > 0 else { return nil }
+            #if DEBUG
+            print("[DURATION DEBUG] Raw CMTime: \(duration)")
+            print("[DURATION DEBUG] Seconds from CMTime: \(seconds)")
+            print("[DURATION DEBUG] isFinite: \(seconds.isFinite), > 0: \(seconds > 0)")
+            #endif
+            guard seconds.isFinite && seconds > 0 else {
+                #if DEBUG
+                print("[DURATION DEBUG] Duration check failed, returning nil")
+                #endif
+                return nil
+            }
             // Round to 1 decimal place for cleaner display
-            return Decimal(Double(round(seconds * 10) / 10))
+            let rounded = Double(round(seconds * 10) / 10)
+            let decimal = Decimal(rounded)
+            #if DEBUG
+            print("[DURATION DEBUG] Rounded: \(rounded), Decimal: \(decimal)")
+            #endif
+            return decimal
         } catch {
-            print("Failed to load video duration: \(error)")
+            print("[DURATION DEBUG] Failed to load video duration: \(error)")
             return nil
         }
     }

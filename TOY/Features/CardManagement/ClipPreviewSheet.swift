@@ -24,9 +24,12 @@ struct ClipPreviewSheet: View {
             VStack(spacing: 24) {
                 // Video player area
                 ZStack {
-                    if isLoading {
+                    // Always show skeleton as base layer while loading or no player
+                    if isLoading || (player == nil && loadError == nil) {
                         loadingView
-                    } else if let error = loadError {
+                    }
+
+                    if let error = loadError {
                         errorView(error)
                     } else if let player {
                         ClipVideoPlayer(player: player)
@@ -182,33 +185,29 @@ private struct SkeletonLoadingView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
+                // Base background - dark gray to be visible
+                Color(uiColor: UIColor.systemGray5)
+
                 // Base skeleton content
                 VStack(spacing: 16) {
-                    // Simulated video frame skeleton
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.toyTextSecondary.opacity(0.15))
-                        .frame(width: geometry.size.width * 0.6, height: geometry.size.width * 0.4)
+                    Spacer()
 
                     // Play button skeleton
                     Circle()
-                        .fill(Color.toyTextSecondary.opacity(0.15))
-                        .frame(width: 60, height: 60)
+                        .fill(Color(uiColor: UIColor.systemGray4))
+                        .frame(width: 70, height: 70)
                         .overlay {
                             Image(systemName: "play.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(.toyTextSecondary.opacity(0.3))
+                                .font(.system(size: 28))
+                                .foregroundColor(Color(uiColor: UIColor.systemGray3))
                         }
 
-                    // Text skeleton lines
-                    VStack(spacing: 8) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.toyTextSecondary.opacity(0.15))
-                            .frame(width: geometry.size.width * 0.5, height: 12)
+                    // Loading text
+                    Text("Loading video...")
+                        .font(.subheadline)
+                        .foregroundColor(Color(uiColor: UIColor.systemGray2))
 
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.toyTextSecondary.opacity(0.15))
-                            .frame(width: geometry.size.width * 0.3, height: 12)
-                    }
+                    Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -216,15 +215,14 @@ private struct SkeletonLoadingView: View {
                 LinearGradient(
                     gradient: Gradient(colors: [
                         .clear,
-                        .white.opacity(0.3),
+                        .white.opacity(0.4),
                         .clear
                     ]),
                     startPoint: .leading,
                     endPoint: .trailing
                 )
-                .frame(width: geometry.size.width * 0.5)
+                .frame(width: geometry.size.width * 0.6)
                 .offset(x: shimmerOffset * geometry.size.width)
-                .blendMode(.overlay)
             }
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }

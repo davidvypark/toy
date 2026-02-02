@@ -136,12 +136,10 @@ struct CardDetailView: View {
             // Contributors section (participants + clips combined)
             Section {
                 if allContributors.isEmpty && viewModel.isLoading {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
+                    // Skeleton loading placeholders for contributors
+                    ForEach(0..<3, id: \.self) { _ in
+                        ContributorSkeletonRow()
                     }
-                    .padding(.vertical, 16)
                 } else {
                     ForEach(allContributors) { contributor in
                         ContributorClipRow(
@@ -164,11 +162,6 @@ struct CardDetailView: View {
         }
         .task {
             await viewModel.loadData(for: card.id)
-        }
-        .overlay {
-            if viewModel.isLoading && viewModel.participants.isEmpty && viewModel.clips.isEmpty {
-                ProgressView("Loading...")
-            }
         }
         .sheet(item: $selectedClip) { clip in
             ClipPreviewSheet(clip: clip) {
@@ -204,58 +197,63 @@ private struct ContributorRow: Identifiable {
 // MARK: - Contributor Clip Row
 
 /// A row displaying a contributor's name on the left and their clip thumbnail on the right
+/// The entire row is tappable when a clip exists
 private struct ContributorClipRow: View {
     let contributor: ContributorRow
     let onTapClip: (Clip) -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Avatar
-            Circle()
-                .fill(contributor.isHost ? Color.toyPrimary.opacity(0.2) : Color.toySurface)
-                .frame(width: 40, height: 40)
-                .overlay {
-                    Image(systemName: contributor.isHost ? "star.fill" : "person.fill")
-                        .foregroundColor(contributor.isHost ? .toyPrimary : .toyTextSecondary)
-                        .font(.system(size: 16))
-                }
-
-            // Name and status
-            VStack(alignment: .leading, spacing: 2) {
-                TOYLabel(contributor.name, style: .body)
-
-                if let clip = contributor.clip {
-                    TOYLabel("Submitted", style: .caption, color: .green)
-                } else if let participant = contributor.participant {
-                    TOYLabel(statusText(for: participant), style: .caption, color: statusColor(for: participant))
-                } else if !contributor.isHost {
-                    TOYLabel("Not submitted", style: .caption, color: .toyTextSecondary)
-                }
-            }
-
-            Spacer()
-
-            // Clip thumbnail or empty state
+        Button {
             if let clip = contributor.clip {
-                Button {
-                    onTapClip(clip)
-                } label: {
-                    ClipThumbnailView(clip: clip)
-                }
-                .buttonStyle(.plain)
-            } else {
-                // Empty thumbnail placeholder
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.toyTextSecondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4]))
-                    .frame(width: 50, height: 66)
-                    .overlay {
-                        Image(systemName: "video.slash")
-                            .font(.system(size: 14))
-                            .foregroundColor(.toyTextSecondary.opacity(0.5))
-                    }
+                onTapClip(clip)
             }
+        } label: {
+            HStack(spacing: 12) {
+                // Avatar
+                Circle()
+                    .fill(contributor.isHost ? Color.toyPrimary.opacity(0.2) : Color.toySurface)
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        Image(systemName: contributor.isHost ? "star.fill" : "person.fill")
+                            .foregroundColor(contributor.isHost ? .toyPrimary : .toyTextSecondary)
+                            .font(.system(size: 16))
+                    }
+
+                // Name and status
+                VStack(alignment: .leading, spacing: 2) {
+                    TOYLabel(contributor.name, style: .body)
+
+                    if let clip = contributor.clip {
+                        TOYLabel("Submitted", style: .caption, color: .green)
+                    } else if let participant = contributor.participant {
+                        TOYLabel(statusText(for: participant), style: .caption, color: statusColor(for: participant))
+                    } else if !contributor.isHost {
+                        TOYLabel("Not submitted", style: .caption, color: .toyTextSecondary)
+                    }
+                }
+
+                Spacer()
+
+                // Clip thumbnail or empty state
+                if let clip = contributor.clip {
+                    ClipThumbnailView(clip: clip)
+                } else {
+                    // Empty thumbnail placeholder
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.toyTextSecondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                        .frame(width: 50, height: 66)
+                        .overlay {
+                            Image(systemName: "video.slash")
+                                .font(.system(size: 14))
+                                .foregroundColor(.toyTextSecondary.opacity(0.5))
+                        }
+                }
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 4)
+        .buttonStyle(.plain)
+        .disabled(contributor.clip == nil)
     }
 
     private func statusText(for participant: Participant) -> String {
@@ -273,6 +271,63 @@ private struct ContributorClipRow: View {
         case "submitted": return .green
         case "recording": return .toyPrimary
         default: return .toyTextSecondary
+        }
+    }
+}
+
+// MARK: - Contributor Skeleton Row
+
+/// A skeleton loading placeholder for contributor rows
+private struct ContributorSkeletonRow: View {
+    @State private var shimmerOffset: CGFloat = -1.0
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Avatar skeleton
+            Circle()
+                .fill(Color(uiColor: UIColor.systemGray5))
+                .frame(width: 40, height: 40)
+
+            // Name and status skeleton
+            VStack(alignment: .leading, spacing: 6) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color(uiColor: UIColor.systemGray5))
+                    .frame(width: 120, height: 14)
+
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color(uiColor: UIColor.systemGray5))
+                    .frame(width: 70, height: 10)
+            }
+
+            Spacer()
+
+            // Thumbnail skeleton
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(uiColor: UIColor.systemGray5))
+                .frame(width: 50, height: 66)
+        }
+        .padding(.vertical, 4)
+        .overlay {
+            GeometryReader { geometry in
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        .clear,
+                        .white.opacity(0.4),
+                        .clear
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: geometry.size.width * 0.4)
+                .offset(x: shimmerOffset * geometry.size.width)
+            }
+            .clipped()
+        }
+        .onAppear {
+            shimmerOffset = -1.0
+            withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+                shimmerOffset = 1.5
+            }
         }
     }
 }
