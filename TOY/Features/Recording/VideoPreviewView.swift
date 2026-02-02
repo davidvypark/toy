@@ -1,4 +1,4 @@
-import AVKit
+import AVFoundation
 import SwiftUI
 import TOYShared
 
@@ -22,10 +22,10 @@ public struct VideoPreviewView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Video player
+            // Video player - custom view without controls
             ZStack {
                 if let player {
-                    VideoPlayer(player: player)
+                    LoopingVideoPlayer(player: player)
                         .aspectRatio(9/16, contentMode: .fit)
                 } else {
                     Rectangle()
@@ -88,6 +88,41 @@ public struct VideoPreviewView: View {
         }
 
         player = newPlayer
+    }
+}
+
+// MARK: - Custom Video Player (no controls)
+
+/// A simple looping video player without playback controls.
+private struct LoopingVideoPlayer: UIViewRepresentable {
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> PlayerUIView {
+        let view = PlayerUIView()
+        view.player = player
+        return view
+    }
+
+    func updateUIView(_ uiView: PlayerUIView, context: Context) {
+        uiView.player = player
+    }
+}
+
+private class PlayerUIView: UIView {
+    override class var layerClass: AnyClass {
+        AVPlayerLayer.self
+    }
+
+    var playerLayer: AVPlayerLayer {
+        layer as! AVPlayerLayer
+    }
+
+    var player: AVPlayer? {
+        get { playerLayer.player }
+        set {
+            playerLayer.player = newValue
+            playerLayer.videoGravity = .resizeAspectFill
+        }
     }
 }
 

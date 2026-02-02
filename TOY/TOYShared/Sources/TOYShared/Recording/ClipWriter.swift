@@ -23,11 +23,11 @@ public final class ClipWriter {
         assetWriter = try AVAssetWriter(outputURL: url, fileType: .mov)
 
         // Video settings for H.264 720p 30fps
-        // Note: Input is 1280x720 landscape, transform rotates for portrait display
+        // Capture is 1280x720 landscape, we keep those dimensions and use transform for portrait display
         let videoSettings: [String: Any] = [
             AVVideoCodecKey: AVVideoCodecType.h264,
-            AVVideoWidthKey: 720,  // Portrait width
-            AVVideoHeightKey: 1280, // Portrait height
+            AVVideoWidthKey: 1280,  // Keep capture width
+            AVVideoHeightKey: 720,  // Keep capture height
             AVVideoCompressionPropertiesKey: [
                 AVVideoAverageBitRateKey: 2_000_000,
                 AVVideoProfileLevelKey: AVVideoProfileLevelH264High41,
@@ -38,10 +38,11 @@ public final class ClipWriter {
 
         videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
         videoInput?.expectsMediaDataInRealTime = true
-        // Front camera is mirrored, so we need to flip horizontally
-        // Portrait orientation with mirror flip
+
+        // Front camera transform for portrait display:
+        // Rotate 90° counterclockwise and flip vertically for proper front camera orientation
         videoInput?.transform = CGAffineTransform(rotationAngle: .pi / 2)
-            .scaledBy(x: -1, y: 1)
+            .scaledBy(x: 1, y: -1)
 
         // Audio settings for AAC
         let audioSettings: [String: Any] = [
