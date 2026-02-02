@@ -16,8 +16,7 @@ struct HomeView: View {
 
     // Card creation flow state
     @State private var showCreateCard = false
-    @State private var cardInProgress: Card? = nil
-    @State private var showHostRecording = false
+    @State private var cardInProgress: Card? = nil  // When non-nil, shows recording fullScreenCover
     @State private var completedCard: Card? = nil
     @State private var showCardCreated = false
 
@@ -74,45 +73,39 @@ struct HomeView: View {
             .sheet(isPresented: $showCreateCard) {
                 if let user = viewModel.authState.user {
                     CreateCardView(hostId: user.id) { createdCard in
-                        // Card created, store it and dismiss sheet
-                        cardInProgress = createdCard
+                        #if DEBUG
+                        print("✅ Card created: \(createdCard.id), dismissing sheet")
+                        #endif
+                        // Dismiss sheet first, then set card after delay
+                        // This ensures sheet is gone before fullScreenCover presents
                         showCreateCard = false
-                        // Delay presenting fullScreenCover until sheet dismisses
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            showHostRecording = true
+                            #if DEBUG
+                            print("🎬 Presenting recording for card: \(createdCard.id)")
+                            #endif
+                            cardInProgress = createdCard
                         }
                     }
                 }
             }
-            // Host recording cover
-            .fullScreenCover(isPresented: $showHostRecording) {
-                if let card = cardInProgress, let user = viewModel.authState.user {
+            // Host recording cover - use item-based presentation for reliability
+            .fullScreenCover(item: $cardInProgress) { card in
+                if let user = viewModel.authState.user {
                     RecordingView(
                         cardId: card.id,
                         participantId: user.id,
                         isHostClip: true
                     )
                     .onDisappear {
-                        // Recording complete (dismissed via upload success)
-                        if cardInProgress != nil {
-                            completedCard = cardInProgress
-                            cardInProgress = nil
-                            // Delay showing card created sheet until fullScreenCover dismisses
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                showCardCreated = true
-                            }
+                        #if DEBUG
+                        print("🎬 Recording dismissed, showing card created view")
+                        #endif
+                        // Recording complete - show card created view
+                        completedCard = card
+                        // Delay showing card created sheet
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showCardCreated = true
                         }
-                    }
-                } else {
-                    // Fallback - should not happen but prevents blank screen
-                    VStack {
-                        Text("Loading...")
-                            .onAppear {
-                                // If we got here without card context, dismiss
-                                if cardInProgress == nil {
-                                    showHostRecording = false
-                                }
-                            }
                     }
                 }
             }
