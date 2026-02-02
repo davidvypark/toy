@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Anyone can create a heartfelt group video message in minutes
-**Current focus:** Phase 5 - Host Card Management
+**Current focus:** Phase 6 - Video Stitching & Publishing
 
 ## Current Position
 
-Phase: 5 of 8 (Host Card Management)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-02 - Completed 05-03 bug fixes
+Phase: 6 of 8 (Video Stitching & Publishing)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-02 - Completed 06-01-PLAN.md
 
-Progress: [#####-----] 50% (4/8 phases complete)
+Progress: [######----] 60% (5/8 phases complete)
 
 ## Performance Metrics
 
@@ -32,10 +32,11 @@ Progress: [#####-----] 50% (4/8 phases complete)
 | 3 | 4/4 | ~11min | ~2.75min |
 | 4 | 4/4 | ~22min | ~5.5min |
 | 5 | 3/3 | ~8min | ~2.7min |
+| 6 | 1/4 | ~2min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 04-04 (~15min), 05-01 (~3min), 05-02 (~2min), 05-03 (~3min)
-- Trend: Phase 5 complete with bug fixes
+- Last 5 plans: 05-01 (~3min), 05-02 (~2min), 05-03 (~3min), 06-01 (~2min)
+- Trend: Starting Phase 6 - Video Stitching & Publishing
 
 *Updated after each plan completion*
 
@@ -92,6 +93,7 @@ Recent decisions affecting current work:
 | PLAYER-001 | KVO for player status observation | Keep skeleton visible until AVPlayer.status == readyToPlay, not just URL loaded | 05-03 |
 | DURATION-001 | Load missing durations from AVAsset | Old clips in DB may not have duration; load from video asset on demand | 05-03 |
 | HOST-001 | Identify host clip by participantId == hostId | More reliable than orderPosition for finding host's clip | 05-03 |
+| VIDEO-001 | upsert=true for montage uploads | Allows re-publishing (overwriting existing montage) without delete+insert | 06-01 |
 
 ### Pending Todos
 
@@ -104,7 +106,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 05-03 bug fixes (Phase 5 complete)
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -315,3 +317,15 @@ After 05-03 (Bug Fixes - Phase 5 Complete):
   - Host clip identified by participantId == card.hostId (not orderPosition)
   - Host always shown as first contributor with star icon
   - Effective durations passed through ContributorRow to ClipThumbnailView
+
+After 06-01 (Videos Bucket & Publishing Infrastructure):
+- **Videos storage bucket:**
+  - SQL migration at supabase/migrations/004_videos_bucket.sql
+  - Private videos bucket for final montage storage
+  - INSERT/SELECT/UPDATE/DELETE RLS policies for authenticated users
+- **StorageService extensions:**
+  - uploadMontage(fileURL:cardId:) with upsert=true for re-publishing
+  - createSignedVideoURL(path:expiresIn:) for montage access
+  - Separate videosBucketName constant from clips bucket
+- **CardService publishing:**
+  - publishCard(cardId:videoUrl:) atomically sets status, video_url, published_at
