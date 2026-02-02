@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 5 of 8 (Host Card Management)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-02 - Completed 05-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-02 - Completed 05-03 bug fixes
 
 Progress: [#####-----] 50% (4/8 phases complete)
 
@@ -31,11 +31,11 @@ Progress: [#####-----] 50% (4/8 phases complete)
 | 2 | 6/6 | ~19min | ~3.2min |
 | 3 | 4/4 | ~11min | ~2.75min |
 | 4 | 4/4 | ~22min | ~5.5min |
-| 5 | 2/3 | ~5min | ~2.5min |
+| 5 | 3/3 | ~8min | ~2.7min |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (~3min), 04-04 (~15min), 05-01 (~3min), 05-02 (~2min)
-- Trend: Phase 5 progressing smoothly, 05-02 executed efficiently
+- Last 5 plans: 04-04 (~15min), 05-01 (~3min), 05-02 (~2min), 05-03 (~3min)
+- Trend: Phase 5 complete with bug fixes
 
 *Updated after each plan completion*
 
@@ -89,6 +89,9 @@ Recent decisions affecting current work:
 | RLS-001 | SECURITY DEFINER helper functions | Breaks infinite recursion between cards and participants RLS policies | 04-04 |
 | CLIP-003 | Delete storage file before database record | Prevents orphaned files if DB delete fails; continues if storage already deleted | 05-01 |
 | UI-006 | Status mapping via computed properties | Keeps view body clean and logic testable | 05-01 |
+| PLAYER-001 | KVO for player status observation | Keep skeleton visible until AVPlayer.status == readyToPlay, not just URL loaded | 05-03 |
+| DURATION-001 | Load missing durations from AVAsset | Old clips in DB may not have duration; load from video asset on demand | 05-03 |
+| HOST-001 | Identify host clip by participantId == hostId | More reliable than orderPosition for finding host's clip | 05-03 |
 
 ### Pending Todos
 
@@ -101,7 +104,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 05-02-PLAN.md (Card Management UI)
+Stopped at: Completed 05-03 bug fixes (Phase 5 complete)
 Resume file: None
 
 ## What's Available
@@ -297,3 +300,18 @@ After 05-02 (Card Management UI):
   - Pull-to-refresh via refreshable modifier
   - Sheet-based clip preview with deletion capability
   - Empty states for no participants/clips
+
+After 05-03 (Bug Fixes - Phase 5 Complete):
+- **Skeleton timing fix:**
+  - ClipPreviewSheet keeps skeleton visible until AVPlayer.status == readyToPlay
+  - KVO observer on player.currentItem.status for proper ready detection
+  - Prevents blank white screen between URL load and video ready
+- **Duration display fix:**
+  - CardDetailViewModel.loadedDurations dictionary for clips without DB duration
+  - loadMissingDurations() uses AVAsset.load(.duration) on signed URLs
+  - effectiveDuration(for:) returns DB value or loaded value
+  - Concurrent loading via TaskGroup for performance
+- **Host contributor fix:**
+  - Host clip identified by participantId == card.hostId (not orderPosition)
+  - Host always shown as first contributor with star icon
+  - Effective durations passed through ContributorRow to ClipThumbnailView
