@@ -89,7 +89,18 @@ struct HomeView: View {
                 }
             }
             // Host recording cover - use item-based presentation for reliability
-            .fullScreenCover(item: $cardInProgress) { card in
+            .fullScreenCover(item: $cardInProgress, onDismiss: {
+                #if DEBUG
+                print("🎬 Recording fullScreenCover dismissed")
+                print("   completedCard: \(completedCard?.id.uuidString ?? "nil")")
+                #endif
+                // Show card created sheet after recording completes
+                if completedCard != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showCardCreated = true
+                    }
+                }
+            }) { card in
                 if let user = viewModel.authState.user {
                     RecordingView(
                         cardId: card.id,
@@ -97,15 +108,11 @@ struct HomeView: View {
                         isHostClip: true
                     )
                     .onDisappear {
+                        // Store the card before the cover fully dismisses
                         #if DEBUG
-                        print("🎬 Recording dismissed, showing card created view")
+                        print("🎬 Recording view disappearing, storing card: \(card.id)")
                         #endif
-                        // Recording complete - show card created view
                         completedCard = card
-                        // Delay showing card created sheet
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            showCardCreated = true
-                        }
                     }
                 }
             }
@@ -114,6 +121,11 @@ struct HomeView: View {
                 if let card = completedCard {
                     CardCreatedView(card: card) {
                         completedCard = nil
+                        showCardCreated = false
+                    }
+                } else {
+                    // Fallback - dismiss if no card
+                    Color.clear.onAppear {
                         showCardCreated = false
                     }
                 }
