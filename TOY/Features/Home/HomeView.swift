@@ -11,20 +11,32 @@ import TOYShared
 struct HomeView: View {
     @Bindable var viewModel: AuthViewModel
 
-    // Standalone recording (temporary for testing)
-    @State private var showRecording = false
-
     // Card creation flow state
     @State private var showCreateCard = false
     @State private var cardInProgress: Card? = nil  // When non-nil, shows recording fullScreenCover
     @State private var completedCard: Card? = nil
+    @State private var showSettings = false
+    @State private var publishedCardToPlay: Card? = nil  // For fullscreen video player
 
     // Card list state
     @State private var hostedCards: [Card] = []
+    @State private var clipCounts: [UUID: Int] = [:]  // cardId -> clip count
     @State private var participatingCards: [Card] = []
     @State private var isLoadingCards = false
 
     private let cardService = CardService()
+
+    // MARK: - Computed Properties
+
+    /// Cards that are still in progress (not published)
+    private var inProgressCards: [Card] {
+        hostedCards.filter { $0.status != "published" }
+    }
+
+    /// Cards that have been published
+    private var publishedCards: [Card] {
+        hostedCards.filter { $0.status == "published" }
+    }
 
     /// Whether there are any cards to display
     private var hasCards: Bool {
@@ -34,12 +46,21 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Welcome Header
-                VStack(spacing: 8) {
+                // Header with title and settings
+                HStack {
+                    Spacer()
                     TOYLabel.largeTitle("Thinking Of You")
-                    if let user = viewModel.authState.user {
-                        TOYLabel("Welcome, \(user.displayNameOrEmail)", style: .subheadline, color: .toyTextSecondary)
+                    Spacer()
+                }
+                .overlay(alignment: .trailing) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.title3)
+                            .foregroundColor(.toyTextSecondary)
                     }
+                    .padding(.trailing, 24)
                 }
                 .padding(.top, 40)
                 .padding(.bottom, 24)
@@ -70,48 +91,63 @@ struct HomeView: View {
 
                     Spacer()
                 } else {
-                    // Horizontal scrolling card sections
+                    // Card sections
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            // My Cards section (hosted)
-                            if !hostedCards.isEmpty {
-                                CardSectionView(
-                                    title: "My Cards",
-                                    cards: hostedCards
+                        VStack(alignment: .leading, spacing: 32) {
+                            // In Progress section (paginated single card)
+                            if !inProgressCards.isEmpty {
+                                InProgressSectionView(
+                                    cards: inProgressCards,
+                                    clipCounts: clipCounts
+                                )
+                            }
+
+                            // Published section (horizontal scroll)
+                            if !publishedCards.isEmpty {
+                                PublishedSectionView(
+                                    cards: publishedCards,
+                                    clipCounts: clipCounts,
+                                    onCardTapped: { card in
+                                        publishedCardToPlay = card
+                                    }
                                 )
                             }
 
                             // Participating section
                             if !participatingCards.isEmpty {
-                                CardSectionView(
+                                PublishedSectionView(
                                     title: "Participating",
-                                    cards: participatingCards
+                                    cards: participatingCards,
+                                    clipCounts: clipCounts,
+                                    onCardTapped: { card in
+                                        publishedCardToPlay = card
+                                    }
                                 )
                             }
                         }
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 8)
                     }
+                    .scrollBounceBehavior(.basedOnSize)
 
                     // Create Card button at bottom
                     TOYButton("Create Card", style: .primary, size: .large) {
                         showCreateCard = true
                     }
                     .padding(.horizontal, 40)
-                    .padding(.bottom, 8)
+                    .padding(.vertical, 16)
                 }
-
-                // Sign Out
-                TOYButton("Sign Out", style: .text) {
-                    Task { await viewModel.signOut() }
-                }
-                .padding(.bottom, 20)
             }
             .background(Color.toyBackground)
             .navigationDestination(for: Card.self) { card in
                 CardDetailView(card: card)
             }
-            .fullScreenCover(isPresented: $showRecording) {
-                RecordingView()
+            // Settings sheet
+            .sheet(isPresented: $showSettings) {
+                SettingsView(authViewModel: viewModel)
+            }
+            // Published card video player
+            .fullScreenCover(item: $publishedCardToPlay) { card in
+                PublishedCardPlayerView(card: card)
             }
             // Card creation sheet
             .sheet(isPresented: $showCreateCard) {
@@ -188,6 +224,14 @@ struct HomeView: View {
             // Fetch cards where user is host
             hostedCards = try await cardService.fetchCardsForHost(hostId: user.id)
 
+            // Fetch clip counts for each card
+            var counts: [UUID: Int] = [:]
+            for card in hostedCards {
+                let clips = try await cardService.fetchClipsForCard(cardId: card.id)
+                counts[card.id] = clips.count
+            }
+            clipCounts = counts
+
             // TODO: Fetch cards where user is participant (future feature)
             // For now, participatingCards remains empty
             participatingCards = []
@@ -199,12 +243,62 @@ struct HomeView: View {
     }
 }
 
-// MARK: - Card Section View
+// MARK: - In Progress Section View
 
-/// A horizontally scrolling section of cards
-private struct CardSectionView: View {
-    let title: String
+/// Paginated single-card view with page dots for in-progress cards
+private struct InProgressSectionView: View {
     let cards: [Card]
+    let clipCounts: [UUID: Int]
+
+    @State private var currentIndex: Int = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Section header
+            TOYLabel("In Progress", style: .headline)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 12)
+
+            // Paginated card view
+            TabView(selection: $currentIndex) {
+                ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
+                    NavigationLink(value: card) {
+                        InProgressCardTile(
+                            card: card,
+                            clipCount: clipCounts[card.id] ?? 0
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .tag(index)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 176)  // Card height (160) + minimal padding
+
+            // Custom page dots (only show if more than 1 card, max 3 dots)
+            if cards.count > 1 {
+                HStack(spacing: 8) {
+                    ForEach(0..<min(cards.count, 3), id: \.self) { index in
+                        Circle()
+                            .fill(index == currentIndex % min(cards.count, 3) ? Color.toyPrimary : Color.toyTextSecondary.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+            }
+        }
+    }
+}
+
+// MARK: - Published Section View
+
+/// Horizontal scrolling section for published cards
+private struct PublishedSectionView: View {
+    var title: String = "Published"
+    let cards: [Card]
+    let clipCounts: [UUID: Int]
+    var onCardTapped: ((Card) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -216,55 +310,110 @@ private struct CardSectionView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 16) {
                     ForEach(cards) { card in
-                        NavigationLink(value: card) {
-                            CardTileView(card: card)
+                        Button {
+                            onCardTapped?(card)
+                        } label: {
+                            PublishedCardTile(
+                                card: card,
+                                clipCount: clipCounts[card.id] ?? 0
+                            )
                         }
                         .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 24)
+                .padding(.vertical, 8)  // Extra padding to prevent clipping
             }
         }
     }
 }
 
-// MARK: - Card Tile View
+// MARK: - In Progress Card Tile
 
-/// A card tile for horizontal scrolling display
-private struct CardTileView: View {
+/// Large card tile for paginated in-progress section
+private struct InProgressCardTile: View {
     let card: Card
+    let clipCount: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Top row: Director badge
+            HStack {
+                DirectorBadge()
+                Spacer()
+            }
+
+            Spacer()
+
+            // Bottom content
+            VStack(alignment: .leading, spacing: 6) {
+                // Title (prominent)
+                Text(card.title)
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(.toyText)
+                    .lineLimit(2)
+
+                // Recipient
+                Text("For \(card.recipientName)")
+                    .font(.subheadline)
+                    .foregroundColor(.toyTextSecondary)
+
+                // Clip count
+                HStack(spacing: 4) {
+                    Image(systemName: "person.2.fill")
+                        .font(.caption)
+                    Text("\(clipCount)/\(card.maxParticipants) clips")
+                        .font(.caption.weight(.medium))
+                }
+                .foregroundColor(.toyPrimary)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 160)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color.toySurface)
+                .shadow(color: .black.opacity(0.1), radius: 12, x: 0, y: 4)
+        )
+        .padding(.horizontal, 24)
+    }
+}
+
+// MARK: - Published Card Tile
+
+/// Smaller card tile for horizontal scrolling published section
+private struct PublishedCardTile: View {
+    let card: Card
+    let clipCount: Int
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Card visual
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.toySurface)
-                .frame(width: 140, height: 100)
-                .overlay {
-                    VStack(spacing: 8) {
-                        Image(systemName: "video.fill")
-                            .font(.system(size: 28))
-                            .foregroundColor(.toyPrimary)
+            // Title (prominent)
+            Text(card.title)
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(.toyText)
+                .lineLimit(2)
 
-                        StatusBadge(status: card.status)
-                    }
-                }
+            // Recipient
+            Text("For \(card.recipientName)")
+                .font(.caption)
+                .foregroundColor(.toyTextSecondary)
+                .lineLimit(1)
 
-            // Card info
-            VStack(alignment: .leading, spacing: 2) {
-                Text(card.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.toyText)
-                    .lineLimit(1)
+            Spacer()
 
-                Text("For \(card.recipientName)")
-                    .font(.caption)
-                    .foregroundColor(.toyTextSecondary)
-                    .lineLimit(1)
+            // Clip count
+            HStack(spacing: 4) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 10))
+                Text("\(clipCount) clips")
+                    .font(.caption2.weight(.medium))
             }
-            .frame(width: 140, alignment: .leading)
+            .foregroundColor(.toyTextSecondary)
         }
-        .padding(12)
+        .padding(16)
+        .frame(width: 150, height: 120, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.toySurface)
@@ -273,63 +422,16 @@ private struct CardTileView: View {
     }
 }
 
-// MARK: - Status Badge
+// MARK: - Director Badge
 
-private struct StatusBadge: View {
-    let status: String
-
+private struct DirectorBadge: View {
     var body: some View {
-        Text(displayText)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundColor(textColor)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(backgroundColor)
-            .cornerRadius(6)
-    }
-
-    private var displayText: String {
-        switch status {
-        case "draft":
-            return "Draft"
-        case "collecting":
-            return "Collecting"
-        case "stitching":
-            return "Stitching"
-        case "published":
-            return "Published"
-        default:
-            return status.capitalized
-        }
-    }
-
-    private var textColor: Color {
-        switch status {
-        case "draft":
-            return .toyTextSecondary
-        case "collecting":
-            return .toyPrimary
-        case "stitching":
-            return .orange
-        case "published":
-            return .green
-        default:
-            return .toyTextSecondary
-        }
-    }
-
-    private var backgroundColor: Color {
-        switch status {
-        case "draft":
-            return Color.toyTextSecondary.opacity(0.15)
-        case "collecting":
-            return Color.toyPrimary.opacity(0.15)
-        case "stitching":
-            return Color.orange.opacity(0.15)
-        case "published":
-            return Color.green.opacity(0.15)
-        default:
-            return Color.toyTextSecondary.opacity(0.15)
-        }
+        Text("Director")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(.toyPrimary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color.toyPrimary.opacity(0.15))
+            .cornerRadius(8)
     }
 }

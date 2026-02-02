@@ -413,7 +413,6 @@
 			packageReferences = (
 				FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOY/TOYShared" */,
 				FFRC00012F3100010000003 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
-				FFPH00012F3200010000003 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FF67B6F82F2F6236007DAF2C /* Products */;
