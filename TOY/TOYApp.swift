@@ -12,6 +12,7 @@ import TOYShared
 struct TOYApp: App {
     @State private var themeManager = ThemeManager()
     @State private var authViewModel = AuthViewModel()
+    @State private var pendingDeepLink: DeepLinkDestination?
 
     var body: some Scene {
         WindowGroup {
@@ -21,6 +22,27 @@ struct TOYApp: App {
                 .task {
                     await authViewModel.checkAuthState()
                 }
+                .onOpenURL { url in
+                    handleDeepLink(url)
+                }
+        }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        let destination = DeepLinkService.parse(url)
+
+        #if DEBUG
+        print("Deep link received: \(url)")
+        print("Parsed destination: \(destination)")
+        #endif
+
+        switch destination {
+        case .card(let shareToken):
+            // Store for navigation - actual navigation will be implemented in Phase 4
+            pendingDeepLink = .card(shareToken: shareToken)
+        case .unknown:
+            // Ignore unrecognized deep links
+            break
         }
     }
 }
