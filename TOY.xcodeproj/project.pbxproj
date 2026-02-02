@@ -10,6 +10,8 @@
 		FFAABBCC112233440000002 /* TOYShared in Frameworks */ = {isa = PBXBuildFile; productRef = FFAABBCC112233440000003 /* TOYShared */; };
 		FFB080422F30CC1200C5E3B5 /* TOYClip.app in Embed App Clips */ = {isa = PBXBuildFile; fileRef = FFB0801D2F30CC1100C5E3B5 /* TOYClip.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FFB080502F30CC6400C5E3B5 /* TOYShared in Frameworks */ = {isa = PBXBuildFile; productRef = FFB0804F2F30CC6400C5E3B5 /* TOYShared */; };
+		FFPH00012F3200010000001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = FFPH00012F3200010000002 /* PostHog */; };
+		FFRC00012F3100010000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = FFRC00012F3100010000002 /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -136,6 +138,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				FFAABBCC112233440000002 /* TOYShared in Frameworks */,
+				FFRC00012F3100010000001 /* RevenueCat in Frameworks */,
+				FFPH00012F3200010000001 /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -244,6 +248,8 @@
 			name = TOY;
 			packageProductDependencies = (
 				FFAABBCC112233440000003 /* TOYShared */,
+				FFRC00012F3100010000002 /* RevenueCat */,
+				FFPH00012F3200010000002 /* PostHog */,
 			);
 			productName = TOY;
 			productReference = FF67B6F72F2F6236007DAF2C /* TOY.app */;
@@ -409,6 +415,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOY/TOYShared" */,
+				FFRC00012F3100010000003 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				FFPH00012F3200010000003 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FF67B6F82F2F6236007DAF2C /* Products */;
@@ -1009,6 +1017,25 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		FFPH00012F3200010000003 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.0;
+			};
+		};
+		FFRC00012F3100010000003 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		FFAABBCC112233440000003 /* TOYShared */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1018,6 +1045,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FFAABBCC112233440000004 /* XCLocalSwiftPackageReference "TOY/TOYShared" */;
 			productName = TOYShared;
+		};
+		FFPH00012F3200010000002 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFPH00012F3200010000003 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
+		FFRC00012F3100010000002 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FFRC00012F3100010000003 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

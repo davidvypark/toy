@@ -36,4 +36,20 @@ public enum Configuration {
         return false
         #endif
     }
+
+    // MARK: - RevenueCat (main app only)
+
+    /// RevenueCat API key - replace with your key from RevenueCat Dashboard
+    /// Dashboard -> API Keys -> Public App-Specific API Keys -> iOS
+    public static let revenueCatAPIKey = "appl_REPLACE_WITH_YOUR_KEY"
+
+    // MARK: - PostHog Analytics (main app only)
+
+    /// PostHog API key - replace with your key from PostHog Dashboard
+    /// Dashboard -> Project Settings -> Project API Key
+    public static let postHogAPIKey = "phc_REPLACE_WITH_YOUR_KEY"
+
+    /// PostHog host URL
+    /// Use "https://us.i.posthog.com" for US or "https://eu.i.posthog.com" for EU
+    public static let postHogHost = "https://us.i.posthog.com"
 }

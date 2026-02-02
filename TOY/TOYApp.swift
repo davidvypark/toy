@@ -5,6 +5,8 @@
 //  Created by David Park on 2/1/26.
 //
 
+import PostHog
+import RevenueCat
 import SwiftUI
 import TOYShared
 
@@ -13,6 +15,26 @@ struct TOYApp: App {
     @State private var themeManager = ThemeManager()
     @State private var authViewModel = AuthViewModel()
     @State private var pendingDeepLink: DeepLinkDestination?
+
+    init() {
+        // Configure RevenueCat for in-app purchases
+        #if DEBUG
+        Purchases.logLevel = .debug
+        #endif
+        Purchases.configure(withAPIKey: Configuration.revenueCatAPIKey)
+
+        // Configure PostHog for analytics
+        let postHogConfig = PostHogConfig(
+            apiKey: Configuration.postHogAPIKey,
+            host: Configuration.postHogHost
+        )
+        postHogConfig.captureApplicationLifecycleEvents = true
+        postHogConfig.captureScreenViews = true
+        #if DEBUG
+        postHogConfig.debug = true
+        #endif
+        PostHogSDK.shared.setup(postHogConfig)
+    }
 
     var body: some Scene {
         WindowGroup {
