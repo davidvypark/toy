@@ -60,12 +60,6 @@ final class CreateCardViewModel {
             )
             createdCard = card
 
-            // Track card creation event
-            AnalyticsService.shared.trackCardCreated(
-                cardId: card.id,
-                occasion: occasion?.trimmingCharacters(in: .whitespacesAndNewlines)
-            )
-
             #if DEBUG
             print("Card created: \(card.id)")
             #endif

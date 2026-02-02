@@ -5,7 +5,6 @@
 //  Created by David Park on 2/1/26.
 //
 
-import PostHog
 import RevenueCat
 import SwiftUI
 import TOYShared
@@ -22,18 +21,6 @@ struct TOYApp: App {
         Purchases.logLevel = .debug
         #endif
         Purchases.configure(withAPIKey: Configuration.revenueCatAPIKey)
-
-        // Configure PostHog for analytics
-        let postHogConfig = PostHogConfig(
-            apiKey: Configuration.postHogAPIKey,
-            host: Configuration.postHogHost
-        )
-        postHogConfig.captureApplicationLifecycleEvents = true
-        postHogConfig.captureScreenViews = true
-        #if DEBUG
-        postHogConfig.debug = true
-        #endif
-        PostHogSDK.shared.setup(postHogConfig)
     }
 
     var body: some Scene {

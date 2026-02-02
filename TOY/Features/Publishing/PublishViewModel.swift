@@ -88,13 +88,6 @@ final class PublishViewModel {
 
             state = .success(videoURL: signedURL)
 
-            // Track publish event
-            AnalyticsService.shared.trackCardPublished(
-                cardId: card.id,
-                participantCount: participantCount,
-                clipCount: clipCount
-            )
-
             // Cleanup local file
             try? FileManager.default.removeItem(at: montageURL)
             self.montageURL = nil
