@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Host Card Creation** - Create cards, record host clip, generate invites ✓
 - [x] **Phase 5: Host Card Management** - View participants, preview clips, manage submissions ✓
 - [x] **Phase 6: Video Stitching & Publishing** - Montage generation, preview, publish to recipient ✓
-- [ ] **Phase 7: App Clip Integration** - Zero-friction participant recording without app install
+- [x] **Phase 7: App Clip Integration** - Zero-friction participant recording without app install ✓
 - [ ] **Phase 8: Recipient Flow & Monetization** - Video viewing, sharing, payments
 
 ## Phase Details
@@ -147,10 +147,10 @@ Plans:
 **Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 07-01-PLAN.md — Backend support for unauthenticated card lookup (Wave 1)
-- [ ] 07-02-PLAN.md — App Clip target setup (Wave 1)
-- [ ] 07-03-PLAN.md — App Clip entry point and recording flow (Wave 2)
-- [ ] 07-04-PLAN.md — Upload success view and human verification (Wave 3)
+- [x] 07-01-PLAN.md — Backend support for unauthenticated card lookup (Wave 1)
+- [x] 07-02-PLAN.md — App Clip target setup (Wave 1)
+- [x] 07-03-PLAN.md — App Clip entry point and recording flow (Wave 2)
+- [x] 07-04-PLAN.md — Upload success view and human verification (Wave 3)
 
 ### Phase 8: Recipient Flow & Monetization
 **Goal**: Recipients can view final videos and hosts can purchase card upgrades
@@ -163,11 +163,15 @@ Plans:
   4. Recipient can reshare video to social media
   5. Host can purchase per-card upgrades via RevenueCat
   6. Free tier works for cards with 8 or fewer participants
-**Plans**: TBD
+**Plans**: 6 plans in 3 waves
 
 Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
+- [ ] 08-01-PLAN.md — Next.js web project setup with Supabase (Wave 1)
+- [ ] 08-02-PLAN.md — Video viewer page with branding and social sharing (Wave 2)
+- [ ] 08-03-PLAN.md — RevenueCat SDK setup and PurchaseService (Wave 1)
+- [ ] 08-04-PLAN.md — Upgrade UI and free tier enforcement (Wave 2)
+- [ ] 08-05-PLAN.md — PostHog analytics integration (Wave 1)
+- [ ] 08-06-PLAN.md — Human verification of recipient flow and monetization (Wave 3)
 
 ## Progress
 
@@ -182,8 +186,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 4. Host Card Creation | 4/4 | Complete | 2026-02-02 |
 | 5. Host Card Management | 3/3 | Complete | 2026-02-02 |
 | 6. Video Stitching & Publishing | 4/4 | Complete | 2026-02-02 |
-| 7. App Clip Integration | 0/4 | Not started | - |
-| 8. Recipient Flow & Monetization | 0/TBD | Not started | - |
+| 7. App Clip Integration | 4/4 | Complete | 2026-02-02 |
+| 8. Recipient Flow & Monetization | 0/6 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-01*
