@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import TOYShared
 
@@ -239,31 +240,7 @@ private struct ContributorClipRow: View {
                 Button {
                     onTapClip(clip)
                 } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.toySurface)
-                            .frame(width: 50, height: 66)
-
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.toyTextSecondary)
-
-                        // Duration label at bottom
-                        if let duration = clip.durationSeconds {
-                            VStack {
-                                Spacer()
-                                Text(formatDuration(NSDecimalNumber(decimal: duration).doubleValue))
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 2)
-                                    .background(Color.black.opacity(0.6))
-                                    .cornerRadius(4)
-                                    .padding(4)
-                            }
-                            .frame(width: 50, height: 66)
-                        }
-                    }
+                    ClipThumbnailView(clip: clip)
                 }
                 .buttonStyle(.plain)
             } else {
@@ -298,9 +275,138 @@ private struct ContributorClipRow: View {
         default: return .toyTextSecondary
         }
     }
+}
+
+// MARK: - Clip Thumbnail View
+
+/// A view that loads and displays a video thumbnail from a signed URL
+private struct ClipThumbnailView: View {
+    let clip: Clip
+
+    @State private var thumbnail: UIImage?
+    @State private var isLoading = true
+
+    private let storageService = StorageService()
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.toySurface)
+                .frame(width: 50, height: 66)
+
+            if isLoading {
+                // Loading shimmer
+                ShimmerView()
+                    .frame(width: 50, height: 66)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else if let thumbnail {
+                // Actual thumbnail
+                Image(uiImage: thumbnail)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 50, height: 66)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                // Fallback play icon
+                Image(systemName: "play.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.toyTextSecondary)
+            }
+
+            // Play button overlay (when thumbnail loaded)
+            if thumbnail != nil {
+                Circle()
+                    .fill(Color.black.opacity(0.5))
+                    .frame(width: 24, height: 24)
+                    .overlay {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.white)
+                    }
+            }
+
+            // Duration label at bottom
+            if let duration = clip.durationSeconds {
+                VStack {
+                    Spacer()
+                    Text(formatDuration(NSDecimalNumber(decimal: duration).doubleValue))
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Color.black.opacity(0.6))
+                        .cornerRadius(4)
+                        .padding(4)
+                }
+                .frame(width: 50, height: 66)
+            }
+        }
+        .task {
+            await loadThumbnail()
+        }
+    }
+
+    private func loadThumbnail() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            // Get signed URL for the video
+            let signedURL = try await storageService.createSignedURL(path: clip.videoUrl)
+
+            // Generate thumbnail from video
+            let asset = AVAsset(url: signedURL)
+            let imageGenerator = AVAssetImageGenerator(asset: asset)
+            imageGenerator.appliesPreferredTrackTransform = true
+            imageGenerator.maximumSize = CGSize(width: 150, height: 200) // Higher res for quality
+
+            // Get frame at 0.5 seconds (or start if video is shorter)
+            let time = CMTime(seconds: 0.5, preferredTimescale: 600)
+            let cgImage = try await imageGenerator.image(at: time).image
+            thumbnail = UIImage(cgImage: cgImage)
+        } catch {
+            #if DEBUG
+            print("Failed to load thumbnail: \(error)")
+            #endif
+            // Leave thumbnail nil, will show fallback
+        }
+    }
 
     private func formatDuration(_ seconds: Double) -> String {
         String(format: "%.1fs", seconds)
+    }
+}
+
+// MARK: - Shimmer View
+
+/// A simple shimmer loading effect for thumbnails
+private struct ShimmerView: View {
+    @State private var shimmerOffset: CGFloat = -1.0
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                Color.toyTextSecondary.opacity(0.15)
+
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        .clear,
+                        .white.opacity(0.3),
+                        .clear
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: geometry.size.width * 0.6)
+                .offset(x: shimmerOffset * geometry.size.width)
+            }
+        }
+        .onAppear {
+            shimmerOffset = -1.0
+            withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
+                shimmerOffset = 1.5
+            }
+        }
     }
 }
 

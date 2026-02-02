@@ -164,6 +164,9 @@ public final class RecordingViewModel: ObservableObject {
         let clipId = UUID()
 
         do {
+            // Calculate video duration before upload
+            let duration = await getVideoDuration(url: videoURL)
+
             let path = try await storageService.uploadVideo(fileURL: videoURL, clipId: clipId)
             uploadedPath = path
             uploadState = .success(storagePath: path)
@@ -178,7 +181,7 @@ public final class RecordingViewModel: ObservableObject {
                         cardId: cardId,
                         participantId: participantId,
                         videoUrl: path,
-                        durationSeconds: nil,
+                        durationSeconds: duration,
                         orderPosition: orderPosition,
                         status: "uploaded"
                     )
@@ -197,6 +200,23 @@ public final class RecordingViewModel: ObservableObject {
             let message = (error as? UploadError)?.errorDescription ?? error.localizedDescription
             uploadState = .failed(error: message)
             print("Upload failed: \(error)")
+        }
+    }
+
+    /// Gets the duration of a video file in seconds.
+    /// - Parameter url: The local URL of the video file
+    /// - Returns: Duration as Decimal, or nil if cannot be determined
+    private func getVideoDuration(url: URL) async -> Decimal? {
+        let asset = AVAsset(url: url)
+        do {
+            let duration = try await asset.load(.duration)
+            let seconds = CMTimeGetSeconds(duration)
+            guard seconds.isFinite && seconds > 0 else { return nil }
+            // Round to 1 decimal place for cleaner display
+            return Decimal(Double(round(seconds * 10) / 10))
+        } catch {
+            print("Failed to load video duration: \(error)")
+            return nil
         }
     }
 

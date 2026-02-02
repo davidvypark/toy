@@ -177,57 +177,63 @@ struct ClipPreviewSheet: View {
 
 /// A skeleton loading view with animated shimmer effect
 private struct SkeletonLoadingView: View {
-    @State private var isAnimating = false
+    @State private var shimmerOffset: CGFloat = -1.0
 
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 16) {
-                // Simulated video frame skeleton
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.toyTextSecondary.opacity(0.15))
-                    .frame(width: geometry.size.width * 0.6, height: geometry.size.width * 0.4)
+            ZStack {
+                // Base skeleton content
+                VStack(spacing: 16) {
+                    // Simulated video frame skeleton
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.toyTextSecondary.opacity(0.15))
+                        .frame(width: geometry.size.width * 0.6, height: geometry.size.width * 0.4)
 
-                // Play button skeleton
-                Circle()
-                    .fill(Color.toyTextSecondary.opacity(0.15))
-                    .frame(width: 60, height: 60)
-                    .overlay {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.toyTextSecondary.opacity(0.3))
+                    // Play button skeleton
+                    Circle()
+                        .fill(Color.toyTextSecondary.opacity(0.15))
+                        .frame(width: 60, height: 60)
+                        .overlay {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.toyTextSecondary.opacity(0.3))
+                        }
+
+                    // Text skeleton lines
+                    VStack(spacing: 8) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.toyTextSecondary.opacity(0.15))
+                            .frame(width: geometry.size.width * 0.5, height: 12)
+
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.toyTextSecondary.opacity(0.15))
+                            .frame(width: geometry.size.width * 0.3, height: 12)
                     }
-
-                // Text skeleton lines
-                VStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.toyTextSecondary.opacity(0.15))
-                        .frame(width: geometry.size.width * 0.5, height: 12)
-
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.toyTextSecondary.opacity(0.15))
-                        .frame(width: geometry.size.width * 0.3, height: 12)
                 }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay {
-                // Shimmer effect
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Shimmer overlay
                 LinearGradient(
                     gradient: Gradient(colors: [
                         .clear,
-                        .white.opacity(0.2),
+                        .white.opacity(0.3),
                         .clear
                     ]),
                     startPoint: .leading,
                     endPoint: .trailing
                 )
-                .frame(width: geometry.size.width * 0.4)
-                .offset(x: isAnimating ? geometry.size.width : -geometry.size.width)
+                .frame(width: geometry.size.width * 0.5)
+                .offset(x: shimmerOffset * geometry.size.width)
+                .blendMode(.overlay)
             }
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .onAppear {
-            withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
-                isAnimating = true
+            // Start with shimmer off-screen to the left
+            shimmerOffset = -1.0
+            // Animate to the right, repeating forever
+            withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
+                shimmerOffset = 1.5
             }
         }
     }

@@ -264,6 +264,12 @@ private struct CardTileView: View {
             }
             .frame(width: 140, alignment: .leading)
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.toySurface)
+                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+        )
     }
 }
 
