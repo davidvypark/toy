@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Architecture** - Project structure, Supabase setup, theme system ✓
 - [x] **Phase 2: Recording Pipeline** - Vine-style video capture with preview and re-record ✓
-- [ ] **Phase 3: Data Layer & Upload** - Storage, deep linking, video upload with progress
+- [x] **Phase 3: Data Layer & Upload** - Storage, deep linking, video upload with progress ✓
 - [ ] **Phase 4: Host Card Creation** - Create cards, record host clip, generate invites
 - [ ] **Phase 5: Host Card Management** - View participants, preview clips, manage submissions
 - [ ] **Phase 6: Video Stitching & Publishing** - Montage generation, preview, publish to recipient
@@ -77,10 +77,10 @@ Plans:
 **Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 03-01-PLAN.md — Storage Service & Supabase Bucket Setup (Wave 1)
-- [ ] 03-02-PLAN.md — Deep Link Infrastructure (Wave 1)
-- [ ] 03-03-PLAN.md — Upload UI & Integration (Wave 2)
-- [ ] 03-04-PLAN.md — Verify & Human Test (Wave 3)
+- [x] 03-01-PLAN.md — Storage Service & Supabase Bucket Setup (Wave 1)
+- [x] 03-02-PLAN.md — Deep Link Infrastructure (Wave 1)
+- [x] 03-03-PLAN.md — Upload UI & Integration (Wave 2)
+- [x] 03-04-PLAN.md — Verify & Human Test (Wave 3)
 
 ### Phase 4: Host Card Creation
 **Goal**: Hosts can create new cards, record their own clip, and invite participants
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 |-------|----------------|--------|-----------|
 | 1. Foundation & Architecture | 7/7 | Complete | 2026-02-01 |
 | 2. Recording Pipeline | 6/6 | Complete | 2026-02-02 |
-| 3. Data Layer & Upload | 0/4 | In Progress | - |
+| 3. Data Layer & Upload | 4/4 | Complete | 2026-02-02 |
 | 4. Host Card Creation | 0/TBD | Not started | - |
 | 5. Host Card Management | 0/TBD | Not started | - |
 | 6. Video Stitching & Publishing | 0/TBD | Not started | - |
