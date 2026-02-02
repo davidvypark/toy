@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 3 of 8 (Data Layer & Upload)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 03-01-PLAN.md (Storage Service)
+Last activity: 2026-02-02 - Completed 03-02-PLAN.md (Deep Link Infrastructure)
 
 Progress: [###-------] ~25% (2/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 15
 - Average duration: ~6 minutes
-- Total execution time: ~75 minutes
+- Total execution time: ~79 minutes
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: [###-------] ~25% (2/8 phases complete)
 |-------|-------|-------|----------|
 | 1 | 7/7 | ~56min | ~8min |
 | 2 | 6/6 | ~19min | ~3.2min |
-| 3 | 1/3 | ~2min | ~2min |
+| 3 | 2/3 | ~4min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (~3min), 02-05 (~2min), 02-06 (~7min with fixes), 03-01 (~2min)
-- Trend: Starting Phase 3 - Data Layer & Upload
+- Last 5 plans: 02-04 (~3min), 02-05 (~2min), 02-06 (~7min with fixes), 03-01 (~2min), 03-02 (~2min)
+- Trend: Phase 3 progressing smoothly
 
 *Updated after each plan completion*
 
@@ -71,6 +71,7 @@ Recent decisions affecting current work:
 | REC-010 | Immediate state update on stop | Set state to paused immediately, async work updates if needed; prevents UI stuck | 02-06 |
 | STORAGE-001 | Actor isolation for StorageService | Thread safety with async upload operations from multiple contexts | 03-01 |
 | STORAGE-002 | Private bucket with signed URLs | Security: videos accessible only via time-limited URLs (1 hour default) | 03-01 |
+| LINK-001 | Placeholder domain toy.app for Associated Domains | Will be updated when real domain is finalized | 03-02 |
 
 ### Pending Todos
 
@@ -83,7 +84,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 03-01-PLAN.md
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -186,3 +187,11 @@ After 03-01 (Storage Service):
   - UploadError enum with fileNotFound, uploadFailed, signedURLFailed cases
   - SQL migration at supabase/migrations/002_storage_policies.sql
   - Private clips bucket with INSERT/SELECT/UPDATE/DELETE RLS policies
+
+After 03-02 (Deep Link Infrastructure):
+- **Universal Links support:**
+  - DeepLinkService with parse() method for URL parsing
+  - DeepLinkDestination enum with card(shareToken:) and unknown cases
+  - Associated Domains entitlement with applinks:toy.app placeholder
+  - onOpenURL handler in TOYApp with pendingDeepLink state
+  - Ready for card invite link navigation in Phase 4+
