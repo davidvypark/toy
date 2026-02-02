@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Anyone can create a heartfelt group video message in minutes
-**Current focus:** Phase 2 - Recording Pipeline
+**Current focus:** Phase 3 - Data Layer & Upload
 
 ## Current Position
 
-Phase: 2 of 8 (Recording Pipeline) - COMPLETE
-Plan: 6 of 6 in current phase
-Status: Phase 2 complete, ready for Phase 3
-Last activity: 2026-02-02 - Completed 02-06-PLAN.md (Wire & Verify Recording Flow)
+Phase: 3 of 8 (Data Layer & Upload)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-02 - Completed 03-01-PLAN.md (Storage Service)
 
 Progress: [###-------] ~25% (2/8 phases complete)
 
@@ -29,10 +29,11 @@ Progress: [###-------] ~25% (2/8 phases complete)
 |-------|-------|-------|----------|
 | 1 | 7/7 | ~56min | ~8min |
 | 2 | 6/6 | ~19min | ~3.2min |
+| 3 | 1/3 | ~2min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (~3min), 02-03 (~1min), 02-04 (~3min), 02-05 (~2min), 02-06 (~7min with fixes)
-- Trend: Phase 2 complete with human-verified recording pipeline
+- Last 5 plans: 02-04 (~3min), 02-05 (~2min), 02-06 (~7min with fixes), 03-01 (~2min)
+- Trend: Starting Phase 3 - Data Layer & Upload
 
 *Updated after each plan completion*
 
@@ -68,6 +69,8 @@ Recent decisions affecting current work:
 | REC-008 | Forward nested ObservableObject changes | Combine subscription forwards objectWillChange for proper SwiftUI updates | 02-06 |
 | REC-009 | Custom AVPlayerLayer for preview | Removes AVKit controls (AirPlay, speed) for cleaner preview experience | 02-06 |
 | REC-010 | Immediate state update on stop | Set state to paused immediately, async work updates if needed; prevents UI stuck | 02-06 |
+| STORAGE-001 | Actor isolation for StorageService | Thread safety with async upload operations from multiple contexts | 03-01 |
+| STORAGE-002 | Private bucket with signed URLs | Security: videos accessible only via time-limited URLs (1 hour default) | 03-01 |
 
 ### Pending Todos
 
@@ -80,7 +83,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 02-05-PLAN.md
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -174,3 +177,12 @@ After 02-06 (Wire & Verify - Phase 2 Complete):
   - Correct video transform for portrait front camera
   - Record button hides when 7 seconds reached
   - All Phase 2 success criteria human-verified on physical device
+
+After 03-01 (Storage Service):
+- **Storage infrastructure:**
+  - StorageService actor for thread-safe video upload operations
+  - uploadVideo() method for clips bucket upload with FileOptions
+  - createSignedURL() method for time-limited secure video access
+  - UploadError enum with fileNotFound, uploadFailed, signedURLFailed cases
+  - SQL migration at supabase/migrations/002_storage_policies.sql
+  - Private clips bucket with INSERT/SELECT/UPDATE/DELETE RLS policies
