@@ -74,10 +74,13 @@ struct HomeView: View {
             .sheet(isPresented: $showCreateCard) {
                 if let user = viewModel.authState.user {
                     CreateCardView(hostId: user.id) { createdCard in
-                        // Card created, navigate to recording
+                        // Card created, store it and dismiss sheet
                         cardInProgress = createdCard
                         showCreateCard = false
-                        showHostRecording = true
+                        // Delay presenting fullScreenCover until sheet dismisses
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            showHostRecording = true
+                        }
                     }
                 }
             }
@@ -94,8 +97,22 @@ struct HomeView: View {
                         if cardInProgress != nil {
                             completedCard = cardInProgress
                             cardInProgress = nil
-                            showCardCreated = true
+                            // Delay showing card created sheet until fullScreenCover dismisses
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showCardCreated = true
+                            }
                         }
+                    }
+                } else {
+                    // Fallback - should not happen but prevents blank screen
+                    VStack {
+                        Text("Loading...")
+                            .onAppear {
+                                // If we got here without card context, dismiss
+                                if cardInProgress == nil {
+                                    showHostRecording = false
+                                }
+                            }
                     }
                 }
             }
