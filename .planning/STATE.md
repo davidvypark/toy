@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 6 of 8 (Video Stitching & Publishing)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 06-02-PLAN.md
+Last activity: 2026-02-02 - Completed 06-03-PLAN.md
 
 Progress: [######----] 60% (5/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
-- Average duration: ~4.5 minutes
-- Total execution time: ~98 minutes
+- Total plans completed: 23
+- Average duration: ~4.4 minutes
+- Total execution time: ~101 minutes
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: [######----] 60% (5/8 phases complete)
 | 3 | 4/4 | ~11min | ~2.75min |
 | 4 | 4/4 | ~22min | ~5.5min |
 | 5 | 3/3 | ~8min | ~2.7min |
-| 6 | 2/4 | ~4min | ~2min |
+| 6 | 3/4 | ~7min | ~2.3min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (~2min), 05-03 (~3min), 06-01 (~2min), 06-02 (~2min)
-- Trend: Phase 6 in progress - Montage stitching logic complete
+- Last 5 plans: 05-03 (~3min), 06-01 (~2min), 06-02 (~2min), 06-03 (~3min)
+- Trend: Phase 6 in progress - Publishing UI complete
 
 *Updated after each plan completion*
 
@@ -94,6 +94,9 @@ Recent decisions affecting current work:
 | DURATION-001 | Load missing durations from AVAsset | Old clips in DB may not have duration; load from video asset on demand | 05-03 |
 | HOST-001 | Identify host clip by participantId == hostId | More reliable than orderPosition for finding host's clip | 05-03 |
 | VIDEO-001 | upsert=true for montage uploads | Allows re-publishing (overwriting existing montage) without delete+insert | 06-01 |
+| UI-007 | Auto-generate preview on MontagePreviewView appear | Reduces user friction by starting generation immediately | 06-03 |
+| UI-008 | Loop video playback via AVPlayerItemDidPlayToEndTime | Continuous preview for user review | 06-03 |
+| UI-009 | Recipient URL uses /watch/{token} pattern | Distinct from /card/{token} invite pattern | 06-03 |
 
 ### Pending Todos
 
@@ -106,7 +109,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 06-02-PLAN.md
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -347,3 +350,21 @@ After 06-02 (Montage Stitching Logic):
   - overallProgress: downloading = 40%, stitching = 60%
 - **Error handling:**
   - MontageError enum: noClips, downloadFailed, stitchingFailed
+
+After 06-03 (Publishing UI):
+- **Publishing view model:**
+  - PublishViewModel with @Observable pattern
+  - PublishState enum: idle, generating, uploading, publishing, success, failed
+  - generatePreview() orchestrates MontageService with progress reporting
+  - publish() uploads montage and updates card status
+  - reset() and cleanup() for error handling
+- **Montage preview view:**
+  - MontagePreviewView with VideoPlayer for montage preview
+  - Auto-generates preview on appear via task modifier
+  - Progress view with phase text (downloading/stitching)
+  - Regenerate toolbar button for preview recreation
+  - Loop playback via AVPlayerItemDidPlayToEndTime notification
+- **Published card view:**
+  - PublishedCardView with success icon and ShareLink
+  - Recipient URL pattern: https://toy.app/watch/{shareToken}
+  - Native iOS sharing via ShareLink with customized subject/message
