@@ -48,6 +48,10 @@ final class CreateCardViewModel {
         errorMessage = nil
 
         do {
+            #if DEBUG
+            print("🔄 Creating card for host: \(hostId)")
+            #endif
+
             let card = try await cardService.createCard(
                 title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                 recipientName: recipientName.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -55,7 +59,15 @@ final class CreateCardViewModel {
                 hostId: hostId
             )
             createdCard = card
+
+            #if DEBUG
+            print("✅ Card created: \(card.id)")
+            #endif
         } catch {
+            #if DEBUG
+            print("❌ Card creation failed: \(error)")
+            print("   Underlying error: \(String(describing: error))")
+            #endif
             errorMessage = error.localizedDescription
         }
 
