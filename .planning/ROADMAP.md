@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Recording Pipeline** - Vine-style video capture with preview and re-record ✓
 - [x] **Phase 3: Data Layer & Upload** - Storage, deep linking, video upload with progress ✓
 - [x] **Phase 4: Host Card Creation** - Create cards, record host clip, generate invites ✓
-- [ ] **Phase 5: Host Card Management** - View participants, preview clips, manage submissions
+- [x] **Phase 5: Host Card Management** - View participants, preview clips, manage submissions ✓
 - [ ] **Phase 6: Video Stitching & Publishing** - Montage generation, preview, publish to recipient
 - [ ] **Phase 7: App Clip Integration** - Zero-friction participant recording without app install
 - [ ] **Phase 8: Recipient Flow & Monetization** - Video viewing, sharing, payments
@@ -112,9 +112,9 @@ Plans:
 **Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 05-01-PLAN.md — CardService Extensions & ParticipantRow (Wave 1)
-- [ ] 05-02-PLAN.md — CardDetailView & ClipPreviewSheet (Wave 2)
-- [ ] 05-03-PLAN.md — Wire Navigation & Human Verify (Wave 3)
+- [x] 05-01-PLAN.md — CardService Extensions & ParticipantRow (Wave 1)
+- [x] 05-02-PLAN.md — CardDetailView & ClipPreviewSheet (Wave 2)
+- [x] 05-03-PLAN.md — Wire Navigation & Human Verify (Wave 3)
 
 ### Phase 6: Video Stitching & Publishing
 **Goal**: Hosts can preview the full stitched montage and publish the final card for recipients
@@ -126,11 +126,13 @@ Plans:
   3. Host can finalize and publish the card
   4. Host receives shareable link to send to the recipient
   5. Final montage is stored in Supabase storage (videos bucket)
-**Plans**: TBD
+**Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md — Videos Bucket & Service Extensions (Wave 1)
+- [ ] 06-02-PLAN.md — MontageService & VideoMerger Progress (Wave 1)
+- [ ] 06-03-PLAN.md — Publishing UI (Wave 2)
+- [ ] 06-04-PLAN.md — Wire Navigation & Human Verify (Wave 3)
 
 ### Phase 7: App Clip Integration
 **Goal**: Participants can open invite links and record clips without installing the full app
@@ -176,8 +178,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 2. Recording Pipeline | 6/6 | Complete | 2026-02-02 |
 | 3. Data Layer & Upload | 4/4 | Complete | 2026-02-02 |
 | 4. Host Card Creation | 4/4 | Complete | 2026-02-02 |
-| 5. Host Card Management | 0/3 | Not started | - |
-| 6. Video Stitching & Publishing | 0/TBD | Not started | - |
+| 5. Host Card Management | 3/3 | Complete | 2026-02-02 |
+| 6. Video Stitching & Publishing | 0/4 | Not started | - |
 | 7. App Clip Integration | 0/TBD | Not started | - |
 | 8. Recipient Flow & Monetization | 0/TBD | Not started | - |
 
