@@ -31,6 +31,9 @@ public actor StorageService {
     /// The storage bucket name for video clips
     private let bucketName = "clips"
 
+    /// The storage bucket name for final montage videos
+    private let videosBucketName = "videos"
+
     public init() {}
 
     // MARK: - Upload
@@ -63,7 +66,7 @@ public actor StorageService {
                 path: path,
                 file: fileData,
                 options: FileOptions(
-                    cacheControl: "3600",
+                    cacheControl: "2592000",  // 30 days - enables CDN caching
                     contentType: "video/quicktime",
                     upsert: false
                 )
@@ -95,7 +98,78 @@ public actor StorageService {
             let signedURL = try await bucket.createSignedURL(path: path, expiresIn: expiresIn)
 
             #if DEBUG
-            print("🔗 Created signed URL for \(path) (expires in \(expiresIn)s)")
+            print("🔗 Created signed URL for \(path)")
+            print("   URL host: \(signedURL.host ?? "unknown")")
+            #endif
+
+            return signedURL
+        } catch {
+            throw UploadError.signedURLFailed(error.localizedDescription)
+        }
+    }
+
+    // MARK: - Montage Upload (Videos Bucket)
+
+    /// Uploads a final montage video file to the videos bucket.
+    /// - Parameters:
+    ///   - fileURL: The local URL of the montage video file to upload
+    ///   - cardId: The unique identifier for the card (used as filename)
+    /// - Returns: The storage path of the uploaded file
+    /// - Throws: `UploadError` if the file cannot be read or upload fails
+    public func uploadMontage(fileURL: URL, cardId: UUID) async throws -> String {
+        // Verify file exists
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            throw UploadError.fileNotFound
+        }
+
+        // Read file data
+        let fileData: Data
+        do {
+            fileData = try Data(contentsOf: fileURL)
+        } catch {
+            throw UploadError.fileNotFound
+        }
+
+        let path = "\(cardId).mov"
+        let bucket = supabase.storage.from(videosBucketName)
+
+        do {
+            try await bucket.upload(
+                path: path,
+                file: fileData,
+                options: FileOptions(
+                    cacheControl: "2592000",  // 30 days - enables CDN caching
+                    contentType: "video/quicktime",
+                    upsert: true  // Allow re-publishing (overwrite existing)
+                )
+            )
+
+            #if DEBUG
+            let fileSizeKB = fileData.count / 1024
+            print("📤 Uploaded montage \(path) (\(fileSizeKB) KB)")
+            #endif
+
+            return path
+        } catch {
+            throw UploadError.uploadFailed(error.localizedDescription)
+        }
+    }
+
+    /// Creates a time-limited signed URL for secure montage video access.
+    /// - Parameters:
+    ///   - path: The storage path of the montage file
+    ///   - expiresIn: How long the URL should be valid, in seconds (default: 1 hour)
+    /// - Returns: A signed URL for accessing the video
+    /// - Throws: `UploadError.signedURLFailed` if URL generation fails
+    public func createSignedVideoURL(path: String, expiresIn: Int = 3600) async throws -> URL {
+        let bucket = supabase.storage.from(videosBucketName)
+
+        do {
+            let signedURL = try await bucket.createSignedURL(path: path, expiresIn: expiresIn)
+
+            #if DEBUG
+            print("🔗 Created signed video URL for \(path)")
+            print("   URL host: \(signedURL.host ?? "unknown")")
             #endif
 
             return signedURL
