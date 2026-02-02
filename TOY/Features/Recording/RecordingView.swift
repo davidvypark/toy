@@ -3,10 +3,16 @@ import SwiftUI
 import TOYShared
 
 public struct RecordingView: View {
-    @StateObject private var viewModel = RecordingViewModel()
+    @StateObject private var viewModel: RecordingViewModel
     @Environment(\.dismiss) private var dismiss
 
-    public init() {}
+    public init(cardId: UUID? = nil, participantId: UUID? = nil, isHostClip: Bool = false) {
+        _viewModel = StateObject(wrappedValue: RecordingViewModel(
+            cardId: cardId,
+            participantId: participantId,
+            isHostClip: isHostClip
+        ))
+    }
 
     public var body: some View {
         ZStack {
