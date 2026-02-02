@@ -74,11 +74,13 @@ Plans:
   3. Deep links (Universal Links) open the app to the correct card context
   4. Videos are accessible only via signed URLs (secure access)
   5. Upload completes reliably with retry on failure
-**Plans**: TBD
+**Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Storage Service & Supabase Bucket Setup (Wave 1)
+- [ ] 03-02-PLAN.md — Deep Link Infrastructure (Wave 1)
+- [ ] 03-03-PLAN.md — Upload UI & Integration (Wave 2)
+- [ ] 03-04-PLAN.md — Verify & Human Test (Wave 3)
 
 ### Phase 4: Host Card Creation
 **Goal**: Hosts can create new cards, record their own clip, and invite participants
@@ -169,7 +171,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 |-------|----------------|--------|-----------|
 | 1. Foundation & Architecture | 7/7 | Complete | 2026-02-01 |
 | 2. Recording Pipeline | 6/6 | Complete | 2026-02-02 |
-| 3. Data Layer & Upload | 0/TBD | Not started | - |
+| 3. Data Layer & Upload | 0/4 | In Progress | - |
 | 4. Host Card Creation | 0/TBD | Not started | - |
 | 5. Host Card Management | 0/TBD | Not started | - |
 | 6. Video Stitching & Publishing | 0/TBD | Not started | - |
