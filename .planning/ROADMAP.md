@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Data Layer & Upload** - Storage, deep linking, video upload with progress ✓
 - [x] **Phase 4: Host Card Creation** - Create cards, record host clip, generate invites ✓
 - [x] **Phase 5: Host Card Management** - View participants, preview clips, manage submissions ✓
-- [ ] **Phase 6: Video Stitching & Publishing** - Montage generation, preview, publish to recipient
+- [x] **Phase 6: Video Stitching & Publishing** - Montage generation, preview, publish to recipient ✓
 - [ ] **Phase 7: App Clip Integration** - Zero-friction participant recording without app install
 - [ ] **Phase 8: Recipient Flow & Monetization** - Video viewing, sharing, payments
 
@@ -129,10 +129,10 @@ Plans:
 **Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 06-01-PLAN.md — Videos Bucket & Service Extensions (Wave 1)
-- [ ] 06-02-PLAN.md — MontageService & VideoMerger Progress (Wave 1)
-- [ ] 06-03-PLAN.md — Publishing UI (Wave 2)
-- [ ] 06-04-PLAN.md — Wire Navigation & Human Verify (Wave 3)
+- [x] 06-01-PLAN.md — Videos Bucket & Service Extensions (Wave 1)
+- [x] 06-02-PLAN.md — MontageService & VideoMerger Progress (Wave 1)
+- [x] 06-03-PLAN.md — Publishing UI (Wave 2)
+- [x] 06-04-PLAN.md — Wire Navigation & Human Verify (Wave 3)
 
 ### Phase 7: App Clip Integration
 **Goal**: Participants can open invite links and record clips without installing the full app
@@ -140,15 +140,17 @@ Plans:
 **Requirements**: TECH-06, PART-01
 **Success Criteria** (what must be TRUE):
   1. Participant can open invite link via App Clip (no app install required)
-  2. App Clip binary is under 15MB (iOS 15) or 50MB (iOS 16+)
+  2. App Clip binary is under 15MB (iOS 16+)
   3. Recording flow works identically in App Clip as in main app
   4. Uploaded clips from App Clip appear in host's card management view
   5. App Clip prompts user to get full app after submission
-**Plans**: TBD
+**Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [ ] 07-01-PLAN.md — Backend support for unauthenticated card lookup (Wave 1)
+- [ ] 07-02-PLAN.md — App Clip target setup (Wave 1)
+- [ ] 07-03-PLAN.md — App Clip entry point and recording flow (Wave 2)
+- [ ] 07-04-PLAN.md — Upload success view and human verification (Wave 3)
 
 ### Phase 8: Recipient Flow & Monetization
 **Goal**: Recipients can view final videos and hosts can purchase card upgrades
@@ -179,8 +181,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 3. Data Layer & Upload | 4/4 | Complete | 2026-02-02 |
 | 4. Host Card Creation | 4/4 | Complete | 2026-02-02 |
 | 5. Host Card Management | 3/3 | Complete | 2026-02-02 |
-| 6. Video Stitching & Publishing | 0/4 | Not started | - |
-| 7. App Clip Integration | 0/TBD | Not started | - |
+| 6. Video Stitching & Publishing | 4/4 | Complete | 2026-02-02 |
+| 7. App Clip Integration | 0/4 | Not started | - |
 | 8. Recipient Flow & Monetization | 0/TBD | Not started | - |
 
 ---
