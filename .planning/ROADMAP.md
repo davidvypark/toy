@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Host Card Management** - View participants, preview clips, manage submissions ✓
 - [x] **Phase 6: Video Stitching & Publishing** - Montage generation, preview, publish to recipient ✓
 - [x] **Phase 7: App Clip Integration** - Zero-friction participant recording without app install ✓
-- [ ] **Phase 8: Recipient Flow & Monetization** - Video viewing, sharing, payments
+- [x] **Phase 8: Recipient Flow & Monetization** - Video viewing, sharing, payments ✓
 
 ## Phase Details
 
@@ -166,12 +166,12 @@ Plans:
 **Plans**: 6 plans in 3 waves
 
 Plans:
-- [ ] 08-01-PLAN.md — Next.js web project setup with Supabase (Wave 1)
-- [ ] 08-02-PLAN.md — Video viewer page with branding and social sharing (Wave 2)
-- [ ] 08-03-PLAN.md — RevenueCat SDK setup and PurchaseService (Wave 1)
-- [ ] 08-04-PLAN.md — Upgrade UI and free tier enforcement (Wave 2)
-- [ ] 08-05-PLAN.md — PostHog analytics integration (Wave 1)
-- [ ] 08-06-PLAN.md — Human verification of recipient flow and monetization (Wave 3)
+- [x] 08-01-PLAN.md — Next.js web project setup with Supabase (Wave 1)
+- [x] 08-02-PLAN.md — Video viewer page with branding and social sharing (Wave 2)
+- [x] 08-03-PLAN.md — RevenueCat SDK setup and PurchaseService (Wave 1)
+- [x] 08-04-PLAN.md — Upgrade UI and free tier enforcement (Wave 2)
+- [x] 08-05-PLAN.md — PostHog analytics integration (Wave 1) — removed, using DB timestamps
+- [x] 08-06-PLAN.md — Human verification of recipient flow and monetization (Wave 3)
 
 ## Progress
 
@@ -187,7 +187,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Host Card Management | 3/3 | Complete | 2026-02-02 |
 | 6. Video Stitching & Publishing | 4/4 | Complete | 2026-02-02 |
 | 7. App Clip Integration | 4/4 | Complete | 2026-02-02 |
-| 8. Recipient Flow & Monetization | 0/6 | Not started | - |
+| 8. Recipient Flow & Monetization | 6/6 | Complete | 2026-02-02 |
 
 ---
 *Roadmap created: 2026-02-01*
