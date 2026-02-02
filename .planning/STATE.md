@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Anyone can create a heartfelt group video message in minutes
-**Current focus:** Phase 4 - Host Card Creation
+**Current focus:** Phase 5 - Host Card Management
 
 ## Current Position
 
-Phase: 4 of 8 (Host Card Creation)
-Plan: 3 of TBD in current phase
+Phase: 5 of 8 (Host Card Management)
+Plan: 1 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 04-03-PLAN.md
+Last activity: 2026-02-02 - Completed 05-01-PLAN.md
 
-Progress: [####------] ~43% (3.3/8 phases complete)
+Progress: [#####-----] 50% (4/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: ~5 minutes
-- Total execution time: ~93 minutes
+- Total execution time: ~96 minutes
 
 **By Phase:**
 
@@ -30,11 +30,12 @@ Progress: [####------] ~43% (3.3/8 phases complete)
 | 1 | 7/7 | ~56min | ~8min |
 | 2 | 6/6 | ~19min | ~3.2min |
 | 3 | 4/4 | ~11min | ~2.75min |
-| 4 | 3/? | ~7min | ~2.3min |
+| 4 | 4/4 | ~22min | ~5.5min |
+| 5 | 1/3 | ~3min | ~3min |
 
 **Recent Trend:**
-- Last 5 plans: 03-03 (~2min), 03-04 (~5min verification), 04-01 (~2min), 04-02 (~2min), 04-03 (~3min)
-- Trend: Phase 4 progressing, execution velocity strong
+- Last 5 plans: 04-02 (~2min), 04-03 (~3min), 04-04 (~15min), 05-01 (~3min)
+- Trend: Phase 5 started, 05-01 executed smoothly
 
 *Updated after each plan completion*
 
@@ -82,6 +83,12 @@ Recent decisions affecting current work:
 | FORM-001 | Trim whitespace on validation and submission | Prevents accidental empty submissions via trailing spaces | 04-02 |
 | CLIP-001 | Best-effort clip record creation | Video upload succeeds even if clip record fails; prevents frustrating UX | 04-03 |
 | CLIP-002 | Host clips orderPosition = 0 | Host intro appears first in montage; participants default to 1 | 04-03 |
+| NAV-001 | Item-based sheet for CardCreatedView | Passes card directly as parameter, avoiding state timing issues | 04-04 |
+| NAV-002 | 0.5s delay between modal transitions | SwiftUI can't reliably handle simultaneous sheet dismiss and fullScreenCover | 04-04 |
+| FORM-002 | Local @State for form fields | Prevents full view re-renders on keystroke, ensures responsive input | 04-04 |
+| RLS-001 | SECURITY DEFINER helper functions | Breaks infinite recursion between cards and participants RLS policies | 04-04 |
+| CLIP-003 | Delete storage file before database record | Prevents orphaned files if DB delete fails; continues if storage already deleted | 05-01 |
+| UI-006 | Status mapping via computed properties | Keeps view body clean and logic testable | 05-01 |
 
 ### Pending Todos
 
@@ -94,7 +101,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 04-03-PLAN.md (Recording Integration)
+Stopped at: Completed 05-01-PLAN.md (CardService Extensions & ParticipantRow)
 Resume file: None
 
 ## What's Available
@@ -251,3 +258,25 @@ After 04-03 (Recording Integration):
   - Card status updated to 'collecting' after host records
   - Best-effort clip creation (upload succeeds even if clip record fails)
   - Backward compatibility maintained for standalone recording
+
+After 04-04 (Wire Flow & ShareLink - Phase 4 Complete):
+- **Complete host card creation flow:**
+  - HomeView navigation: Create Card -> CreateCardView -> RecordingView -> CardCreatedView
+  - CardCreatedView with ShareLink generating invite URLs
+  - Invite URL pattern: https://toy.app/card/{shareToken}
+  - Item-based modal presentations for reliable data passing
+  - RLS helper functions (is_participant_of_card, is_host_of_card) for policy recursion fix
+  - Local @State for responsive form input in CreateCardView
+
+After 05-01 (CardService Extensions & ParticipantRow):
+- **Card management data layer:**
+  - CardService.fetchParticipantsForCard(cardId:) for querying participants
+  - CardService.fetchClipsForCard(cardId:) for querying clips ordered by position
+  - CardService.deleteClip(clipId:storagePath:) for storage + database cleanup
+  - CardError.deleteFailed case for delete operation errors
+  - Storage-first delete pattern (delete file, then record)
+- **Participant UI component:**
+  - ParticipantRow in TOY/Features/CardManagement/
+  - Displays avatar placeholder, email/guest name, status text
+  - Status color coding (green=submitted, primary=recording, secondary=default)
+  - Checkmark icon for submitted status
