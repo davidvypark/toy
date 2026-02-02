@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Anyone can create a heartfelt group video message in minutes
-**Current focus:** Phase 7 - App Clip Integration
+**Current focus:** Phase 8 - Recipient Flow & Monetization
 
 ## Current Position
 
-Phase: 7 of 8 (App Clip Integration)
-Plan: 3 of 4 in current phase
+Phase: 8 of 8 (Recipient Flow & Monetization)
+Plan: 1 of 6 complete
 Status: In progress
-Last activity: 2026-02-02 - Completed 07-03-PLAN.md
+Last activity: 2026-02-02 - Completed 08-01-PLAN.md
 
-Progress: [#########-] 84% (27/32 plans complete)
+Progress: [##########] 84% (32/38 plans complete)
 
 ## Performance Metrics
 
@@ -33,11 +33,11 @@ Progress: [#########-] 84% (27/32 plans complete)
 | 4 | 4/4 | ~22min | ~5.5min |
 | 5 | 3/3 | ~8min | ~2.7min |
 | 6 | 4/4 | ~22min | ~5.5min |
-| 7 | 3/4 | ~9min | ~3min |
+| 7 | 4/4 | ~24min | ~6min |
 
 **Recent Trend:**
-- Last 5 plans: 06-03 (~3min), 06-04 (~15min), 07-01 (~3min), 07-03 (~6min)
-- Trend: Phase 7 App Clip integration - entry point and recording flow complete
+- Last 5 plans: 07-01 (~3min), 07-03 (~6min), 07-04 (~15min), 08-01 (~4min)
+- Trend: Phase 8 started - Web project foundation complete
 
 *Updated after each plan completion*
 
@@ -105,6 +105,10 @@ Recent decisions affecting current work:
 | CLIP-004 | Move Recording UI to TOYShared for code sharing | Enables code sharing between main app and App Clip | 07-03 |
 | CLIP-005 | onContinueUserActivity(NSUserActivityTypeBrowsingWeb) for App Clip URLs | Required for App Clips - onOpenURL does not work | 07-03 |
 | CLIP-006 | RecordingView accepts external viewModel | Allows App Clip to monitor upload state changes | 07-03 |
+| CLIP-007 | Guard recording start on isSessionReady | Prevents crash when user taps record before camera starts | 07-04 |
+| URL-002 | Share URL domain: sendtoycard.com | Consistent production domain across all share links | 07-04 |
+| WEB-001 | Tailwind v4 CSS-based theme configuration | No tailwind.config.ts; use @theme inline in globals.css | 08-01 |
+| WEB-002 | Server-side Supabase client with service role key | Required for generating signed URLs from private buckets | 08-01 |
 
 ### Pending Todos
 
@@ -117,7 +121,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 07-03-PLAN.md (App Clip Entry Point and Recording Flow)
+Stopped at: Completed 08-01-PLAN.md (Next.js Web Project Setup)
 Resume file: None
 
 ## What's Available
@@ -419,3 +423,32 @@ After 07-03 (App Clip Entry Point and Recording Flow):
   - Recording UI files moved to TOYShared/Recording/UI/
   - RecordingView, RecordingViewModel, VideoPreviewView, UploadProgressView now shared
   - Both main app and App Clip use same recording components
+
+After 07-04 (Bug Fixes & Verification - Phase 7 Complete):
+- **Recording safety:**
+  - Guard in VideoRecorder.startRecording() prevents recording before camera ready
+  - Defensive check in ClipWriter.finishWriting() prevents crash on status 0
+  - Record button shows loading spinner when capture session not ready
+- **Production URLs:**
+  - All share links use sendtoycard.com domain
+  - Main app entitlements use applinks:sendtoycard.com
+- **App Clip configuration:**
+  - Info.plist includes camera and microphone usage descriptions
+  - Prevents crash on camera access
+- **Verified end-to-end flow:**
+  - App Clip launches from simulated URL
+  - Card loads via anon access (RLS policy applied)
+  - Recording view appears with permission prompt
+  - Note: Full recording requires physical device
+
+After 08-01 (Next.js Web Project Setup):
+- **Web project foundation:**
+  - Next.js 16 project at sendtoycard-web/ with TypeScript, Tailwind v4, App Router
+  - @supabase/supabase-js@2.93.3 installed
+  - Server-side Supabase client at lib/supabase.ts with createServerClient()
+  - TOY brand colors via CSS custom properties (--toy-primary, --toy-background, etc.)
+  - DM Serif Display font for headings, Geist for body
+  - .env.local.example documenting SUPABASE_URL and SUPABASE_SERVICE_KEY
+- **Ready for:**
+  - /watch/[token] video viewer page (08-02)
+  - Vercel deployment configuration
