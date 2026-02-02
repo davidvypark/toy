@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** Anyone can create a heartfelt group video message in minutes
-**Current focus:** Phase 6 - Video Stitching & Publishing
+**Current focus:** Phase 7 - App Clip Integration
 
 ## Current Position
 
-Phase: 6 of 8 (Video Stitching & Publishing)
-Plan: 3 of 4 in current phase
+Phase: 7 of 8 (App Clip Integration)
+Plan: 1 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 06-03-PLAN.md
+Last activity: 2026-02-02 - Completed 07-01-PLAN.md
 
-Progress: [######----] 60% (5/8 phases complete)
+Progress: [########--] 78% (25/32 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
-- Average duration: ~4.4 minutes
-- Total execution time: ~101 minutes
+- Total plans completed: 25
+- Average duration: ~4.8 minutes
+- Total execution time: ~119 minutes
 
 **By Phase:**
 
@@ -32,11 +32,12 @@ Progress: [######----] 60% (5/8 phases complete)
 | 3 | 4/4 | ~11min | ~2.75min |
 | 4 | 4/4 | ~22min | ~5.5min |
 | 5 | 3/3 | ~8min | ~2.7min |
-| 6 | 3/4 | ~7min | ~2.3min |
+| 6 | 4/4 | ~22min | ~5.5min |
+| 7 | 1/4 | ~3min | ~3min |
 
 **Recent Trend:**
-- Last 5 plans: 05-03 (~3min), 06-01 (~2min), 06-02 (~2min), 06-03 (~3min)
-- Trend: Phase 6 in progress - Publishing UI complete
+- Last 5 plans: 06-02 (~2min), 06-03 (~3min), 06-04 (~15min), 07-01 (~3min)
+- Trend: Phase 7 started - Backend support for App Clip share token lookup
 
 *Updated after each plan completion*
 
@@ -97,6 +98,10 @@ Recent decisions affecting current work:
 | UI-007 | Auto-generate preview on MontagePreviewView appear | Reduces user friction by starting generation immediately | 06-03 |
 | UI-008 | Loop video playback via AVPlayerItemDidPlayToEndTime | Continuous preview for user review | 06-03 |
 | UI-009 | Recipient URL uses /watch/{token} pattern | Distinct from /card/{token} invite pattern | 06-03 |
+| MERGE-001 | Copy single clip to new file instead of returning original | Original file gets deleted by cleanup; returning a copy prevents file-not-found errors | 06-04 |
+| UI-010 | Custom AVPlayerLayer for montage preview | Removes unwanted AVKit controls (AirPlay, skip buttons) for cleaner preview | 06-04 |
+| URL-001 | Recipient URL domain: sendtoycard.com | User-specified domain for production | 06-04 |
+| RLS-002 | Permissive SELECT on cards for anon role | share_token acts as capability token - knowing UUID grants read access | 07-01 |
 
 ### Pending Todos
 
@@ -109,7 +114,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 06-03-PLAN.md
+Stopped at: Completed 07-01-PLAN.md (Backend Support for Share Token Lookup)
 Resume file: None
 
 ## What's Available
@@ -368,3 +373,25 @@ After 06-03 (Publishing UI):
   - PublishedCardView with success icon and ShareLink
   - Recipient URL pattern: https://toy.app/watch/{shareToken}
   - Native iOS sharing via ShareLink with customized subject/message
+
+After 06-04 (Wire Navigation & Human Verify - Phase 6 Complete):
+- **Complete publishing flow:**
+  - CardDetailView "Preview Montage" section navigates to MontagePreviewView
+  - Full flow: CardDetail -> MontagePreview -> Publish -> PublishedCard -> ShareLink
+  - Host first ordering enforced in montage (participantId == hostId)
+- **Bug fixes:**
+  - VideoMerger copies single clips to new file (prevents file-not-found after cleanup)
+  - Custom MontageVideoPlayer using AVPlayerLayer (removes AirPlay/skip buttons)
+  - Recipient URL domain: sendtoycard.com/watch/{shareToken}
+- **Verified capabilities:**
+  - Montage preview with progress (downloading clips, stitching)
+  - Publish uploads to videos bucket and updates card status
+  - Shareable link generation for recipients
+  - Note: Web viewer at sendtoycard.com not built yet (future phase)
+
+After 07-01 (Backend Support for Share Token Lookup):
+- **Unauthenticated card lookup:**
+  - CardService.fetchCardByShareToken(shareToken:) method for App Clip access
+  - RLS policy allowing anon role to SELECT from cards table
+  - Migration at supabase/migrations/005_public_card_lookup.sql
+  - share_token acts as capability token (UUID is unguessable)
