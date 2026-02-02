@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 6 of 8 (Video Stitching & Publishing)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 06-01-PLAN.md
+Last activity: 2026-02-02 - Completed 06-02-PLAN.md
 
 Progress: [######----] 60% (5/8 phases complete)
 
@@ -32,11 +32,11 @@ Progress: [######----] 60% (5/8 phases complete)
 | 3 | 4/4 | ~11min | ~2.75min |
 | 4 | 4/4 | ~22min | ~5.5min |
 | 5 | 3/3 | ~8min | ~2.7min |
-| 6 | 1/4 | ~2min | ~2min |
+| 6 | 2/4 | ~4min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (~3min), 05-02 (~2min), 05-03 (~3min), 06-01 (~2min)
-- Trend: Starting Phase 6 - Video Stitching & Publishing
+- Last 5 plans: 05-02 (~2min), 05-03 (~3min), 06-01 (~2min), 06-02 (~2min)
+- Trend: Phase 6 in progress - Montage stitching logic complete
 
 *Updated after each plan completion*
 
@@ -106,7 +106,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 06-01-PLAN.md
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -329,3 +329,21 @@ After 06-01 (Videos Bucket & Publishing Infrastructure):
   - Separate videosBucketName constant from clips bucket
 - **CardService publishing:**
   - publishCard(cardId:videoUrl:) atomically sets status, video_url, published_at
+
+After 06-02 (Montage Stitching Logic):
+- **VideoMerger extension:**
+  - mergeClipsWithProgress(_ clipURLs:onProgress:) method
+  - @Sendable progress callback reporting 0.0 to 1.0
+  - Monitors AVAssetExportSession.progress at 0.1s intervals
+  - Backward compatible with existing mergeClips() method
+- **MontageService actor:**
+  - generateMontage(clips:hostId:onProgress:) orchestrates full pipeline
+  - Downloads clips from Supabase via signed URLs
+  - Sorts clips: host first (participantId == hostId), then orderPosition, then createdAt
+  - Stitches using VideoMerger with progress reporting
+  - Cleans up temp clip files after stitching
+- **Progress reporting:**
+  - MontageProgress struct with downloading/stitching phases
+  - overallProgress: downloading = 40%, stitching = 60%
+- **Error handling:**
+  - MontageError enum: noClips, downloadFailed, stitchingFailed
