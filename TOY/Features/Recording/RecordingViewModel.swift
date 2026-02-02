@@ -179,9 +179,17 @@ public final class RecordingViewModel: ObservableObject {
         }
     }
 
-    public func dismissUpload() {
+    /// Dismisses the upload overlay. Returns true if upload was successful (caller should navigate away).
+    @discardableResult
+    public func dismissUpload() -> Bool {
+        let wasSuccess: Bool
+        if case .success = uploadState {
+            wasSuccess = true
+        } else {
+            wasSuccess = false
+        }
         uploadState = nil
-        // Could navigate away or reset here if needed
+        return wasSuccess
     }
 
     // MARK: - Computed Properties

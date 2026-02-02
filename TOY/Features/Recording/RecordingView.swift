@@ -39,7 +39,13 @@ public struct RecordingView: View {
                 UploadProgressView(
                     state: uploadState,
                     onRetry: { viewModel.retryUpload() },
-                    onDismiss: { viewModel.dismissUpload() }
+                    onDismiss: {
+                        if viewModel.dismissUpload() {
+                            // Upload succeeded - go back to home
+                            dismiss()
+                        }
+                        // Otherwise just hides overlay, stays on preview
+                    }
                 )
             }
         }
