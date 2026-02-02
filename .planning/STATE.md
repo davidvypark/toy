@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 3 of 8 (Data Layer & Upload)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-02 - Completed 03-02-PLAN.md (Deep Link Infrastructure)
+Plan: 3 of 3 in current phase
+Status: In progress (awaiting 03-04 verification)
+Last activity: 2026-02-02 - Completed 03-03-PLAN.md (Upload UI & Integration)
 
 Progress: [###-------] ~25% (2/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: ~6 minutes
-- Total execution time: ~79 minutes
+- Total plans completed: 16
+- Average duration: ~5 minutes
+- Total execution time: ~81 minutes
 
 **By Phase:**
 
@@ -29,10 +29,10 @@ Progress: [###-------] ~25% (2/8 phases complete)
 |-------|-------|-------|----------|
 | 1 | 7/7 | ~56min | ~8min |
 | 2 | 6/6 | ~19min | ~3.2min |
-| 3 | 2/3 | ~4min | ~2min |
+| 3 | 3/4 | ~6min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (~3min), 02-05 (~2min), 02-06 (~7min with fixes), 03-01 (~2min), 03-02 (~2min)
+- Last 5 plans: 02-05 (~2min), 02-06 (~7min with fixes), 03-01 (~2min), 03-02 (~2min), 03-03 (~2min)
 - Trend: Phase 3 progressing smoothly
 
 *Updated after each plan completion*
@@ -72,6 +72,8 @@ Recent decisions affecting current work:
 | STORAGE-001 | Actor isolation for StorageService | Thread safety with async upload operations from multiple contexts | 03-01 |
 | STORAGE-002 | Private bucket with signed URLs | Security: videos accessible only via time-limited URLs (1 hour default) | 03-01 |
 | LINK-001 | Placeholder domain toy.app for Associated Domains | Will be updated when real domain is finalized | 03-02 |
+| UPLOAD-001 | Overlay-based upload progress | Shows progress without navigation change; user stays on preview screen | 03-03 |
+| UPLOAD-002 | Exponential backoff retry (2s/4s/8s) with max 3 retries | Standard network retry pattern; prevents hammering server | 03-03 |
 
 ### Pending Todos
 
@@ -84,7 +86,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 03-02-PLAN.md
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
 
 ## What's Available
@@ -195,3 +197,13 @@ After 03-02 (Deep Link Infrastructure):
   - Associated Domains entitlement with applinks:toy.app placeholder
   - onOpenURL handler in TOYApp with pendingDeepLink state
   - Ready for card invite link navigation in Phase 4+
+
+After 03-03 (Upload UI & Integration):
+- **Upload progress flow:**
+  - UploadProgressView with UploadState enum (uploading, success, failed)
+  - Full-screen overlay with semi-transparent background
+  - Spinner during upload, checkmark on success, error with retry/cancel buttons
+  - RecordingViewModel wired to StorageService with upload lifecycle
+  - Exponential backoff retry (2s, 4s, 8s delays, max 3 attempts)
+  - Upload overlay integrated into RecordingView flow
+  - Complete video submission pipeline: record -> preview -> confirm -> upload -> success
