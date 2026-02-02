@@ -34,6 +34,15 @@ public struct RecordingView: View {
                 }
             }
         }
+        .overlay {
+            if let uploadState = viewModel.uploadState {
+                UploadProgressView(
+                    state: uploadState,
+                    onRetry: { viewModel.retryUpload() },
+                    onDismiss: { viewModel.dismissUpload() }
+                )
+            }
+        }
         .task {
             await viewModel.onAppear()
         }
