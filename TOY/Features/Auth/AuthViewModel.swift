@@ -78,6 +78,13 @@ final class AuthViewModel {
                     fullName: appleIDCredential.fullName
                 )
                 authState = .signedIn(user)
+
+                // Identify user in analytics
+                AnalyticsService.shared.identify(
+                    userId: user.id,
+                    email: user.email,
+                    name: user.displayName
+                )
             } catch let error as AuthError {
                 errorMessage = error.errorDescription
             } catch {
@@ -104,6 +111,9 @@ final class AuthViewModel {
         do {
             try await authService.signOut()
             authState = .signedOut
+
+            // Reset analytics identity
+            AnalyticsService.shared.reset()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -116,6 +126,13 @@ final class AuthViewModel {
     func checkAuthState() async {
         if let user = await authService.getCurrentUser() {
             authState = .signedIn(user)
+
+            // Identify returning user in analytics
+            AnalyticsService.shared.identify(
+                userId: user.id,
+                email: user.email,
+                name: user.displayName
+            )
         } else {
             authState = .signedOut
         }

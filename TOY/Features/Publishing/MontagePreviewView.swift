@@ -1,4 +1,4 @@
-import AVKit
+import AVFoundation
 import SwiftUI
 import TOYShared
 
@@ -10,6 +10,7 @@ struct MontagePreviewView: View {
 
     @State private var viewModel = PublishViewModel()
     @State private var player: AVPlayer?
+    @State private var isPlayerReady = false
     @State private var showPublishedView = false
 
     var body: some View {
@@ -19,20 +20,25 @@ struct MontagePreviewView: View {
             VStack(spacing: 0) {
                 // Video player area
                 if let player {
-                    VideoPlayer(player: player)
-                        .aspectRatio(9/16, contentMode: .fit)
-                        .cornerRadius(12)
-                        .padding()
-                } else if viewModel.state.isInProgress {
-                    // Progress view during generation
+                    MontageVideoPlayer(player: player) {
+                        isPlayerReady = true
+                    }
+                    .aspectRatio(9/16, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding()
+                    .opacity(isPlayerReady ? 1 : 0)
+                }
+
+                if viewModel.state.isInProgress || (player != nil && !isPlayerReady) {
+                    // Progress view during generation or loading
                     progressView
-                } else {
+                } else if player == nil {
                     // Placeholder before generation
                     VStack(spacing: 16) {
                         Image(systemName: "film.stack")
                             .font(.system(size: 48))
                             .foregroundColor(.white.opacity(0.6))
-                        TOYLabel("Tap Generate to preview your montage", style: .body, color: .white.opacity(0.8))
+                        TOYLabel("Generating preview...", style: .body, color: .white.opacity(0.8))
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -54,6 +60,7 @@ struct MontagePreviewView: View {
                     Button("Regenerate") {
                         Task {
                             player = nil
+                            isPlayerReady = false
                             await viewModel.generatePreview(card: card, clips: clips)
                             setupPlayer()
                         }
@@ -69,6 +76,8 @@ struct MontagePreviewView: View {
         }
         .onDisappear {
             player?.pause()
+            player = nil
+            isPlayerReady = false
             viewModel.cleanup()
         }
         .onChange(of: viewModel.state) { _, newState in
@@ -135,7 +144,11 @@ struct MontagePreviewView: View {
                 isLoading: viewModel.state.isInProgress && viewModel.montageURL != nil
             ) {
                 Task {
-                    await viewModel.publish(card: card)
+                    await viewModel.publish(
+                        card: card,
+                        clipCount: clips.count,
+                        participantCount: Set(clips.map(\.participantId)).count
+                    )
                 }
             }
             .disabled(viewModel.montageURL == nil || viewModel.state.isInProgress)
@@ -155,17 +168,82 @@ struct MontagePreviewView: View {
 
     private func setupPlayer() {
         guard let url = viewModel.montageURL else { return }
-        player = AVPlayer(url: url)
-        player?.play()
+        isPlayerReady = false
+        let newPlayer = AVPlayer(url: url)
+        newPlayer.automaticallyWaitsToMinimizeStalling = false
+        newPlayer.play()
 
         // Loop playback
         NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
-            object: player?.currentItem,
+            object: newPlayer.currentItem,
             queue: .main
         ) { _ in
-            player?.seek(to: .zero)
-            player?.play()
+            newPlayer.seek(to: .zero)
+            newPlayer.play()
         }
+
+        player = newPlayer
+    }
+}
+
+// MARK: - Montage Video Player
+
+/// A simple looping video player without controls (no AirPlay, skip buttons).
+/// Reports when the layer is ready to display via onReadyToDisplay callback.
+private struct MontageVideoPlayer: UIViewRepresentable {
+    let player: AVPlayer
+    let onReadyToDisplay: () -> Void
+
+    func makeUIView(context: Context) -> MontagePlayerUIView {
+        let view = MontagePlayerUIView()
+        view.player = player
+        view.onReadyToDisplay = onReadyToDisplay
+        return view
+    }
+
+    func updateUIView(_ uiView: MontagePlayerUIView, context: Context) {
+        uiView.player = player
+    }
+}
+
+/// UIView subclass using AVPlayerLayer for video rendering.
+private class MontagePlayerUIView: UIView {
+    private var layerObserver: NSKeyValueObservation?
+    var onReadyToDisplay: (() -> Void)?
+
+    override class var layerClass: AnyClass {
+        AVPlayerLayer.self
+    }
+
+    var playerLayer: AVPlayerLayer {
+        layer as! AVPlayerLayer
+    }
+
+    var player: AVPlayer? {
+        get { playerLayer.player }
+        set {
+            playerLayer.player = newValue
+            playerLayer.videoGravity = .resizeAspectFill
+
+            // Observe when layer actually has frames to display
+            layerObserver?.invalidate()
+            layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in
+                if layer.isReadyForDisplay {
+                    DispatchQueue.main.async {
+                        self?.onReadyToDisplay?()
+                    }
+                }
+            }
+
+            // Check if already ready
+            if playerLayer.isReadyForDisplay {
+                onReadyToDisplay?()
+            }
+        }
+    }
+
+    deinit {
+        layerObserver?.invalidate()
     }
 }

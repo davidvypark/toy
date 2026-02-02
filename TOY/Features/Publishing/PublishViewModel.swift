@@ -62,7 +62,11 @@ final class PublishViewModel {
     }
 
     /// Publishes the card: uploads montage and updates card status
-    func publish(card: Card) async {
+    /// - Parameters:
+    ///   - card: The card to publish
+    ///   - clipCount: Number of clips in the montage (for analytics)
+    ///   - participantCount: Number of participants (for analytics)
+    func publish(card: Card, clipCount: Int = 0, participantCount: Int = 0) async {
         guard let montageURL, state == .idle else { return }
 
         state = .uploading(progress: 0)
@@ -83,6 +87,13 @@ final class PublishViewModel {
             let signedURL = try await storageService.createSignedVideoURL(path: storagePath)
 
             state = .success(videoURL: signedURL)
+
+            // Track publish event
+            AnalyticsService.shared.trackCardPublished(
+                cardId: card.id,
+                participantCount: participantCount,
+                clipCount: clipCount
+            )
 
             // Cleanup local file
             try? FileManager.default.removeItem(at: montageURL)
