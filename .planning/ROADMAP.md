@@ -92,11 +92,13 @@ Plans:
   3. Host's clip is marked to appear first in the final montage
   4. Host can generate a shareable invite link for participants
   5. Invite link contains card context for participant routing
-**Plans**: TBD
+**Plans**: 4 plans in 3 waves
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md — Models & CardService (Wave 1)
+- [ ] 04-02-PLAN.md — Card Creation Form (Wave 2)
+- [ ] 04-03-PLAN.md — Recording with Card Context (Wave 2)
+- [ ] 04-04-PLAN.md — Wire Flow & ShareLink (Wave 3)
 
 ### Phase 5: Host Card Management
 **Goal**: Hosts can view all participants, preview submitted clips, and manage their card
@@ -172,7 +174,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Foundation & Architecture | 7/7 | Complete | 2026-02-01 |
 | 2. Recording Pipeline | 6/6 | Complete | 2026-02-02 |
 | 3. Data Layer & Upload | 4/4 | Complete | 2026-02-02 |
-| 4. Host Card Creation | 0/TBD | Not started | - |
+| 4. Host Card Creation | 0/4 | In Progress | - |
 | 5. Host Card Management | 0/TBD | Not started | - |
 | 6. Video Stitching & Publishing | 0/TBD | Not started | - |
 | 7. App Clip Integration | 0/TBD | Not started | - |
