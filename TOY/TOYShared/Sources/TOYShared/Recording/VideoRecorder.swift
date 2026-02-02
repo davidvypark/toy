@@ -28,6 +28,7 @@ public final class VideoRecorder: ObservableObject {
     private var accumulatedDuration: TimeInterval = 0
     private var recordingTimer: Timer?
     private var clipStartWallTime: TimeInterval = 0
+    private var isFinishingClip: Bool = false
 
     // MARK: - Initialization
 
@@ -54,6 +55,7 @@ public final class VideoRecorder: ObservableObject {
     /// Start recording (finger down)
     public func startRecording() {
         guard state.canStartRecording else { return }
+        guard !isFinishingClip else { return } // Wait for previous clip to finish
         guard accumulatedDuration < maxDuration else { return }
 
         // Create new clip writer
@@ -82,10 +84,23 @@ public final class VideoRecorder: ObservableObject {
         guard state.isRecording else { return }
 
         stopTimer()
+        isFinishingClip = true
+
+        // Calculate clip duration from wall clock (more reliable than async asset load)
+        let clipDuration = currentClipDuration
+
+        // Update state immediately so UI responds
+        // Will be adjusted to .completed if max duration reached
+        if clipURLs.isEmpty && clipDuration < minimumClipDuration {
+            // Very short first tap - stay idle
+            state = .idle
+        } else {
+            state = .paused
+        }
 
         // Finish current clip asynchronously
         Task {
-            await finishCurrentClip()
+            await finishCurrentClip(estimatedDuration: clipDuration)
         }
     }
 
@@ -94,7 +109,7 @@ public final class VideoRecorder: ObservableObject {
         // Stop any in-progress recording first
         if state.isRecording {
             stopTimer()
-            await finishCurrentClip()
+            await finishCurrentClip(estimatedDuration: currentClipDuration)
         }
 
         guard !clipURLs.isEmpty else {
@@ -116,6 +131,7 @@ public final class VideoRecorder: ObservableObject {
         stopTimer()
         clipWriter?.cancelWriting()
         clipWriter = nil
+        isFinishingClip = false
 
         // Delete all temp clips
         merger.deleteClips(clipURLs)
@@ -138,16 +154,22 @@ public final class VideoRecorder: ObservableObject {
 
     // MARK: - Private Methods
 
-    private func finishCurrentClip() async {
-        guard let writer = clipWriter else { return }
+    private func finishCurrentClip(estimatedDuration: TimeInterval) async {
+        defer { isFinishingClip = false }
+
+        guard let writer = clipWriter else {
+            // No writer - ensure we're in a valid state
+            if state == .recording {
+                state = clipURLs.isEmpty ? .idle : .paused
+            }
+            return
+        }
 
         do {
             let clipURL = try await writer.finishWriting()
 
-            // Calculate clip duration
-            let asset = AVURLAsset(url: clipURL)
-            let duration = try await asset.load(.duration)
-            let clipDuration = CMTimeGetSeconds(duration)
+            // Use estimated duration from wall clock (asset.load can fail for short clips)
+            let clipDuration = estimatedDuration
 
             // Discard clips shorter than minimum (accidental taps)
             if clipDuration < minimumClipDuration {
@@ -165,10 +187,17 @@ public final class VideoRecorder: ObservableObject {
                 let mergedURL = try await merger.mergeClips(clipURLs)
                 state = .completed(videoURL: mergedURL)
             } else {
-                state = .paused
+                // State was already set to .paused in stopRecording
+                // Update to .idle if we discarded the clip and have no content
+                if clipURLs.isEmpty {
+                    state = .idle
+                }
             }
         } catch {
-            state = .error(message: error.localizedDescription)
+            // On error, restore to a usable state
+            clipWriter = nil
+            state = clipURLs.isEmpty ? .idle : .paused
+            print("Clip finish error: \(error.localizedDescription)")
         }
     }
 
