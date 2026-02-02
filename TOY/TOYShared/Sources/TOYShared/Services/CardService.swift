@@ -9,6 +9,7 @@ public enum CardError: LocalizedError, Sendable {
     case fetchFailed(String)
     case updateFailed(String)
     case clipCreateFailed(String)
+    case deleteFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -20,6 +21,8 @@ public enum CardError: LocalizedError, Sendable {
             return "Failed to update card: \(message)"
         case .clipCreateFailed(let message):
             return "Failed to create clip: \(message)"
+        case .deleteFailed(let message):
+            return "Failed to delete: \(message)"
         }
     }
 }
@@ -165,6 +168,92 @@ public actor CardService {
             return clip
         } catch {
             throw CardError.clipCreateFailed(error.localizedDescription)
+        }
+    }
+
+    // MARK: - Participant Operations
+
+    /// Fetches all participants for a given card, ordered by invitation date.
+    /// - Parameter cardId: The ID of the card
+    /// - Returns: Array of Participants
+    /// - Throws: `CardError.fetchFailed` if fetch fails
+    public func fetchParticipantsForCard(cardId: UUID) async throws -> [Participant] {
+        do {
+            let participants: [Participant] = try await supabase
+                .from("participants")
+                .select()
+                .eq("card_id", value: cardId)
+                .order("invited_at", ascending: true)
+                .execute()
+                .value
+
+            #if DEBUG
+            print("👥 Fetched \(participants.count) participants for card \(cardId)")
+            #endif
+
+            return participants
+        } catch {
+            throw CardError.fetchFailed(error.localizedDescription)
+        }
+    }
+
+    /// Fetches all clips for a given card, ordered by position.
+    /// - Parameter cardId: The ID of the card
+    /// - Returns: Array of Clips ordered by order_position
+    /// - Throws: `CardError.fetchFailed` if fetch fails
+    public func fetchClipsForCard(cardId: UUID) async throws -> [Clip] {
+        do {
+            let clips: [Clip] = try await supabase
+                .from("clips")
+                .select()
+                .eq("card_id", value: cardId)
+                .order("order_position", ascending: true)
+                .execute()
+                .value
+
+            #if DEBUG
+            print("🎬 Fetched \(clips.count) clips for card \(cardId)")
+            #endif
+
+            return clips
+        } catch {
+            throw CardError.fetchFailed(error.localizedDescription)
+        }
+    }
+
+    /// Deletes a clip from storage and database.
+    /// - Parameters:
+    ///   - clipId: The ID of the clip to delete
+    ///   - storagePath: The storage path of the video file
+    /// - Throws: `CardError.deleteFailed` if database delete fails
+    public func deleteClip(clipId: UUID, storagePath: String) async throws {
+        // First, attempt to delete from storage (file may already be deleted)
+        let bucket = supabase.storage.from("clips")
+        do {
+            try await bucket.remove(paths: [storagePath])
+            #if DEBUG
+            print("🗑️ Deleted storage file: \(storagePath)")
+            #endif
+        } catch {
+            // Log but continue - file may already be deleted
+            #if DEBUG
+            print("⚠️ Storage delete failed (may already be deleted): \(error.localizedDescription)")
+            #endif
+        }
+
+        // Then delete from database
+        do {
+            try await supabase
+                .from("clips")
+                .delete()
+                .eq("id", value: clipId)
+                .execute()
+
+            #if DEBUG
+            print("🗑️ Deleted clip record: \(clipId)")
+            #endif
+        } catch {
+            throw CardError.deleteFailed(error.localizedDescription)
         }
     }
 }
