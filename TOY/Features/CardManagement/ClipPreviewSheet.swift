@@ -1,0 +1,228 @@
+import AVFoundation
+import SwiftUI
+import TOYShared
+
+/// A sheet view for previewing and managing a clip.
+/// Displays looping video playback with delete confirmation.
+struct ClipPreviewSheet: View {
+    let clip: Clip
+    let onDelete: () async -> Void
+
+    @State private var signedURL: URL?
+    @State private var isLoading = true
+    @State private var loadError: String?
+    @State private var showDeleteConfirmation = false
+    @State private var player: AVPlayer?
+    @State private var isDeleting = false
+
+    @Environment(\.dismiss) private var dismiss
+
+    private let storageService = StorageService()
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Video player area
+                ZStack {
+                    if isLoading {
+                        loadingView
+                    } else if let error = loadError {
+                        errorView(error)
+                    } else if let player {
+                        ClipVideoPlayer(player: player)
+                            .aspectRatio(9/16, contentMode: .fit)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 24)
+
+                Spacer()
+
+                // Delete button
+                TOYButton(
+                    "Delete Clip",
+                    style: .destructive,
+                    size: .large,
+                    isLoading: isDeleting
+                ) {
+                    showDeleteConfirmation = true
+                }
+                .disabled(isDeleting)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
+            }
+            .background(Color.toyBackground)
+            .navigationTitle("Preview Clip")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+            .task {
+                await loadSignedURL()
+            }
+            .onDisappear {
+                cleanupPlayer()
+            }
+            .confirmationDialog(
+                "Delete this clip?",
+                isPresented: $showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    Task {
+                        await handleDelete()
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This action cannot be undone. The clip will be permanently removed from the card.")
+            }
+        }
+    }
+
+    // MARK: - Subviews
+
+    private var loadingView: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(Color.toySurface)
+            .aspectRatio(9/16, contentMode: .fit)
+            .overlay {
+                ProgressView()
+                    .scaleEffect(1.5)
+            }
+    }
+
+    private func errorView(_ error: String) -> some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(Color.toySurface)
+            .aspectRatio(9/16, contentMode: .fit)
+            .overlay {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 40))
+                        .foregroundColor(.toyTextSecondary)
+
+                    TOYLabel("Failed to load video", style: .body)
+
+                    TOYLabel(error, style: .caption, color: .toyTextSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+            }
+    }
+
+    // MARK: - Actions
+
+    private func loadSignedURL() async {
+        isLoading = true
+        loadError = nil
+
+        do {
+            #if DEBUG
+            print("Loading signed URL for clip: \(clip.id)")
+            #endif
+
+            let url = try await storageService.createSignedURL(path: clip.videoUrl)
+            signedURL = url
+            setupPlayer(with: url)
+
+            #if DEBUG
+            print("Signed URL loaded successfully")
+            #endif
+        } catch {
+            #if DEBUG
+            print("Failed to load signed URL: \(error)")
+            #endif
+            loadError = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+
+    private func setupPlayer(with url: URL) {
+        let newPlayer = AVPlayer(url: url)
+        newPlayer.play()
+
+        // Loop playback
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: newPlayer.currentItem,
+            queue: .main
+        ) { _ in
+            newPlayer.seek(to: .zero)
+            newPlayer.play()
+        }
+
+        player = newPlayer
+    }
+
+    private func cleanupPlayer() {
+        player?.pause()
+        player = nil
+    }
+
+    private func handleDelete() async {
+        isDeleting = true
+        await onDelete()
+        isDeleting = false
+        dismiss()
+    }
+}
+
+// MARK: - Clip Video Player
+
+/// A simple looping video player for clip preview.
+private struct ClipVideoPlayer: UIViewRepresentable {
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> ClipPlayerUIView {
+        let view = ClipPlayerUIView()
+        view.player = player
+        return view
+    }
+
+    func updateUIView(_ uiView: ClipPlayerUIView, context: Context) {
+        uiView.player = player
+    }
+}
+
+/// UIView subclass using AVPlayerLayer for video rendering.
+private class ClipPlayerUIView: UIView {
+    override class var layerClass: AnyClass {
+        AVPlayerLayer.self
+    }
+
+    var playerLayer: AVPlayerLayer {
+        layer as! AVPlayerLayer
+    }
+
+    var player: AVPlayer? {
+        get { playerLayer.player }
+        set {
+            playerLayer.player = newValue
+            playerLayer.videoGravity = .resizeAspectFill
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    ClipPreviewSheet(
+        clip: Clip(
+            id: UUID(),
+            cardId: UUID(),
+            participantId: UUID(),
+            videoUrl: "test-clip.mov",
+            status: "uploaded"
+        ),
+        onDelete: {
+            print("Delete tapped")
+        }
+    )
+}
