@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 5 of 8 (Host Card Management)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 05-01-PLAN.md
+Last activity: 2026-02-02 - Completed 05-02-PLAN.md
 
 Progress: [#####-----] 50% (4/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: ~5 minutes
-- Total execution time: ~96 minutes
+- Total plans completed: 22
+- Average duration: ~4.5 minutes
+- Total execution time: ~98 minutes
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [#####-----] 50% (4/8 phases complete)
 | 2 | 6/6 | ~19min | ~3.2min |
 | 3 | 4/4 | ~11min | ~2.75min |
 | 4 | 4/4 | ~22min | ~5.5min |
-| 5 | 1/3 | ~3min | ~3min |
+| 5 | 2/3 | ~5min | ~2.5min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (~2min), 04-03 (~3min), 04-04 (~15min), 05-01 (~3min)
-- Trend: Phase 5 started, 05-01 executed smoothly
+- Last 5 plans: 04-03 (~3min), 04-04 (~15min), 05-01 (~3min), 05-02 (~2min)
+- Trend: Phase 5 progressing smoothly, 05-02 executed efficiently
 
 *Updated after each plan completion*
 
@@ -101,7 +101,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 05-01-PLAN.md (CardService Extensions & ParticipantRow)
+Stopped at: Completed 05-02-PLAN.md (Card Management UI)
 Resume file: None
 
 ## What's Available
@@ -280,3 +280,20 @@ After 05-01 (CardService Extensions & ParticipantRow):
   - Displays avatar placeholder, email/guest name, status text
   - Status color coding (green=submitted, primary=recording, secondary=default)
   - Checkmark icon for submitted status
+
+After 05-02 (Card Management UI):
+- **Card detail view model:**
+  - CardDetailViewModel with @Observable pattern
+  - loadData(for:) fetches participants and clips in parallel using async let
+  - deleteClip(_:) removes clip from storage and database
+  - getSignedURL(for:) generates time-limited video access URL
+- **Clip preview sheet:**
+  - ClipPreviewSheet with signed URL loading on appear
+  - Looping video playback via AVPlayerLayer (ClipVideoPlayer)
+  - Delete confirmation dialog with destructive button
+  - Loading and error states for video player
+- **Card detail view:**
+  - CardDetailView displays card info, participants section, clips section
+  - Pull-to-refresh via refreshable modifier
+  - Sheet-based clip preview with deletion capability
+  - Empty states for no participants/clips
