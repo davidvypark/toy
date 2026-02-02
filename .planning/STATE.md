@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 8 of 8 (Recipient Flow & Monetization)
-Plan: 1 of 6 complete
+Plan: 3 of 6 complete
 Status: In progress
-Last activity: 2026-02-02 - Completed 08-01-PLAN.md
+Last activity: 2026-02-02 - Completed 08-03-PLAN.md
 
-Progress: [##########] 84% (32/38 plans complete)
+Progress: [##########] 89% (34/38 plans complete)
 
 ## Performance Metrics
 
@@ -36,8 +36,8 @@ Progress: [##########] 84% (32/38 plans complete)
 | 7 | 4/4 | ~24min | ~6min |
 
 **Recent Trend:**
-- Last 5 plans: 07-01 (~3min), 07-03 (~6min), 07-04 (~15min), 08-01 (~4min)
-- Trend: Phase 8 started - Web project foundation complete
+- Last 5 plans: 07-03 (~6min), 07-04 (~15min), 08-01 (~4min), 08-03 (~9min)
+- Trend: Phase 8 in progress - RevenueCat SDK integrated
 
 *Updated after each plan completion*
 
@@ -109,6 +109,9 @@ Recent decisions affecting current work:
 | URL-002 | Share URL domain: sendtoycard.com | Consistent production domain across all share links | 07-04 |
 | WEB-001 | Tailwind v4 CSS-based theme configuration | No tailwind.config.ts; use @theme inline in globals.css | 08-01 |
 | WEB-002 | Server-side Supabase client with service role key | Required for generating signed URLs from private buckets | 08-01 |
+| MONETIZE-001 | RevenueCat for IAP management over raw StoreKit | Handles receipt validation, cross-platform sync, analytics | 08-03 |
+| MONETIZE-002 | Actor isolation for PurchaseService | Thread-safe async operations consistent with other services | 08-03 |
+| MONETIZE-003 | Exclude RevenueCat from TOYClip | App Clip size limit (15MB); purchases not allowed in App Clips | 08-03 |
 
 ### Pending Todos
 
@@ -121,7 +124,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 08-01-PLAN.md (Next.js Web Project Setup)
+Stopped at: Completed 08-03-PLAN.md (RevenueCat SDK Setup)
 Resume file: None
 
 ## What's Available
@@ -452,3 +455,20 @@ After 08-01 (Next.js Web Project Setup):
 - **Ready for:**
   - /watch/[token] video viewer page (08-02)
   - Vercel deployment configuration
+
+After 08-03 (RevenueCat SDK Setup):
+- **In-app purchase infrastructure:**
+  - RevenueCat iOS SDK v5.57 added to TOY target only (not TOYClip)
+  - Configuration.revenueCatAPIKey placeholder in TOYShared
+  - Purchases.configure() called in TOYApp.init()
+  - Debug logging enabled in DEBUG builds
+- **PurchaseService actor:**
+  - fetchOfferings() - Get available products from RevenueCat
+  - purchase(package:) - Complete IAP transaction
+  - restorePurchases() - Restore previous purchases
+  - getCustomerInfo() - Get entitlement status
+  - hasEntitlement(_:) - Check specific entitlement
+  - isCardUpgraded(cardId:) - Check per-card purchase status
+- **Ready for:**
+  - Upgrade UI integration (08-04)
+  - User setup: RevenueCat dashboard config, API key
