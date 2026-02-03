@@ -3,7 +3,6 @@ import SwiftUI
 import TOYShared
 
 /// The main card detail/management view for hosts.
-/// Displays card info, participant+clip rows with thumbnails, and summary stats.
 struct CardDetailView: View {
     let card: Card
 
@@ -12,14 +11,18 @@ struct CardDetailView: View {
     @State private var showError = false
     @State private var showMontagePreview = false
     @State private var showUpgradeSheet = false
+    @State private var showDeleteConfirmation = false
+    @State private var showFinalDeleteConfirmation = false
+    @State private var isDeleting = false
+
+    @Environment(\.dismiss) private var dismiss
+    private let cardService = CardService()
 
     // MARK: - Computed Properties
 
-    /// All contributors including host as first entry
     private var allContributors: [ContributorRow] {
         var contributors: [ContributorRow] = []
 
-        // Host is always first - identify by participantId matching hostId
         let hostClip = viewModel.clips.first { $0.participantId == card.hostId }
         let hostDuration = hostClip.flatMap { viewModel.effectiveDuration(for: $0) }
         let hostCachedURL = hostClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
@@ -32,9 +35,7 @@ struct CardDetailView: View {
             cachedURL: hostCachedURL
         ))
 
-        // Add participants with their clips (exclude host from participants list)
         for participant in viewModel.participants {
-            // Skip if this participant is the host (they're already shown)
             guard participant.id != card.hostId else { continue }
 
             let participantClip = viewModel.clips.first { $0.participantId == participant.id }
@@ -54,18 +55,15 @@ struct CardDetailView: View {
         return contributors
     }
 
-    /// Count of contributors who have submitted clips
     private var submittedCount: Int {
         allContributors.filter { $0.clip != nil }.count
     }
 
-    /// Total duration of all clips in seconds, using loaded values when DB is nil
     private var totalDuration: Double {
         viewModel.clips.compactMap { viewModel.effectiveDuration(for: $0) }
             .reduce(0, +)
     }
 
-    /// Formatted total duration string
     private var formattedDuration: String {
         let minutes = Int(totalDuration) / 60
         let seconds = Int(totalDuration) % 60
@@ -75,176 +73,73 @@ struct CardDetailView: View {
         return "\(seconds)s"
     }
 
-    /// Invite URL for sharing
     private var inviteURL: URL? {
         guard let token = card.shareToken else { return nil }
         return URL(string: "https://sendtoycard.com/card/\(token)")
     }
 
-    /// Whether the card needs an upgrade (at or over limit and not already upgraded)
     private var needsUpgrade: Bool {
-        // Show upgrade prompt if at or over limit and not already upgraded to unlimited (999)
         viewModel.participants.count >= card.maxParticipants && card.maxParticipants < 999
-    }
-
-    /// Whether the card is at the free tier limit
-    private var isAtFreeLimit: Bool {
-        card.maxParticipants == 8 && viewModel.participants.count >= 8
     }
 
     // MARK: - Body
 
     var body: some View {
-        List {
-            // Summary stats section
-            Section {
-                HStack(spacing: 24) {
-                    // Clips submitted stat
-                    VStack(spacing: 4) {
-                        HStack(spacing: 4) {
-                            Text("\(submittedCount)")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(.toyPrimary)
-                            Text("of \(allContributors.count)")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.toyTextSecondary)
-                        }
-                        TOYLabel("clips submitted", style: .caption, color: .toyTextSecondary)
-                    }
-                    .frame(maxWidth: .infinity)
+        ZStack {
+            TOYBackground()
 
-                    // Divider
-                    Rectangle()
-                        .fill(Color.toyTextSecondary.opacity(0.3))
-                        .frame(width: 1, height: 40)
+            ScrollView {
+                VStack(alignment: .leading, spacing: TOYSpacing.xl) {
+                    // Card title - large, type-forward
+                    Text(card.title)
+                        .font(.toyTitle())
+                        .foregroundColor(.toyText)
+                        .lineSpacing(-4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, TOYSpacing.sm)
 
-                    // Total duration stat
-                    VStack(spacing: 4) {
-                        Text(formattedDuration)
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.toyPrimary)
-                        TOYLabel("total duration", style: .caption, color: .toyTextSecondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .padding(.vertical, 8)
-            }
+                    // Summary stats
+                    summaryStatsView
 
-            // Card info with re-share link
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        TOYLabel("For: ", style: .body, color: .toyTextSecondary)
-                        TOYLabel(card.recipientName, style: .body)
+                    // Card info with share link
+                    cardInfoView
+
+                    // Upgrade banner
+                    if needsUpgrade {
+                        upgradeBannerView
                     }
 
-                    if let url = inviteURL {
-                        ShareLink(
-                            item: url,
-                            subject: Text("Join my TOY card!"),
-                            message: Text("Record a video message for \(card.recipientName)")
-                        ) {
-                            HStack {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 14))
-                                Text("Share Invite Link")
-                                    .font(.subheadline.weight(.medium))
-                            }
-                            .foregroundColor(.toyPrimary)
-                        }
+                    // Contributors section
+                    contributorsSection
+
+                    // Preview montage
+                    if !viewModel.clips.isEmpty {
+                        previewMontageView
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(.horizontal, TOYSpacing.lg)
+                .padding(.vertical, TOYSpacing.lg)
             }
-
-            // Upgrade banner - show when at or over participant limit
-            if needsUpgrade {
-                Section {
-                    Button {
-                        showUpgradeSheet = true
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                EmptyView()
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
                     } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(.toyPrimary)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Card is full")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                                Text("Upgrade for unlimited participants")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.toyPrimary)
-                        }
-                        .padding(.vertical, 4)
+                        Label("Delete Card", systemImage: "trash")
                     }
-                    .buttonStyle(.plain)
-                    .listRowBackground(Color.toyPrimary.opacity(0.1))
-                }
-            }
-
-            // Contributors section (participants + clips combined)
-            Section {
-                if viewModel.isLoading {
-                    // Skeleton loading placeholders until data AND cached URLs are ready
-                    ForEach(0..<3, id: \.self) { _ in
-                        ContributorSkeletonRow()
-                    }
-                } else {
-                    ForEach(allContributors) { contributor in
-                        ContributorClipRow(
-                            contributor: contributor,
-                            onTapClip: { clip in
-                                selectedClip = clip
-                            }
-                        )
-                    }
-                }
-            } header: {
-                TOYLabel("Contributors", style: .caption)
-            }
-
-            // Preview Montage section - only show when clips exist
-            if !viewModel.clips.isEmpty {
-                Section {
-                    Button {
-                        showMontagePreview = true
-                    } label: {
-                        HStack {
-                            Image(systemName: "film.stack")
-                                .foregroundColor(.toyPrimary)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                TOYLabel("Preview Montage", style: .body)
-                                TOYLabel(
-                                    "\(viewModel.clips.count) clips - \(formattedDuration) total",
-                                    style: .caption,
-                                    color: .toyTextSecondary
-                                )
-                            }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.toyTextSecondary)
-                                .font(.system(size: 14))
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    .buttonStyle(.plain)
-                } header: {
-                    TOYLabel("Publish", style: .caption)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.toyText)
                 }
             }
         }
-        .listStyle(.insetGrouped)
-        .navigationTitle(card.title)
-        .navigationBarTitleDisplayMode(.inline)
         .refreshable {
             await viewModel.loadData(for: card.id)
         }
@@ -265,11 +160,8 @@ struct CardDetailView: View {
                     card: card,
                     clips: viewModel.clips
                 ) {
-                    // On published: dismiss and potentially refresh
                     showMontagePreview = false
-                    Task {
-                        await viewModel.loadData(for: card.id)
-                    }
+                    Task { await viewModel.loadData(for: card.id) }
                 }
             }
         }
@@ -283,20 +175,216 @@ struct CardDetailView: View {
             showError = newValue != nil
         }
         .alert("Error", isPresented: $showError) {
-            Button("OK") {
-                viewModel.errorMessage = nil
-            }
+            Button("OK") { viewModel.errorMessage = nil }
         } message: {
             if let error = viewModel.errorMessage {
                 Text(error)
             }
         }
+        .alert("Delete Card?", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                showFinalDeleteConfirmation = true
+            }
+        } message: {
+            Text("This will permanently delete \"\(card.title)\" and all \(viewModel.clips.count) video clips. This action cannot be undone.")
+        }
+        .alert("Are you sure?", isPresented: $showFinalDeleteConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete Forever", role: .destructive) {
+                Task { await deleteCard() }
+            }
+        } message: {
+            Text("This is your final warning. All videos and participant data will be permanently lost.")
+        }
+    }
+
+    // MARK: - Delete Card
+
+    private func deleteCard() async {
+        isDeleting = true
+        do {
+            try await cardService.deleteCard(cardId: card.id)
+            await MainActor.run {
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                viewModel.errorMessage = error.localizedDescription
+                isDeleting = false
+            }
+        }
+    }
+
+    // MARK: - Summary Stats
+
+    private var summaryStatsView: some View {
+        HStack(spacing: TOYSpacing.lg) {
+            VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("\(submittedCount)")
+                        .font(.toyDisplaySmall())
+                        .foregroundColor(.toyText)
+                    Text("of \(allContributors.count)")
+                        .font(.toySubheadline())
+                        .foregroundColor(.toyTextSecondary)
+                }
+                Text("clips submitted")
+                    .font(.toyCaption())
+                    .foregroundColor(.toyTextSecondary)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: TOYSpacing.xs) {
+                Text(formattedDuration)
+                    .font(.toyDisplaySmall())
+                    .foregroundColor(.toyText)
+                Text("total duration")
+                    .font(.toyCaption())
+                    .foregroundColor(.toyTextSecondary)
+            }
+        }
+        .padding(.vertical, TOYSpacing.md)
+    }
+
+    // MARK: - Card Info
+
+    private var cardInfoView: some View {
+        VStack(alignment: .leading, spacing: TOYSpacing.md) {
+            HStack(spacing: TOYSpacing.xs) {
+                Text("For")
+                    .font(.toyBody())
+                    .foregroundColor(.toyTextSecondary)
+                Text(card.recipientName)
+                    .font(.toyBodyMedium())
+                    .foregroundColor(.toyText)
+            }
+
+            if let url = inviteURL {
+                ShareLink(
+                    item: url,
+                    subject: Text("Join my TOY card!"),
+                    message: Text("Record a video message for \(card.recipientName)")
+                ) {
+                    HStack(spacing: TOYSpacing.sm) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 14))
+                        Text("Share Invite Link")
+                            .font(.toySubheadline())
+                    }
+                    .foregroundColor(.toyText)
+                    .underline()
+                }
+            }
+        }
+        .padding(.vertical, TOYSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.toyDivider)
+                .frame(height: 1)
+        }
+    }
+
+    // MARK: - Upgrade Banner
+
+    private var upgradeBannerView: some View {
+        Button {
+            showUpgradeSheet = true
+        } label: {
+            HStack(spacing: TOYSpacing.md) {
+                VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                    Text("Card is full")
+                        .font(.toyBodyMedium())
+                        .foregroundColor(.toyText)
+                    Text("Upgrade for unlimited participants")
+                        .font(.toyCaption())
+                        .foregroundColor(.toyTextSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.toyText)
+            }
+            .padding(TOYSpacing.md)
+            .background(
+                Rectangle()
+                    .stroke(Color.toyDivider, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Contributors Section
+
+    private var contributorsSection: some View {
+        VStack(alignment: .leading, spacing: TOYSpacing.md) {
+            Text("CONTRIBUTORS")
+                .font(.toyCaption())
+                .foregroundColor(.toyTextSecondary)
+                .toyLetterSpacing(1.5)
+
+            if viewModel.isLoading {
+                ForEach(0..<3, id: \.self) { _ in
+                    ContributorSkeletonRow()
+                }
+            } else {
+                ForEach(allContributors) { contributor in
+                    ContributorClipRow(
+                        contributor: contributor,
+                        onTapClip: { clip in
+                            selectedClip = clip
+                        }
+                    )
+
+                    if contributor.id != allContributors.last?.id {
+                        Rectangle()
+                            .fill(Color.toyDivider)
+                            .frame(height: 1)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Preview Montage
+
+    private var previewMontageView: some View {
+        Button {
+            showMontagePreview = true
+        } label: {
+            HStack(spacing: TOYSpacing.md) {
+                VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                    Text("Preview Montage")
+                        .font(.toyBodyMedium())
+                        .foregroundColor(.toyText)
+                    Text("\(viewModel.clips.count) clips - \(formattedDuration) total")
+                        .font(.toyCaption())
+                        .foregroundColor(.toyTextSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "play.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.toyText)
+            }
+            .padding(TOYSpacing.md)
+            .background(
+                Rectangle()
+                    .fill(Color.toyText)
+            )
+            .foregroundColor(.toyBackground)
+        }
+        .buttonStyle(.plain)
     }
 }
 
 // MARK: - Contributor Row Model
 
-/// Represents a contributor (host or participant) with their optional clip
 private struct ContributorRow: Identifiable {
     let id: UUID
     let name: String
@@ -309,8 +397,6 @@ private struct ContributorRow: Identifiable {
 
 // MARK: - Contributor Clip Row
 
-/// A row displaying a contributor's name on the left and their clip thumbnail on the right
-/// The entire row is tappable when a clip exists
 private struct ContributorClipRow: View {
     let contributor: ContributorRow
     let onTapClip: (Clip) -> Void
@@ -321,48 +407,61 @@ private struct ContributorClipRow: View {
                 onTapClip(clip)
             }
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: TOYSpacing.md) {
                 // Avatar
                 Circle()
-                    .fill(contributor.isHost ? Color.toyPrimary.opacity(0.2) : Color.toySurface)
+                    .stroke(Color.toyDivider, lineWidth: 1)
                     .frame(width: 40, height: 40)
                     .overlay {
-                        Image(systemName: contributor.isHost ? "star.fill" : "person.fill")
-                            .foregroundColor(contributor.isHost ? .toyPrimary : .toyTextSecondary)
-                            .font(.system(size: 16))
+                        if contributor.isHost {
+                            Text("H")
+                                .font(.toySubheadline())
+                                .foregroundColor(.toyText)
+                        } else {
+                            Text(String(contributor.name.prefix(1)).uppercased())
+                                .font(.toySubheadline())
+                                .foregroundColor(.toyTextSecondary)
+                        }
                     }
 
                 // Name and status
-                VStack(alignment: .leading, spacing: 2) {
-                    TOYLabel(contributor.name, style: .body)
+                VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                    Text(contributor.name)
+                        .font(.toyBody())
+                        .foregroundColor(.toyText)
 
                     if let clip = contributor.clip {
-                        TOYLabel("Submitted", style: .caption, color: .green)
+                        Text("Submitted")
+                            .font(.toyCaption())
+                            .foregroundColor(.toyTextSecondary)
                     } else if let participant = contributor.participant {
-                        TOYLabel(statusText(for: participant), style: .caption, color: statusColor(for: participant))
+                        Text(statusText(for: participant))
+                            .font(.toyCaption())
+                            .foregroundColor(.toyTextSecondary)
                     } else if !contributor.isHost {
-                        TOYLabel("Not submitted", style: .caption, color: .toyTextSecondary)
+                        Text("Not submitted")
+                            .font(.toyCaption())
+                            .foregroundColor(.toyTextSecondary)
                     }
                 }
 
                 Spacer()
 
-                // Clip thumbnail or empty state
+                // Clip thumbnail
                 if let clip = contributor.clip {
                     ClipThumbnailView(clip: clip, effectiveDuration: contributor.effectiveDuration, cachedURL: contributor.cachedURL)
                 } else {
-                    // Empty thumbnail placeholder
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(Color.toyTextSecondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                    Rectangle()
+                        .strokeBorder(Color.toyDivider, style: StrokeStyle(lineWidth: 1, dash: [4]))
                         .frame(width: 50, height: 66)
                         .overlay {
                             Image(systemName: "video.slash")
                                 .font(.system(size: 14))
-                                .foregroundColor(.toyTextSecondary.opacity(0.5))
+                                .foregroundColor(.toyTextSecondary)
                         }
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, TOYSpacing.sm)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -378,76 +477,41 @@ private struct ContributorClipRow: View {
         default: return participant.status
         }
     }
-
-    private func statusColor(for participant: Participant) -> Color {
-        switch participant.status {
-        case "submitted": return .green
-        case "recording": return .toyPrimary
-        default: return .toyTextSecondary
-        }
-    }
 }
 
 // MARK: - Contributor Skeleton Row
 
-/// A skeleton loading placeholder for contributor rows
 private struct ContributorSkeletonRow: View {
     @State private var shimmerOffset: CGFloat = -1.0
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Avatar skeleton
+        HStack(spacing: TOYSpacing.md) {
             Circle()
-                .fill(Color(uiColor: UIColor.systemGray5))
+                .fill(Color.toyDivider)
                 .frame(width: 40, height: 40)
 
-            // Name and status skeleton
-            VStack(alignment: .leading, spacing: 6) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(uiColor: UIColor.systemGray5))
+            VStack(alignment: .leading, spacing: TOYSpacing.sm) {
+                Rectangle()
+                    .fill(Color.toyDivider)
                     .frame(width: 120, height: 14)
 
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(uiColor: UIColor.systemGray5))
+                Rectangle()
+                    .fill(Color.toyDivider)
                     .frame(width: 70, height: 10)
             }
 
             Spacer()
 
-            // Thumbnail skeleton
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(uiColor: UIColor.systemGray5))
+            Rectangle()
+                .fill(Color.toyDivider)
                 .frame(width: 50, height: 66)
         }
-        .padding(.vertical, 4)
-        .overlay {
-            GeometryReader { geometry in
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        .clear,
-                        .white.opacity(0.4),
-                        .clear
-                    ]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(width: geometry.size.width * 0.4)
-                .offset(x: shimmerOffset * geometry.size.width)
-            }
-            .clipped()
-        }
-        .onAppear {
-            shimmerOffset = -1.0
-            withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
-                shimmerOffset = 1.5
-            }
-        }
+        .padding(.vertical, TOYSpacing.sm)
     }
 }
 
 // MARK: - Clip Thumbnail View
 
-/// A view that loads and displays a video thumbnail from a signed URL
 private struct ClipThumbnailView: View {
     let clip: Clip
     let effectiveDuration: Double?
@@ -458,51 +522,30 @@ private struct ClipThumbnailView: View {
 
     private let storageService = StorageService()
 
-    init(clip: Clip, effectiveDuration: Double?, cachedURL: URL? = nil) {
-        self.clip = clip
-        self.effectiveDuration = effectiveDuration
-        self.cachedURL = cachedURL
-    }
-
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.toySurface)
+            Rectangle()
+                .fill(Color.toyVideoContainer)
                 .frame(width: 50, height: 66)
 
             if isLoading {
-                // Loading shimmer
-                ShimmerView()
-                    .frame(width: 50, height: 66)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                ProgressView()
+                    .tint(.warmCream)
+                    .scaleEffect(0.6)
             } else if let thumbnail {
-                // Actual thumbnail
                 Image(uiImage: thumbnail)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 50, height: 66)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipped()
             } else {
-                // Fallback play icon
                 Image(systemName: "play.fill")
                     .font(.system(size: 16))
-                    .foregroundColor(.toyTextSecondary)
+                    .foregroundColor(.warmCream)
             }
 
-            // Play button overlay (when thumbnail loaded)
-            if thumbnail != nil {
-                Circle()
-                    .fill(Color.black.opacity(0.5))
-                    .frame(width: 24, height: 24)
-                    .overlay {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white)
-                    }
-            }
-
-            // Duration label at bottom
-            if let duration = effectiveDuration {
+            // Duration label
+            if let duration = effectiveDuration, !isLoading {
                 VStack {
                     Spacer()
                     Text(formatDuration(duration))
@@ -511,7 +554,6 @@ private struct ClipThumbnailView: View {
                         .padding(.horizontal, 4)
                         .padding(.vertical, 2)
                         .background(Color.black.opacity(0.6))
-                        .cornerRadius(4)
                         .padding(4)
                 }
                 .frame(width: 50, height: 66)
@@ -527,27 +569,18 @@ private struct ClipThumbnailView: View {
         defer { isLoading = false }
 
         do {
-            // Use cached URL if available, otherwise fetch
             let signedURL: URL
             if let cachedURL {
-                #if DEBUG
-                print("🖼️ Thumbnail using CACHED URL for \(clip.id)")
-                #endif
                 signedURL = cachedURL
             } else {
-                #if DEBUG
-                print("⚠️ Thumbnail FETCHING URL for \(clip.id) (cache miss)")
-                #endif
                 signedURL = try await storageService.createSignedURL(path: clip.videoUrl)
             }
 
-            // Generate thumbnail from video
             let asset = AVAsset(url: signedURL)
             let imageGenerator = AVAssetImageGenerator(asset: asset)
             imageGenerator.appliesPreferredTrackTransform = true
-            imageGenerator.maximumSize = CGSize(width: 150, height: 200) // Higher res for quality
+            imageGenerator.maximumSize = CGSize(width: 150, height: 200)
 
-            // Get frame at 0.5 seconds (or start if video is shorter)
             let time = CMTime(seconds: 0.5, preferredTimescale: 600)
             let cgImage = try await imageGenerator.image(at: time).image
             thumbnail = UIImage(cgImage: cgImage)
@@ -555,45 +588,11 @@ private struct ClipThumbnailView: View {
             #if DEBUG
             print("Failed to load thumbnail: \(error)")
             #endif
-            // Leave thumbnail nil, will show fallback
         }
     }
 
     private func formatDuration(_ seconds: Double) -> String {
         String(format: "%.1fs", seconds)
-    }
-}
-
-// MARK: - Shimmer View
-
-/// A simple shimmer loading effect for thumbnails
-private struct ShimmerView: View {
-    @State private var shimmerOffset: CGFloat = -1.0
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                Color.toyTextSecondary.opacity(0.15)
-
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        .clear,
-                        .white.opacity(0.3),
-                        .clear
-                    ]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(width: geometry.size.width * 0.6)
-                .offset(x: shimmerOffset * geometry.size.width)
-            }
-        }
-        .onAppear {
-            shimmerOffset = -1.0
-            withAnimation(.linear(duration: 1.0).repeatForever(autoreverses: false)) {
-                shimmerOffset = 1.5
-            }
-        }
     }
 }
 

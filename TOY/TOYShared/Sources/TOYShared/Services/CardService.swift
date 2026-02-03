@@ -193,6 +193,40 @@ public actor CardService {
         }
     }
 
+    /// Permanently deletes a card and all associated data (clips, participants).
+    /// - Parameter cardId: The ID of the card to delete
+    /// - Throws: `CardError.deleteFailed` if deletion fails
+    public func deleteCard(cardId: UUID) async throws {
+        // Delete associated clips from storage first
+        let clips = try await fetchClipsForCard(cardId: cardId)
+        let bucket = supabase.storage.from("clips")
+
+        for clip in clips {
+            do {
+                try await bucket.remove(paths: [clip.videoUrl])
+            } catch {
+                #if DEBUG
+                print("⚠️ Storage delete failed for clip: \(error.localizedDescription)")
+                #endif
+            }
+        }
+
+        // Database cascade will handle clips and participants
+        do {
+            try await supabase
+                .from("cards")
+                .delete()
+                .eq("id", value: cardId)
+                .execute()
+
+            #if DEBUG
+            print("🗑️ Deleted card: \(cardId)")
+            #endif
+        } catch {
+            throw CardError.deleteFailed(error.localizedDescription)
+        }
+    }
+
     // MARK: - Clip Operations
 
     /// Creates a new clip record in the database.

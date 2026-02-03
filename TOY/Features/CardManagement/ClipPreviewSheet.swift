@@ -3,10 +3,9 @@ import SwiftUI
 import TOYShared
 
 /// A sheet view for previewing and managing a clip.
-/// Displays looping video playback with delete confirmation.
 struct ClipPreviewSheet: View {
     let clip: Clip
-    let cachedURL: URL?  // Pre-cached URL from ViewModel
+    let cachedURL: URL?
     let onDelete: () async -> Void
 
     @State private var signedURL: URL?
@@ -30,48 +29,48 @@ struct ClipPreviewSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                // Video player area
-                ZStack {
-                    // Player layer - always present when player exists, hidden behind skeleton
-                    if let player {
-                        ClipVideoPlayer(player: player) {
-                            // Called when layer has actual frames to display
-                            isPlayerReady = true
+            ZStack {
+                TOYBackground()
+
+                VStack(spacing: TOYSpacing.lg) {
+                    // Video player area
+                    ZStack {
+                        if let player {
+                            ClipVideoPlayer(player: player) {
+                                isPlayerReady = true
+                            }
+                            .aspectRatio(9/16, contentMode: .fit)
+                            .background(Color.toyVideoContainer)
+                            .opacity(isPlayerReady ? 1 : 0)
                         }
-                        .aspectRatio(9/16, contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .opacity(isPlayerReady ? 1 : 0)  // Hidden until ready
-                    }
 
-                    // Show skeleton until layer is ready to display
-                    if isLoading || !isPlayerReady {
-                        loadingView
-                    }
+                        if isLoading || !isPlayerReady {
+                            loadingView
+                        }
 
-                    if let error = loadError {
-                        errorView(error)
+                        if let error = loadError {
+                            errorView(error)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, TOYSpacing.lg)
+
+                    Spacer()
+
+                    // Delete button
+                    TOYButton(
+                        "Delete Clip",
+                        style: .destructive,
+                        size: .large,
+                        isLoading: isDeleting
+                    ) {
+                        showDeleteConfirmation = true
+                    }
+                    .disabled(isDeleting)
+                    .padding(.horizontal, TOYSpacing.lg)
+                    .padding(.bottom, TOYSpacing.xl)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 24)
-
-                Spacer()
-
-                // Delete button
-                TOYButton(
-                    "Delete Clip",
-                    style: .destructive,
-                    size: .large,
-                    isLoading: isDeleting
-                ) {
-                    showDeleteConfirmation = true
-                }
-                .disabled(isDeleting)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
             }
-            .background(Color.toyBackground)
             .navigationTitle("Preview Clip")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -79,6 +78,8 @@ struct ClipPreviewSheet: View {
                     Button("Done") {
                         dismiss()
                     }
+                    .font(.toyBodyMedium())
+                    .foregroundColor(.toyText)
                 }
             }
             .task {
@@ -93,13 +94,11 @@ struct ClipPreviewSheet: View {
                 titleVisibility: .visible
             ) {
                 Button("Delete", role: .destructive) {
-                    Task {
-                        await handleDelete()
-                    }
+                    Task { await handleDelete() }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This action cannot be undone. The clip will be permanently removed from the card.")
+                Text("This action cannot be undone.")
             }
         }
     }
@@ -107,27 +106,38 @@ struct ClipPreviewSheet: View {
     // MARK: - Subviews
 
     private var loadingView: some View {
-        RoundedRectangle(cornerRadius: 16)
-            .fill(Color.toySurface)
+        Rectangle()
+            .fill(Color.toyVideoContainer)
             .aspectRatio(9/16, contentMode: .fit)
             .overlay {
-                SkeletonLoadingView()
+                VStack(spacing: TOYSpacing.md) {
+                    ProgressView()
+                        .tint(.warmCream)
+                        .scaleEffect(1.2)
+                    Text("Loading...")
+                        .font(.toyCaption())
+                        .foregroundColor(.warmGrayDark)
+                }
             }
     }
 
     private func errorView(_ error: String) -> some View {
-        RoundedRectangle(cornerRadius: 16)
-            .fill(Color.toySurface)
+        Rectangle()
+            .fill(Color.toyVideoContainer)
             .aspectRatio(9/16, contentMode: .fit)
             .overlay {
-                VStack(spacing: 12) {
+                VStack(spacing: TOYSpacing.md) {
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 40))
-                        .foregroundColor(.toyTextSecondary)
+                        .font(.system(size: 40, weight: .light))
+                        .foregroundColor(.warmGrayDark)
 
-                    TOYLabel("Failed to load video", style: .body)
+                    Text("Failed to load video")
+                        .font(.toyBody())
+                        .foregroundColor(.warmCream)
 
-                    TOYLabel(error, style: .caption, color: .toyTextSecondary)
+                    Text(error)
+                        .font(.toyCaption())
+                        .foregroundColor(.warmGrayDark)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                 }
@@ -140,49 +150,17 @@ struct ClipPreviewSheet: View {
         isLoading = true
         loadError = nil
 
-        #if DEBUG
-        let startTime = CFAbsoluteTimeGetCurrent()
-        print("⏱️ [TIMING] Starting video load for clip: \(clip.id)")
-        #endif
-
         do {
             let url: URL
-
-            // Use cached URL if available, otherwise fetch
             if let cachedURL {
-                #if DEBUG
-                print("🔗 [TIMING] Using cached signed URL (0ms)")
-                #endif
                 url = cachedURL
             } else {
-                #if DEBUG
-                let urlStartTime = CFAbsoluteTimeGetCurrent()
-                #endif
                 url = try await storageService.createSignedURL(path: clip.videoUrl)
-                #if DEBUG
-                let urlEndTime = CFAbsoluteTimeGetCurrent()
-                print("⏳ [TIMING] Signed URL fetch took: \(Int((urlEndTime - urlStartTime) * 1000))ms")
-                #endif
             }
 
             signedURL = url
-
-            #if DEBUG
-            let playerStartTime = CFAbsoluteTimeGetCurrent()
-            print("🎬 [TIMING] Starting AVPlayer setup...")
-            #endif
-
             setupPlayer(with: url)
-
-            #if DEBUG
-            let playerEndTime = CFAbsoluteTimeGetCurrent()
-            print("✅ [TIMING] Player setup took: \(Int((playerEndTime - playerStartTime) * 1000))ms")
-            print("⏱️ [TIMING] Total so far: \(Int((playerEndTime - startTime) * 1000))ms (waiting for readyToPlay...)")
-            #endif
         } catch {
-            #if DEBUG
-            print("❌ Failed to load signed URL: \(error)")
-            #endif
             loadError = error.localizedDescription
         }
 
@@ -191,41 +169,17 @@ struct ClipPreviewSheet: View {
 
     private func setupPlayer(with url: URL) {
         let newPlayer = AVPlayer(url: url)
-
-        // Don't wait for full buffer - start playing as soon as possible
         newPlayer.automaticallyWaitsToMinimizeStalling = false
-
-        #if DEBUG
-        let playerCreatedTime = CFAbsoluteTimeGetCurrent()
-        #endif
-
-        // Start playback immediately - don't wait for readyToPlay
         newPlayer.play()
 
-        // Observe for when we have enough data to display
-        playerStatusObserver = newPlayer.currentItem?.observe(\.status, options: [.new]) { [weak newPlayer] item, _ in
+        playerStatusObserver = newPlayer.currentItem?.observe(\.status, options: [.new]) { item, _ in
             DispatchQueue.main.async {
-                switch item.status {
-                case .readyToPlay:
-                    #if DEBUG
-                    let readyTime = CFAbsoluteTimeGetCurrent()
-                    print("▶️ [TIMING] Player status READY - took \(Int((readyTime - playerCreatedTime) * 1000))ms")
-                    #endif
-                    // Player is ready, but wait for actual frames - handled by layer observer
-                case .failed:
-                    #if DEBUG
-                    print("❌ Player failed: \(item.error?.localizedDescription ?? "unknown")")
-                    #endif
+                if case .failed = item.status {
                     loadError = item.error?.localizedDescription ?? "Failed to load video"
-                case .unknown:
-                    break
-                @unknown default:
-                    break
                 }
             }
         }
 
-        // Loop playback
         NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: newPlayer.currentItem,
@@ -254,71 +208,8 @@ struct ClipPreviewSheet: View {
     }
 }
 
-// MARK: - Skeleton Loading View
-
-/// A skeleton loading view with animated shimmer effect
-private struct SkeletonLoadingView: View {
-    @State private var shimmerOffset: CGFloat = -1.0
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Base background - dark gray to be visible
-                Color(uiColor: UIColor.systemGray5)
-
-                // Base skeleton content
-                VStack(spacing: 16) {
-                    Spacer()
-
-                    // Play button skeleton
-                    Circle()
-                        .fill(Color(uiColor: UIColor.systemGray4))
-                        .frame(width: 70, height: 70)
-                        .overlay {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 28))
-                                .foregroundColor(Color(uiColor: UIColor.systemGray3))
-                        }
-
-                    // Loading text
-                    Text("Loading video...")
-                        .font(.subheadline)
-                        .foregroundColor(Color(uiColor: UIColor.systemGray2))
-
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                // Shimmer overlay
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        .clear,
-                        .white.opacity(0.4),
-                        .clear
-                    ]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(width: geometry.size.width * 0.6)
-                .offset(x: shimmerOffset * geometry.size.width)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-        }
-        .onAppear {
-            // Start with shimmer off-screen to the left
-            shimmerOffset = -1.0
-            // Animate to the right, repeating forever
-            withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
-                shimmerOffset = 1.5
-            }
-        }
-    }
-}
-
 // MARK: - Clip Video Player
 
-/// A simple looping video player for clip preview.
-/// Reports when the layer is ready to display via onReadyToDisplay callback.
 private struct ClipVideoPlayer: UIViewRepresentable {
     let player: AVPlayer
     let onReadyToDisplay: () -> Void
@@ -335,15 +226,9 @@ private struct ClipVideoPlayer: UIViewRepresentable {
     }
 }
 
-/// UIView subclass using AVPlayerLayer for video rendering.
-/// Observes readyForDisplay to know when actual frames are available.
 private class ClipPlayerUIView: UIView {
     private var layerObserver: NSKeyValueObservation?
     var onReadyToDisplay: (() -> Void)?
-
-    #if DEBUG
-    private var createdTime = CFAbsoluteTimeGetCurrent()
-    #endif
 
     override class var layerClass: AnyClass {
         AVPlayerLayer.self
@@ -359,27 +244,16 @@ private class ClipPlayerUIView: UIView {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
 
-            // Observe when layer actually has frames to display
             layerObserver?.invalidate()
             layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in
                 if layer.isReadyForDisplay {
                     DispatchQueue.main.async {
-                        #if DEBUG
-                        if let self = self {
-                            let readyTime = CFAbsoluteTimeGetCurrent()
-                            print("🖼️ [TIMING] Layer READY FOR DISPLAY - took \(Int((readyTime - self.createdTime) * 1000))ms from view creation")
-                        }
-                        #endif
                         self?.onReadyToDisplay?()
                     }
                 }
             }
 
-            // Check if already ready (in case we missed it)
             if playerLayer.isReadyForDisplay {
-                #if DEBUG
-                print("🖼️ [TIMING] Layer already ready for display")
-                #endif
                 onReadyToDisplay?()
             }
         }
@@ -401,8 +275,6 @@ private class ClipPlayerUIView: UIView {
             videoUrl: "test-clip.mov",
             status: "uploaded"
         ),
-        onDelete: {
-            print("Delete tapped")
-        }
+        onDelete: {}
     )
 }

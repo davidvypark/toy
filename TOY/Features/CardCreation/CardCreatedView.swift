@@ -2,7 +2,6 @@ import SwiftUI
 import TOYShared
 
 /// The celebration view shown after a host successfully creates a card and records their intro clip.
-/// Provides a ShareLink for inviting participants to record their messages.
 struct CardCreatedView: View {
 
     // MARK: - Properties
@@ -13,70 +12,75 @@ struct CardCreatedView: View {
     // MARK: - Body
 
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
+        ZStack {
+            TOYBackground()
 
-            // Success header
-            VStack(spacing: 16) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundColor(.toyPrimary)
+            VStack(spacing: TOYSpacing.xl) {
+                Spacer()
 
-                TOYLabel.largeTitle("Card Created!")
+                // Success header - minimal, type-forward
+                VStack(alignment: .leading, spacing: TOYSpacing.md) {
+                    Text("Card\nCreated")
+                        .font(.toyTitle())
+                        .foregroundColor(.toyText)
+                        .lineSpacing(-4)
 
-                TOYLabel(
-                    "Now invite friends and family to record their messages for \(card.recipientName)",
-                    style: .body,
-                    color: .toyTextSecondary
-                )
-                .multilineTextAlignment(.center)
-            }
-
-            // Card details summary
-            VStack(alignment: .leading, spacing: 8) {
-                TOYLabel(card.title, style: .headline)
-                TOYLabel("For: \(card.recipientName)", style: .subheadline, color: .toyTextSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(Color.toySurface)
-            .cornerRadius(12)
-
-            Spacer()
-
-            // ShareLink button
-            if let inviteURL = inviteURL(for: card) {
-                ShareLink(
-                    item: inviteURL,
-                    subject: Text("Join my TOY card!"),
-                    message: Text("Record a video message for \(card.recipientName)")
-                ) {
-                    Label("Share Invite Link", systemImage: "square.and.arrow.up")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.toyPrimary)
-                        .cornerRadius(12)
+                    Text("Now invite friends and family to record their messages for \(card.recipientName).")
+                        .font(.toyBody())
+                        .foregroundColor(.toyTextSecondary)
                 }
-                .padding(.top, 24)
-            }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Done button
-            TOYButton("Done", style: .secondary, size: .large) {
-                onDone()
-            }
+                // Card details summary
+                VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                    Text(card.title)
+                        .font(.toyHeadline())
+                        .foregroundColor(.toyText)
 
-            Spacer()
-                .frame(height: 20)
+                    Text("For \(card.recipientName)")
+                        .font(.toySubheadline())
+                        .foregroundColor(.toyTextSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(TOYSpacing.lg)
+                .background(
+                    Rectangle()
+                        .stroke(Color.toyDivider, lineWidth: 1)
+                )
+
+                Spacer()
+
+                // ShareLink button - primary CTA
+                if let inviteURL = inviteURL(for: card) {
+                    ShareLink(
+                        item: inviteURL,
+                        subject: Text("Join my TOY card!"),
+                        message: Text("Record a video message for \(card.recipientName)")
+                    ) {
+                        HStack(spacing: TOYSpacing.sm) {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("Share Invite Link")
+                        }
+                        .font(.toyBodyMedium())
+                        .foregroundColor(.toyBackground)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: TOYSpacing.buttonHeight)
+                        .background(Color.toyText)
+                    }
+                }
+
+                // Done button - secondary
+                TOYButton("Done", style: .text) {
+                    onDone()
+                }
+                .padding(.bottom, TOYSpacing.lg)
+            }
+            .padding(.horizontal, TOYSpacing.lg)
         }
-        .padding(.horizontal, 24)
-        .background(Color.toyBackground)
     }
 
     // MARK: - Helpers
 
-    /// Generates the invite URL for participants to join the card.
     private func inviteURL(for card: Card) -> URL? {
         guard let token = card.shareToken else { return nil }
         return URL(string: "https://sendtoycard.com/card/\(token)")

@@ -2,7 +2,8 @@
 //  PublishedCardPlayerView.swift
 //  TOY
 //
-//  TikTok-style full screen video player for published cards.
+//  Full screen video player for published cards.
+//  "Intimate Raw" design: minimal chrome, type-forward details panel.
 //
 
 import AVKit
@@ -16,7 +17,6 @@ struct PublishedCardPlayerView: View {
     @State private var player: AVPlayer?
     @State private var isLoading = true
     @State private var error: String?
-    @State private var detailsOffset: CGFloat = 0
     @State private var showDetails = false
     @State private var clips: [Clip] = []
     @State private var showCopiedToast = false
@@ -24,28 +24,35 @@ struct PublishedCardPlayerView: View {
     private let storageService = StorageService()
     private let cardService = CardService()
 
-    // Details panel height (half screen)
-    private let detailsPanelHeight: CGFloat = UIScreen.main.bounds.height * 0.5
+    private let detailsPanelHeight: CGFloat = UIScreen.main.bounds.height * 0.55
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Black background
+                // True black background
                 Color.black.ignoresSafeArea()
 
                 // Video player
                 if let player = player {
                     VideoPlayerView(player: player, showDetails: showDetails, geometry: geometry)
+                        .onTapGesture {
+                            if showDetails {
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    showDetails = false
+                                }
+                            }
+                        }
                 } else if isLoading {
                     ProgressView()
-                        .tint(.white)
+                        .tint(.warmCream)
                 } else if let error = error {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(.orange)
+                    VStack(spacing: TOYSpacing.md) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 40, weight: .light))
+                            .foregroundColor(.warmGrayDark)
                         Text(error)
-                            .foregroundColor(.white)
+                            .font(.toyBody())
+                            .foregroundColor(.warmCream)
                             .multilineTextAlignment(.center)
                     }
                     .padding()
@@ -53,40 +60,45 @@ struct PublishedCardPlayerView: View {
 
                 // Overlay content
                 VStack {
-                    // Top bar with close button
+                    // Top bar - minimal close button
                     HStack {
                         Button {
                             dismiss()
                         } label: {
                             Image(systemName: "xmark")
-                                .font(.title2)
-                                .foregroundStyle(.white)
-                                .padding(12)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
+                                .font(.system(size: 18, weight: .light))
+                                .foregroundColor(.warmCream)
                         }
                         Spacer()
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
+                    .padding(.horizontal, TOYSpacing.lg)
+                    .padding(.top, TOYSpacing.md)
 
                     Spacer()
 
-                    // Bottom hint text (only when details hidden)
+                    // Bottom hint - tappable with up arrow
                     if !showDetails {
-                        VStack(spacing: 4) {
-                            Image(systemName: "chevron.up")
-                                .font(.caption)
-                            Text("swipe up for details")
-                                .font(.caption2)
+                        Button {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                showDetails = true
+                            }
+                        } label: {
+                            VStack(spacing: TOYSpacing.xs) {
+                                Image(systemName: "chevron.up")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.warmGrayDark)
+                                Text("DETAILS")
+                                    .font(.toyCaption2())
+                                    .foregroundColor(.warmGrayDark)
+                                    .toyLetterSpacing(2)
+                            }
                         }
-                        .foregroundColor(.white.opacity(0.7))
-                        .padding(.bottom, 40)
+                        .padding(.bottom, TOYSpacing.xxl)
                     }
                 }
                 .opacity(showDetails ? 0.3 : 1)
 
-                // Details panel (slides up from bottom)
+                // Details panel (slides up)
                 VStack(spacing: 0) {
                     Spacer()
 
@@ -94,7 +106,7 @@ struct PublishedCardPlayerView: View {
                         card: card,
                         clips: clips,
                         onDismiss: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            withAnimation(.easeOut(duration: 0.2)) {
                                 showDetails = false
                             }
                         },
@@ -108,33 +120,31 @@ struct PublishedCardPlayerView: View {
                 DragGesture()
                     .onChanged { value in
                         if !showDetails && value.translation.height < -20 {
-                            // Swiping up - show details
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            withAnimation(.easeOut(duration: 0.2)) {
                                 showDetails = true
                             }
                         } else if showDetails && value.translation.height > 20 {
-                            // Swiping down - hide details
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            withAnimation(.easeOut(duration: 0.2)) {
                                 showDetails = false
                             }
                         }
                     }
             )
             .overlay {
-                // Copied toast
+                // Copied toast - minimal
                 if showCopiedToast {
                     VStack {
                         Spacer()
-                        Text("Link copied!")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(Color.black.opacity(0.8))
-                            .cornerRadius(25)
+                        Text("Copied")
+                            .font(.toyCaption())
+                            .foregroundColor(.warmCream)
+                            .toyLetterSpacing(1)
+                            .padding(.horizontal, TOYSpacing.lg)
+                            .padding(.vertical, TOYSpacing.sm)
+                            .background(Color.warmBlack)
                             .padding(.bottom, 100)
                     }
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .transition(.opacity)
                     .onAppear {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                             withAnimation {
@@ -168,7 +178,6 @@ struct PublishedCardPlayerView: View {
                 let avPlayer = AVPlayer(url: signedURL)
                 avPlayer.play()
 
-                // Loop video
                 NotificationCenter.default.addObserver(
                     forName: .AVPlayerItemDidPlayToEndTime,
                     object: avPlayer.currentItem,
@@ -208,17 +217,17 @@ private struct VideoPlayerView: View {
     let geometry: GeometryProxy
 
     var body: some View {
-        let videoHeight = showDetails ? geometry.size.height * 0.45 : geometry.size.height
-        let videoWidth = showDetails ? geometry.size.width * 0.9 : geometry.size.width
+        let videoHeight = showDetails ? geometry.size.height * 0.40 : geometry.size.height
+        let videoWidth = showDetails ? geometry.size.width * 0.85 : geometry.size.width
 
         VideoPlayer(player: player)
-            .disabled(true)  // Disable default controls
+            .disabled(true)
             .frame(width: videoWidth, height: videoHeight)
             .clipped()
             .background(Color.black)
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showDetails)
+            .animation(.easeOut(duration: 0.2), value: showDetails)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: showDetails ? .top : .center)
-            .padding(.top, showDetails ? 60 : 0)
+            .padding(.top, showDetails ? 50 : 0)
     }
 }
 
@@ -230,170 +239,183 @@ private struct DetailsPanel: View {
     let onDismiss: () -> Void
     @Binding var showCopiedToast: Bool
 
+    @State private var scrollOffset: CGFloat = 0
+    @State private var isDragging = false
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Drag handle
-            Capsule()
-                .fill(Color.white.opacity(0.4))
-                .frame(width: 36, height: 5)
-                .padding(.top, 12)
-                .padding(.bottom, 16)
-                .frame(maxWidth: .infinity)
-                .background(Color.black.opacity(0.95))
-                .onTapGesture {
-                    onDismiss()
-                }
+        ZStack {
+            // Film grain texture on black
+            Color.black
+            TOYTextureOverlay(opacity: 0.04)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Card Info
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(card.title)
-                            .font(.title2.weight(.bold))
-                            .foregroundColor(.white)
-
-                        Text("For \(card.recipientName)")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.7))
-
-                        if let publishedAt = card.publishedAt {
-                            Text("Published \(publishedAt.formatted(date: .abbreviated, time: .omitted))")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.5))
-                        }
+            VStack(spacing: 0) {
+                // Drag indicator - minimal line
+                Rectangle()
+                    .fill(Color.warmGrayDark)
+                    .frame(width: 32, height: 2)
+                    .padding(.top, TOYSpacing.lg)
+                    .padding(.bottom, TOYSpacing.xl)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        onDismiss()
                     }
-
-                    // Share Link
-                    if let shareToken = card.shareToken {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Share Link")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.5))
-
-                            let shareURL = "https://sendtoycard.com/view/\(shareToken)"
-
-                            Button {
-                                UIPasteboard.general.string = shareURL
-                                showCopiedToast = true
-                            } label: {
-                                HStack {
-                                    Text(shareURL)
-                                        .font(.system(.caption, design: .monospaced))
-                                        .lineLimit(1)
-
-                                    Spacer()
-
-                                    Image(systemName: "doc.on.doc")
-                                        .font(.caption)
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                if value.translation.height > 30 {
+                                    onDismiss()
                                 }
-                                .foregroundColor(.toyPrimary)
-                                .padding(12)
-                                .background(Color.white.opacity(0.1))
-                                .cornerRadius(8)
+                            }
+                    )
+
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: TOYSpacing.xxl) {
+                        // Card title - large serif, type-forward
+                        VStack(alignment: .leading, spacing: TOYSpacing.sm) {
+                            Text(card.title)
+                                .font(.toyLargeTitle())
+                                .foregroundColor(.warmCream)
+                                .lineLimit(3)
+
+                            Text("For \(card.recipientName)")
+                                .font(.toyBody())
+                                .foregroundColor(.warmGrayDark)
+
+                            if let publishedAt = card.publishedAt {
+                                Text(publishedAt.formatted(date: .abbreviated, time: .omitted))
+                                    .font(.toyCaption())
+                                    .foregroundColor(.warmGrayDark)
+                                    .padding(.top, TOYSpacing.xs)
                             }
                         }
-                    }
 
-                    // Contributors
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Contributors (\(clips.count))")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.5))
-
-                        if clips.isEmpty {
-                            Text("No clips yet")
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.5))
-                        } else {
-                            ForEach(Array(clips.enumerated()), id: \.element.id) { index, clip in
-                                ContributorRow(
-                                    index: index + 1,
-                                    clip: clip,
-                                    isDirector: clip.orderPosition == 0
-                                )
-                            }
+                        // Share link - bottom border style
+                        if let shareToken = card.shareToken {
+                            shareLinkSection(shareToken: shareToken)
                         }
+
+                        // Contributors - simple numbered list
+                        contributorsSection
                     }
+                    .padding(.horizontal, TOYSpacing.lg)
+                    .padding(.bottom, TOYSpacing.xxl)
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.preference(
+                                key: ScrollOffsetPreferenceKey.self,
+                                value: geo.frame(in: .named("detailsScroll")).minY
+                            )
+                        }
+                    )
                 }
-                .padding(20)
+                .coordinateSpace(name: "detailsScroll")
+                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                    scrollOffset = value
+                }
+                .simultaneousGesture(
+                    DragGesture()
+                        .onChanged { value in
+                            // If at top (scrollOffset >= 0) and dragging down
+                            if scrollOffset >= 0 && value.translation.height > 50 {
+                                onDismiss()
+                            }
+                        }
+                )
             }
-            .background(Color.black.opacity(0.95))
         }
-        .background(Color.black.opacity(0.95))
-        .cornerRadius(20, corners: [.topLeft, .topRight])
+        // No rounded corners - sharp edges
     }
-}
 
-// MARK: - Contributor Row
+    @ViewBuilder
+    private func shareLinkSection(shareToken: String) -> some View {
+        let shareURL = "https://sendtoycard.com/view/\(shareToken)"
 
-private struct ContributorRow: View {
-    let index: Int
-    let clip: Clip
-    let isDirector: Bool
+        VStack(alignment: .leading, spacing: TOYSpacing.md) {
+            Text("SHARE")
+                .font(.toyCaption())
+                .foregroundColor(.warmGrayDark)
+                .toyLetterSpacing(1.5)
 
-    var body: some View {
-        HStack(spacing: 12) {
-            // Avatar placeholder
-            Circle()
-                .fill(Color.toyPrimary.opacity(0.3))
-                .frame(width: 36, height: 36)
-                .overlay {
-                    Text("\(index)")
-                        .font(.caption.weight(.bold))
-                        .foregroundColor(.toyPrimary)
+            Button {
+                UIPasteboard.general.string = shareURL
+                showCopiedToast = true
+            } label: {
+                VStack(alignment: .leading, spacing: TOYSpacing.sm) {
+                    Text(shareURL)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.warmCream)
+                        .lineLimit(1)
+
+                    // Bottom border
+                    Rectangle()
+                        .fill(Color.dividerDark)
+                        .frame(height: 1)
                 }
+            }
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text("Contributor \(index)")
-                        .font(.subheadline)
-                        .foregroundColor(.white)
+    @ViewBuilder
+    private var contributorsSection: some View {
+        VStack(alignment: .leading, spacing: TOYSpacing.lg) {
+            Text("CONTRIBUTORS")
+                .font(.toyCaption())
+                .foregroundColor(.warmGrayDark)
+                .toyLetterSpacing(1.5)
 
-                    if isDirector {
-                        Text("Director")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundColor(.toyPrimary)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.toyPrimary.opacity(0.2))
-                            .cornerRadius(4)
+            if clips.isEmpty {
+                Text("No clips yet")
+                    .font(.toyBody())
+                    .foregroundColor(.warmGrayDark)
+            } else {
+                VStack(alignment: .leading, spacing: TOYSpacing.md) {
+                    ForEach(Array(clips.enumerated()), id: \.element.id) { index, clip in
+                        contributorRow(index: index + 1, clip: clip, isDirector: clip.orderPosition == 0)
                     }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func contributorRow(index: Int, clip: Clip, isDirector: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: TOYSpacing.sm) {
+            // Simple number
+            Text("\(index).")
+                .font(.toyCaption())
+                .foregroundColor(.warmGrayDark)
+                .frame(width: 20, alignment: .trailing)
+
+            VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                HStack(spacing: TOYSpacing.sm) {
+                    Text(isDirector ? "Director" : "Contributor \(index)")
+                        .font(.toyBody())
+                        .foregroundColor(.warmCream)
                 }
 
                 if let duration = clip.durationSeconds {
-                    Text("\(NSDecimalNumber(decimal: duration).doubleValue, specifier: "%.1f")s clip")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.5))
+                    Text("\(NSDecimalNumber(decimal: duration).doubleValue, specifier: "%.1f")s")
+                        .font(.toyCaption())
+                        .foregroundColor(.warmGrayDark)
                 }
             }
 
             Spacer()
         }
-        .padding(.vertical, 4)
     }
 }
 
-// MARK: - Corner Radius Extension
+// MARK: - Scroll Offset Preference Key
 
-private extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
+private struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
-private struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
-    }
-}
+// MARK: - Preview
 
 #Preview {
     PublishedCardPlayerView(card: Card(

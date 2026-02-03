@@ -3,9 +3,6 @@ import RevenueCat
 import TOYShared
 
 /// A view that displays the card upgrade purchase UI.
-///
-/// Shows the current participant count, benefits of upgrading,
-/// and allows the host to purchase unlimited participants for their card.
 struct CardUpgradeView: View {
     let card: Card
     let currentParticipantCount: Int
@@ -21,56 +18,66 @@ struct CardUpgradeView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                // Header
-                VStack(spacing: 8) {
-                    Image(systemName: "person.3.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.toyPrimary)
+            ZStack {
+                TOYBackground()
 
-                    Text("Upgrade Your Card")
-                        .font(.custom("DMSerifDisplay-Regular", size: 28))
+                VStack(spacing: TOYSpacing.xl) {
+                    // Header
+                    VStack(alignment: .leading, spacing: TOYSpacing.md) {
+                        Text("Upgrade\nYour Card")
+                            .font(.toyTitle())
+                            .foregroundColor(.toyText)
+                            .lineSpacing(-4)
 
-                    Text("Unlock unlimited participants")
-                        .foregroundStyle(.secondary)
+                        Text("Unlock unlimited participants")
+                            .font(.toySubheadline())
+                            .foregroundColor(.toyTextSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, TOYSpacing.xl)
+
+                    // Current status
+                    VStack(spacing: TOYSpacing.xs) {
+                        Text("\(currentParticipantCount) of \(card.maxParticipants)")
+                            .font(.toyDisplaySmall())
+                            .foregroundColor(.toyText)
+                        Text("participants used")
+                            .font(.toyCaption())
+                            .foregroundColor(.toyTextSecondary)
+                    }
+                    .padding(TOYSpacing.lg)
+                    .frame(maxWidth: .infinity)
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.toyDivider, lineWidth: 1)
+                    )
+
+                    // Benefits list
+                    VStack(alignment: .leading, spacing: TOYSpacing.md) {
+                        benefitRow(text: "Unlimited participants")
+                        benefitRow(text: "No restrictions on this card")
+                        benefitRow(text: "Support TOY development")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Spacer()
+
+                    // Action buttons
+                    VStack(spacing: TOYSpacing.md) {
+                        actionContent
+                    }
+                    .padding(.bottom, TOYSpacing.xl)
                 }
-                .padding(.top, 24)
-
-                // Current status
-                VStack(spacing: 4) {
-                    Text("\(currentParticipantCount) of \(card.maxParticipants)")
-                        .font(.title2.bold())
-                    Text("participants used")
-                        .foregroundStyle(.secondary)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(.toySurface)
-                .cornerRadius(12)
-
-                // Benefits list
-                VStack(alignment: .leading, spacing: 12) {
-                    benefitRow(icon: "infinity", text: "Unlimited participants")
-                    benefitRow(icon: "star.fill", text: "No restrictions on this card")
-                    benefitRow(icon: "heart.fill", text: "Support TOY development")
-                }
-                .padding()
-
-                Spacer()
-
-                // Action buttons
-                VStack(spacing: 12) {
-                    actionContent
-                }
-                .padding(.bottom, 24)
+                .padding(.horizontal, TOYSpacing.lg)
             }
-            .padding(.horizontal)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .font(.toyBody())
+                    .foregroundColor(.toyTextSecondary)
                 }
             }
         }
@@ -86,14 +93,13 @@ struct CardUpgradeView: View {
                 .task { await viewModel.loadOffering() }
 
         case .ready(let package):
-            TOYButton("Upgrade - \(package.localizedPriceString)", size: .large) {
+            TOYButton.primary("Upgrade - \(package.localizedPriceString)") {
                 Task { await viewModel.purchase() }
             }
-
             restorePurchasesButton
 
         case .purchasing:
-            TOYButton("Processing...", size: .large, isLoading: true) {}
+            TOYButton.primary("Processing...", isLoading: true) {}
 
         case .success:
             successContent
@@ -104,15 +110,15 @@ struct CardUpgradeView: View {
     }
 
     private var successContent: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.green)
-            Text("Upgrade Complete!")
-                .font(.headline)
+        VStack(spacing: TOYSpacing.sm) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 48, weight: .light))
+                .foregroundColor(.toyText)
+            Text("Upgrade Complete")
+                .font(.toyHeadline())
+                .foregroundColor(.toyText)
         }
         .onAppear {
-            // Auto-dismiss after success animation
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 dismiss()
             }
@@ -120,12 +126,13 @@ struct CardUpgradeView: View {
     }
 
     private func errorContent(message: String) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: TOYSpacing.md) {
             Text(message)
-                .foregroundStyle(.red)
+                .font(.toyBody())
+                .foregroundColor(.toyDestructive)
                 .multilineTextAlignment(.center)
 
-            TOYButton("Try Again", size: .large) {
+            TOYButton.primary("Try Again") {
                 Task { await viewModel.loadOffering() }
             }
 
@@ -137,18 +144,19 @@ struct CardUpgradeView: View {
         Button("Restore Purchases") {
             Task { await viewModel.restore() }
         }
-        .font(.footnote)
-        .foregroundStyle(.secondary)
+        .font(.toyCaption())
+        .foregroundColor(.toyTextSecondary)
+        .underline()
     }
 
-    private func benefitRow(icon: String, text: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundStyle(.toyPrimary)
-                .frame(width: 24)
+    private func benefitRow(text: String) -> some View {
+        HStack(spacing: TOYSpacing.sm) {
+            Rectangle()
+                .fill(Color.toyText)
+                .frame(width: 8, height: 1)
             Text(text)
-                .foregroundStyle(.primary)
-            Spacer()
+                .font(.toyBody())
+                .foregroundColor(.toyText)
         }
     }
 }

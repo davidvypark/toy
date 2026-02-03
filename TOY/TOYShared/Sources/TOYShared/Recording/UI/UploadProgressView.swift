@@ -33,45 +33,48 @@ public struct UploadProgressView: View {
     public var body: some View {
         ZStack {
             // Semi-transparent background
-            Color.black.opacity(0.6)
+            Color.black.opacity(0.8)
                 .ignoresSafeArea()
 
             // Content card
-            VStack(spacing: 24) {
+            VStack(spacing: TOYSpacing.lg) {
                 switch state {
                 case .uploading:
                     ProgressView()
                         .scaleEffect(1.5)
-                        .tint(.toyPrimary)
-                    TOYLabel("Uploading...", style: .headline)
+                        .tint(.warmCream)
+                    Text("Uploading...")
+                        .font(.toyHeadline())
+                        .foregroundColor(.warmCream)
 
                 case .success:
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.green)
-                    TOYLabel("Uploaded!", style: .headline)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundColor(.warmCream)
+                    Text("Uploaded")
+                        .font(.toyHeadline())
+                        .foregroundColor(.warmCream)
                     TOYButton("Done", style: .primary, size: .large, action: onDismiss)
                         .frame(maxWidth: 200)
 
                 case .failed(let error):
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.red)
-                    TOYLabel("Upload Failed", style: .headline)
-                    TOYLabel(error, style: .body)
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundColor(.toyDestructive)
+                    Text("Upload Failed")
+                        .font(.toyHeadline())
+                        .foregroundColor(.warmCream)
+                    Text(error)
+                        .font(.toyBody())
+                        .foregroundColor(.warmGrayDark)
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(Color.toyTextSecondary)
-                    HStack(spacing: 16) {
+                    HStack(spacing: TOYSpacing.md) {
                         TOYButton("Cancel", style: .secondary, size: .medium, action: onDismiss)
                         TOYButton("Retry", style: .primary, size: .medium, action: onRetry)
                     }
                 }
             }
-            .padding(32)
-            .background(Color.toySurface)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(radius: 20)
-            .padding(32)
+            .padding(TOYSpacing.xl)
         }
     }
 }

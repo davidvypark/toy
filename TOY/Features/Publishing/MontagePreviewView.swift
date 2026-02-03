@@ -24,31 +24,29 @@ struct MontagePreviewView: View {
                         isPlayerReady = true
                     }
                     .aspectRatio(9/16, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding()
                     .opacity(isPlayerReady ? 1 : 0)
                 }
 
                 if viewModel.state.isInProgress || (player != nil && !isPlayerReady) {
-                    // Progress view during generation or loading
                     progressView
                 } else if player == nil {
-                    // Placeholder before generation
-                    VStack(spacing: 16) {
+                    VStack(spacing: TOYSpacing.md) {
                         Image(systemName: "film.stack")
-                            .font(.system(size: 48))
-                            .foregroundColor(.white.opacity(0.6))
-                        TOYLabel("Generating preview...", style: .body, color: .white.opacity(0.8))
+                            .font(.system(size: 48, weight: .light))
+                            .foregroundColor(.warmGrayDark)
+                        Text("Generating preview...")
+                            .font(.toyBody())
+                            .foregroundColor(.warmGrayDark)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
 
                 Spacer()
 
-                // Action buttons
                 actionButtons
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 32)
+                    .padding(.horizontal, TOYSpacing.lg)
+                    .padding(.bottom, TOYSpacing.xl)
             }
         }
         .navigationTitle("Preview Montage")
@@ -65,12 +63,12 @@ struct MontagePreviewView: View {
                             setupPlayer()
                         }
                     }
-                    .foregroundColor(.white)
+                    .font(.toyBody())
+                    .foregroundColor(.warmCream)
                 }
             }
         }
         .task {
-            // Auto-generate preview on appear
             await viewModel.generatePreview(card: card, clips: clips)
             setupPlayer()
         }
@@ -109,24 +107,30 @@ struct MontagePreviewView: View {
 
     @ViewBuilder
     private var progressView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: TOYSpacing.lg) {
             ProgressView()
                 .scaleEffect(1.5)
-                .tint(.white)
+                .tint(.warmCream)
 
             switch viewModel.state {
             case .generating(let progress, let phase):
-                VStack(spacing: 8) {
-                    TOYLabel(phase, style: .body, color: .white)
+                VStack(spacing: TOYSpacing.sm) {
+                    Text(phase)
+                        .font(.toyBody())
+                        .foregroundColor(.warmCream)
                     ProgressView(value: progress)
                         .progressViewStyle(.linear)
-                        .tint(.toyPrimary)
+                        .tint(.warmCream)
                         .frame(width: 200)
                 }
             case .uploading:
-                TOYLabel("Uploading video...", style: .body, color: .white)
+                Text("Uploading video...")
+                    .font(.toyBody())
+                    .foregroundColor(.warmCream)
             case .publishing:
-                TOYLabel("Finalizing...", style: .body, color: .white)
+                Text("Finalizing...")
+                    .font(.toyBody())
+                    .foregroundColor(.warmCream)
             default:
                 EmptyView()
             }
@@ -136,11 +140,9 @@ struct MontagePreviewView: View {
 
     @ViewBuilder
     private var actionButtons: some View {
-        VStack(spacing: 12) {
-            // Publish button
-            TOYButton(
-                "Publish Card",
-                style: .primary,
+        VStack(spacing: TOYSpacing.md) {
+            TOYButton.primary(
+                viewModel.state.isInProgress && viewModel.montageURL != nil ? "Publishing..." : "Publish Card",
                 isLoading: viewModel.state.isInProgress && viewModel.montageURL != nil
             ) {
                 Task {
@@ -153,18 +155,13 @@ struct MontagePreviewView: View {
             }
             .disabled(viewModel.montageURL == nil || viewModel.state.isInProgress)
 
-            // Info text
             if viewModel.montageURL == nil && !viewModel.state.isInProgress {
-                TOYLabel(
-                    "Generate preview first",
-                    style: .caption,
-                    color: .white.opacity(0.6)
-                )
+                Text("Generate preview first")
+                    .font(.toyCaption())
+                    .foregroundColor(.warmGrayDark)
             }
         }
     }
-
-    // MARK: - Helpers
 
     private func setupPlayer() {
         guard let url = viewModel.montageURL else { return }
@@ -173,7 +170,6 @@ struct MontagePreviewView: View {
         newPlayer.automaticallyWaitsToMinimizeStalling = false
         newPlayer.play()
 
-        // Loop playback
         NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
             object: newPlayer.currentItem,
@@ -189,8 +185,6 @@ struct MontagePreviewView: View {
 
 // MARK: - Montage Video Player
 
-/// A simple looping video player without controls (no AirPlay, skip buttons).
-/// Reports when the layer is ready to display via onReadyToDisplay callback.
 private struct MontageVideoPlayer: UIViewRepresentable {
     let player: AVPlayer
     let onReadyToDisplay: () -> Void
@@ -207,7 +201,6 @@ private struct MontageVideoPlayer: UIViewRepresentable {
     }
 }
 
-/// UIView subclass using AVPlayerLayer for video rendering.
 private class MontagePlayerUIView: UIView {
     private var layerObserver: NSKeyValueObservation?
     var onReadyToDisplay: (() -> Void)?
@@ -226,7 +219,6 @@ private class MontagePlayerUIView: UIView {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
 
-            // Observe when layer actually has frames to display
             layerObserver?.invalidate()
             layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in
                 if layer.isReadyForDisplay {
@@ -236,7 +228,6 @@ private class MontagePlayerUIView: UIView {
                 }
             }
 
-            // Check if already ready
             if playerLayer.isReadyForDisplay {
                 onReadyToDisplay?()
             }

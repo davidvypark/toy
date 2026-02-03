@@ -3,16 +3,18 @@ import SwiftUI
 /// A themed label component with preset typography styles.
 public struct TOYLabel: View {
     public enum Style {
-        case largeTitle
-        case title
-        case title2
-        case title3
-        case headline
-        case body
-        case callout
-        case subheadline
-        case footnote
-        case caption
+        case display       // 72pt - Hero headlines, cropped
+        case displayMedium // 56pt - Large headlines
+        case displaySmall  // 48pt - Section headers
+        case largeTitle    // 34pt
+        case title         // 28pt
+        case title2        // 22pt
+        case title3        // 20pt
+        case headline      // 17pt serif
+        case body          // 17pt rounded
+        case subheadline   // 15pt rounded
+        case footnote      // 13pt rounded
+        case caption       // 12pt rounded
     }
 
     private let text: String
@@ -37,13 +39,15 @@ public struct TOYLabel: View {
 
     private var font: Font {
         switch style {
+        case .display: return .toyDisplay()
+        case .displayMedium: return .toyDisplayMedium()
+        case .displaySmall: return .toyDisplaySmall()
         case .largeTitle: return .toyLargeTitle()
         case .title: return .toyTitle()
         case .title2: return .toyTitle2()
         case .title3: return .toyTitle3()
         case .headline: return .toyHeadline()
         case .body: return .toyBody()
-        case .callout: return .toyCallout()
         case .subheadline: return .toySubheadline()
         case .footnote: return .toyFootnote()
         case .caption: return .toyCaption()
@@ -52,12 +56,10 @@ public struct TOYLabel: View {
 
     private var textColor: Color {
         switch style {
-        case .largeTitle, .title, .title2, .title3, .headline, .body:
-            return .toyText
-        case .callout, .subheadline:
-            return .toyText
         case .footnote, .caption:
             return .toyTextSecondary
+        default:
+            return .toyText
         }
     }
 }
@@ -65,6 +67,11 @@ public struct TOYLabel: View {
 // MARK: - Convenience Initializers
 
 public extension TOYLabel {
+    /// Creates a display label (DM Serif Display, 72pt) - for hero headlines
+    static func display(_ text: String, color: Color? = nil) -> TOYLabel {
+        TOYLabel(text, style: .display, color: color)
+    }
+
     /// Creates a large title label (DM Serif Display, 34pt)
     static func largeTitle(_ text: String, color: Color? = nil) -> TOYLabel {
         TOYLabel(text, style: .largeTitle, color: color)
@@ -85,6 +92,11 @@ public extension TOYLabel {
         TOYLabel(text, style: .body, color: color)
     }
 
+    /// Creates a subheadline label (System Rounded, 15pt medium)
+    static func subheadline(_ text: String, color: Color? = nil) -> TOYLabel {
+        TOYLabel(text, style: .subheadline, color: color)
+    }
+
     /// Creates a caption label (System Rounded, 12pt, secondary color)
     static func caption(_ text: String, color: Color? = nil) -> TOYLabel {
         TOYLabel(text, style: .caption, color: color)
@@ -94,18 +106,28 @@ public extension TOYLabel {
 // MARK: - Previews
 
 #Preview("Label Styles") {
-    VStack(alignment: .leading, spacing: 16) {
-        TOYLabel.largeTitle("Large Title")
-        TOYLabel.title("Title")
-        TOYLabel("Title 2", style: .title2)
-        TOYLabel("Title 3", style: .title3)
-        TOYLabel.headline("Headline")
-        TOYLabel.body("Body text goes here with more content.")
-        TOYLabel("Callout", style: .callout)
-        TOYLabel("Subheadline", style: .subheadline)
-        TOYLabel("Footnote", style: .footnote)
-        TOYLabel.caption("Caption text")
-        TOYLabel.body("Custom Color", color: .toyPrimary)
+    ScrollView {
+        VStack(alignment: .leading, spacing: TOYSpacing.md) {
+            TOYLabel.display("Display")
+            TOYLabel("Display Medium", style: .displayMedium)
+            TOYLabel("Display Small", style: .displaySmall)
+
+            Divider()
+
+            TOYLabel.largeTitle("Large Title")
+            TOYLabel.title("Title")
+            TOYLabel("Title 2", style: .title2)
+            TOYLabel("Title 3", style: .title3)
+            TOYLabel.headline("Headline")
+
+            Divider()
+
+            TOYLabel.body("Body text goes here with more content.")
+            TOYLabel.subheadline("Subheadline")
+            TOYLabel("Footnote", style: .footnote)
+            TOYLabel.caption("Caption text")
+        }
+        .padding(TOYSpacing.lg)
     }
-    .padding()
+    .toyBackground()
 }

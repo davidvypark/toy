@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// A themed text field component with consistent styling.
+/// A minimal text field with bottom-border styling.
+///
+/// Editorial design: no box, just a subtle bottom line that emphasizes on focus.
 public struct TOYTextField: View {
     private let placeholder: String
     @Binding private var text: String
@@ -9,6 +11,7 @@ public struct TOYTextField: View {
     private let errorMessage: String?
 
     @FocusState private var isFocused: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     public init(
         _ placeholder: String,
@@ -25,12 +28,13 @@ public struct TOYTextField: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+            HStack(spacing: TOYSpacing.sm) {
                 if let icon = icon {
                     Image(systemName: icon)
+                        .font(.system(size: 18, weight: .regular))
                         .foregroundColor(iconColor)
-                        .frame(width: 20)
+                        .frame(width: 24)
                 }
 
                 Group {
@@ -41,41 +45,85 @@ public struct TOYTextField: View {
                     }
                 }
                 .font(.toyBody())
+                .foregroundColor(.toyText)
+                .tint(.toyText)
                 .focused($isFocused)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color.toySurface)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(borderColor, lineWidth: 1.5)
-            )
+            .padding(.vertical, TOYSpacing.md)
+
+            // Bottom border only
+            Rectangle()
+                .fill(borderColor)
+                .frame(height: isFocused ? 2 : 1)
+                .animation(.easeInOut(duration: 0.15), value: isFocused)
 
             if let error = errorMessage {
                 Text(error)
                     .font(.toyCaption())
-                    .foregroundColor(.red)
-                    .padding(.leading, 4)
+                    .foregroundColor(.toyDestructive)
+                    .padding(.top, TOYSpacing.xs)
             }
         }
     }
 
     private var borderColor: Color {
         if errorMessage != nil {
-            return .red
+            return .toyDestructive
         } else if isFocused {
-            return .toyPrimary
+            return .toyText
         } else {
-            return Color.gray.opacity(0.3)
+            return .toyDivider
         }
     }
 
     private var iconColor: Color {
         if isFocused {
-            return .toyPrimary
+            return .toyText
         } else {
             return .toyTextSecondary
+        }
+    }
+}
+
+// MARK: - Label Variant
+
+/// Text field with a floating label above
+public struct TOYLabeledTextField: View {
+    private let label: String
+    private let placeholder: String
+    @Binding private var text: String
+    private let isSecure: Bool
+    private let errorMessage: String?
+
+    @FocusState private var isFocused: Bool
+
+    public init(
+        label: String,
+        placeholder: String = "",
+        text: Binding<String>,
+        isSecure: Bool = false,
+        errorMessage: String? = nil
+    ) {
+        self.label = label
+        self.placeholder = placeholder.isEmpty ? label : placeholder
+        self._text = text
+        self.isSecure = isSecure
+        self.errorMessage = errorMessage
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: TOYSpacing.sm) {
+            Text(label)
+                .font(.toyCaption())
+                .foregroundColor(.toyTextSecondary)
+                .toyLetterSpacing(0.5)
+
+            TOYTextField(
+                placeholder,
+                text: $text,
+                isSecure: isSecure,
+                errorMessage: errorMessage
+            )
         }
     }
 }
@@ -83,11 +131,17 @@ public struct TOYTextField: View {
 // MARK: - Previews
 
 #Preview("Text Fields") {
-    VStack(spacing: 20) {
-        TOYTextField("Email", text: .constant(""), icon: "envelope")
-        TOYTextField("Password", text: .constant(""), isSecure: true, icon: "lock")
-        TOYTextField("With Error", text: .constant("bad@email"), icon: "envelope", errorMessage: "Invalid email format")
-        TOYTextField("Filled", text: .constant("hello@example.com"), icon: "envelope")
+    VStack(spacing: TOYSpacing.xl) {
+        TOYTextField("Enter your name", text: .constant(""))
+
+        TOYTextField("Email address", text: .constant(""), icon: "envelope")
+
+        TOYTextField("Filled field", text: .constant("hello@example.com"), icon: "envelope")
+
+        TOYTextField("With error", text: .constant("bad"), icon: "exclamationmark.circle", errorMessage: "Please enter a valid email")
+
+        TOYLabeledTextField(label: "RECIPIENT NAME", text: .constant(""))
     }
-    .padding()
+    .padding(TOYSpacing.lg)
+    .toyBackground()
 }

@@ -6,69 +6,47 @@ struct ParticipantRow: View {
     let participant: Participant
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Avatar placeholder
+        HStack(spacing: TOYSpacing.md) {
+            // Avatar
             Circle()
-                .fill(Color.toySurface)
+                .stroke(Color.toyDivider, lineWidth: 1)
                 .frame(width: 40, height: 40)
                 .overlay {
-                    Image(systemName: "person.fill")
+                    Text(String((participant.email ?? "G").prefix(1)).uppercased())
+                        .font(.toySubheadline())
                         .foregroundColor(.toyTextSecondary)
                 }
 
             // Name and status
-            VStack(alignment: .leading, spacing: 2) {
-                TOYLabel(
-                    participant.email ?? "Invited Guest",
-                    style: .body
-                )
+            VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                Text(participant.email ?? "Invited Guest")
+                    .font(.toyBody())
+                    .foregroundColor(.toyText)
 
-                TOYLabel(
-                    statusText,
-                    style: .caption,
-                    color: statusColor
-                )
+                Text(statusText)
+                    .font(.toyCaption())
+                    .foregroundColor(.toyTextSecondary)
             }
 
             Spacer()
 
             // Checkmark for submitted status
             if participant.status == "submitted" {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                    .font(.system(size: 20))
+                Image(systemName: "checkmark")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.toyText)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, TOYSpacing.sm)
     }
 
-    // MARK: - Private
-
-    /// Maps status to human-readable text
     private var statusText: String {
         switch participant.status {
-        case "invited":
-            return "Waiting for response"
-        case "viewed":
-            return "Viewed invitation"
-        case "recording":
-            return "Recording in progress"
-        case "submitted":
-            return "Clip submitted"
-        default:
-            return participant.status
-        }
-    }
-
-    /// Maps status to color
-    private var statusColor: Color {
-        switch participant.status {
-        case "submitted":
-            return .green
-        case "recording":
-            return .toyPrimary
-        default:
-            return .toyTextSecondary
+        case "invited": return "Waiting"
+        case "viewed": return "Viewed"
+        case "recording": return "Recording..."
+        case "submitted": return "Submitted"
+        default: return participant.status
         }
     }
 }
@@ -76,7 +54,7 @@ struct ParticipantRow: View {
 // MARK: - Preview
 
 #Preview("Participant Statuses") {
-    List {
+    VStack(spacing: 0) {
         ParticipantRow(participant: Participant(
             id: UUID(),
             cardId: UUID(),
@@ -84,36 +62,15 @@ struct ParticipantRow: View {
             email: "friend@example.com",
             status: "invited"
         ))
-
+        Divider()
         ParticipantRow(participant: Participant(
             id: UUID(),
             cardId: UUID(),
             inviteToken: "def456",
             email: "colleague@example.com",
-            status: "viewed"
-        ))
-
-        ParticipantRow(participant: Participant(
-            id: UUID(),
-            cardId: UUID(),
-            inviteToken: "ghi789",
-            email: "family@example.com",
-            status: "recording"
-        ))
-
-        ParticipantRow(participant: Participant(
-            id: UUID(),
-            cardId: UUID(),
-            inviteToken: "jkl012",
-            email: "bestfriend@example.com",
             status: "submitted"
         ))
-
-        ParticipantRow(participant: Participant(
-            id: UUID(),
-            cardId: UUID(),
-            inviteToken: "mno345",
-            status: "invited"
-        ))
     }
+    .padding()
+    .toyBackground()
 }

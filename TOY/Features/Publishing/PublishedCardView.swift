@@ -9,93 +9,90 @@ struct PublishedCardView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    /// The shareable recipient link
     private var recipientURL: URL? {
         guard let token = card.shareToken else { return nil }
-        // Recipient link (different from invite link pattern)
         return URL(string: "https://sendtoycard.com/watch/\(token)")
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 32) {
-                Spacer()
+            ZStack {
+                TOYBackground()
 
-                // Success icon
-                ZStack {
-                    Circle()
-                        .fill(Color.toyPrimary.opacity(0.15))
-                        .frame(width: 120, height: 120)
+                VStack(spacing: TOYSpacing.xl) {
+                    Spacer()
 
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 64))
-                        .foregroundColor(.toyPrimary)
-                }
+                    // Success message - type-forward
+                    VStack(alignment: .leading, spacing: TOYSpacing.md) {
+                        Text("Card\nPublished")
+                            .font(.toyTitle())
+                            .foregroundColor(.toyText)
+                            .lineSpacing(-4)
 
-                // Success message
-                VStack(spacing: 8) {
-                    TOYLabel("Card Published!", style: .title)
-                    TOYLabel(
-                        "Your montage for \(card.recipientName) is ready to share",
-                        style: .body,
-                        color: .toyTextSecondary
-                    )
-                    .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal, 32)
-
-                // Stats
-                VStack(spacing: 4) {
-                    TOYLabel("\(card.title)", style: .headline)
-                    if let url = recipientURL {
-                        Text(url.absoluteString)
-                            .font(.caption)
+                        Text("Your montage for \(card.recipientName) is ready to share.")
+                            .font(.toyBody())
                             .foregroundColor(.toyTextSecondary)
-                            .lineLimit(1)
                     }
-                }
-                .padding()
-                .background(Color.toySurface)
-                .cornerRadius(12)
-                .padding(.horizontal)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer()
+                    // Card info
+                    VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                        Text(card.title)
+                            .font(.toyHeadline())
+                            .foregroundColor(.toyText)
 
-                // Action buttons
-                VStack(spacing: 12) {
-                    if let url = recipientURL {
-                        ShareLink(
-                            item: url,
-                            subject: Text("A video message for \(card.recipientName)"),
-                            message: Text("Someone made a special video card for you!")
-                        ) {
-                            HStack {
-                                Image(systemName: "square.and.arrow.up")
-                                Text("Share with \(card.recipientName)")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.toyPrimary)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                        if let url = recipientURL {
+                            Text(url.absoluteString)
+                                .font(.toyCaption())
+                                .foregroundColor(.toyTextSecondary)
+                                .lineLimit(1)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(TOYSpacing.lg)
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.toyDivider, lineWidth: 1)
+                    )
 
-                    TOYButton("Done", style: .text) {
-                        onDone()
+                    Spacer()
+
+                    // Action buttons
+                    VStack(spacing: TOYSpacing.md) {
+                        if let url = recipientURL {
+                            ShareLink(
+                                item: url,
+                                subject: Text("A video message for \(card.recipientName)"),
+                                message: Text("Someone made a special video card for you!")
+                            ) {
+                                HStack(spacing: TOYSpacing.sm) {
+                                    Image(systemName: "square.and.arrow.up")
+                                    Text("Share with \(card.recipientName)")
+                                }
+                                .font(.toyBodyMedium())
+                                .foregroundColor(.toyBackground)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: TOYSpacing.buttonHeight)
+                                .background(Color.toyText)
+                            }
+                        }
+
+                        TOYButton("Done", style: .text) {
+                            onDone()
+                        }
                     }
+                    .padding(.bottom, TOYSpacing.xl)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
+                .padding(.horizontal, TOYSpacing.lg)
             }
-            .background(Color.toyBackground)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         onDone()
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.toyTextSecondary)
                     }
                 }
@@ -117,7 +114,5 @@ struct PublishedCardView: View {
             shareToken: "abc123-test-token"
         ),
         videoURL: URL(string: "https://example.com/video.mov")!
-    ) {
-        print("Done tapped")
-    }
+    ) {}
 }

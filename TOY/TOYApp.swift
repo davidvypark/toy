@@ -28,6 +28,7 @@ struct TOYApp: App {
             ContentView(authViewModel: authViewModel)
                 .environment(themeManager)
                 .preferredColorScheme(themeManager.colorScheme)
+                .tint(.toyText)
                 .task {
                     await authViewModel.checkAuthState()
                 }
