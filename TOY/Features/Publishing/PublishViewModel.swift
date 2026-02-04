@@ -61,7 +61,84 @@ final class PublishViewModel {
         }
     }
 
-    /// Publishes the card: uploads montage and updates card status
+    /// Publishes the card with stitching at publish time (for instant preview flow)
+    /// - Parameters:
+    ///   - card: The card to publish
+    ///   - clips: Clips to stitch (already sorted with host first)
+    func publishWithStitching(card: Card, clips: [Clip]) async {
+        guard state == .idle else { return }
+
+        do {
+            let storagePath: String
+
+            if clips.count == 1 {
+                // Single clip: upload directly without re-encoding
+                state = .generating(progress: 0.5, phase: "Preparing video...")
+
+                let clip = clips[0]
+                // Download the clip
+                let signedURL = try await storageService.createSignedURL(path: clip.videoUrl)
+                let (tempURL, _) = try await URLSession.shared.download(from: signedURL)
+
+                state = .uploading(progress: 0)
+
+                // Upload directly
+                storagePath = try await storageService.uploadMontage(
+                    fileURL: tempURL,
+                    cardId: card.id
+                )
+
+                // Cleanup temp file
+                try? FileManager.default.removeItem(at: tempURL)
+            } else {
+                // Multiple clips: download, stitch, then upload
+                let url = try await montageService.generateMontageParallel(
+                    clips: clips,
+                    hostId: card.hostId
+                ) { [weak self] progress in
+                    Task { @MainActor in
+                        let phaseText: String
+                        switch progress.phase {
+                        case .downloading(let current, let total):
+                            phaseText = "Downloading clip \(current + 1) of \(total)..."
+                        case .stitching:
+                            phaseText = "Stitching video..."
+                        }
+                        self?.state = .generating(progress: progress.overallProgress, phase: phaseText)
+                    }
+                }
+
+                state = .uploading(progress: 0)
+
+                // Upload the stitched montage
+                storagePath = try await storageService.uploadMontage(
+                    fileURL: url,
+                    cardId: card.id
+                )
+
+                // Cleanup local file
+                try? FileManager.default.removeItem(at: url)
+            }
+
+            state = .publishing
+
+            // Update card status
+            try await cardService.publishCard(cardId: card.id, videoUrl: storagePath)
+
+            // Get signed URL for preview
+            let signedURL = try await storageService.createSignedVideoURL(path: storagePath)
+
+            state = .success(videoURL: signedURL)
+
+            #if DEBUG
+            print("Card published! Video URL: \(signedURL)")
+            #endif
+        } catch {
+            state = .failed(error: error.localizedDescription)
+        }
+    }
+
+    /// Publishes the card: uploads montage and updates card status (legacy - for pre-generated montage)
     /// - Parameters:
     ///   - card: The card to publish
     ///   - clipCount: Number of clips in the montage (for analytics)

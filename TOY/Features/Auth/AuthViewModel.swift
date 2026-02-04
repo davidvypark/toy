@@ -18,6 +18,9 @@ final class AuthViewModel {
     var errorMessage: String?
     var authState: AuthState = .unknown
 
+    /// Locally selected avatar image for optimistic UI display
+    var pendingAvatarImage: UIImage?
+
     // For Apple Sign-In nonce
     private var currentNonce: String?
 
@@ -109,6 +112,97 @@ final class AuthViewModel {
         }
 
         isLoading = false
+    }
+
+    // MARK: - Profile Updates
+
+    /// Updates user's display name with optimistic UI
+    func updateDisplayName(_ name: String) {
+        guard case .signedIn(let user) = authState else { return }
+
+        // Optimistic update - update UI immediately
+        let updatedUser = User(
+            id: user.id,
+            email: user.email,
+            displayName: name,
+            avatarURL: user.avatarURL,
+            createdAt: user.createdAt
+        )
+        authState = .signedIn(updatedUser)
+
+        // Background server call
+        Task {
+            do {
+                try await authService.updateDisplayName(name, for: user.id)
+            } catch {
+                // Revert on failure
+                authState = .signedIn(user)
+                errorMessage = "Failed to update name"
+            }
+        }
+    }
+
+    /// Updates user's avatar with optimistic UI
+    func updateAvatar(_ imageData: Data) {
+        guard case .signedIn(let user) = authState else {
+            #if DEBUG
+            print("📸 [ViewModel] Cannot update avatar - user not signed in")
+            #endif
+            return
+        }
+
+        #if DEBUG
+        print("📸 [ViewModel] Starting avatar update for user: \(user.id)")
+        print("📸 [ViewModel] Image data size: \(imageData.count) bytes")
+        #endif
+
+        // Optimistic UI - show the image immediately
+        if let uiImage = UIImage(data: imageData) {
+            pendingAvatarImage = uiImage
+            #if DEBUG
+            print("📸 [ViewModel] Pending image set for optimistic UI")
+            #endif
+        }
+
+        // Background server call
+        Task {
+            do {
+                let avatarURL = try await authService.updateAvatar(imageData, for: user.id)
+                #if DEBUG
+                print("📸 [ViewModel] Upload succeeded, URL: \(avatarURL.absoluteString)")
+                #endif
+
+                // Add cache-busting timestamp to URL
+                let cacheBustedURL = avatarURL.appending(queryItems: [
+                    URLQueryItem(name: "t", value: String(Int(Date().timeIntervalSince1970)))
+                ])
+                #if DEBUG
+                print("📸 [ViewModel] Cache-busted URL: \(cacheBustedURL.absoluteString)")
+                #endif
+
+                // Update state with new avatar URL
+                let updatedUser = User(
+                    id: user.id,
+                    email: user.email,
+                    displayName: user.displayName,
+                    avatarURL: cacheBustedURL,
+                    createdAt: user.createdAt
+                )
+                authState = .signedIn(updatedUser)
+                #if DEBUG
+                print("📸 [ViewModel] Auth state updated with new avatar URL")
+                #endif
+                // DON'T clear pendingAvatarImage - keep it as fallback while AsyncImage loads
+                // It will be replaced next time user selects a photo
+            } catch {
+                // DON'T clear pendingAvatarImage on failure - keep showing selected image
+                errorMessage = "Failed to upload photo"
+                #if DEBUG
+                print("📸 [ViewModel] Avatar upload FAILED: \(error)")
+                print("📸 [ViewModel] Error details: \(String(describing: error))")
+                #endif
+            }
+        }
     }
 
     // MARK: - Auth State

@@ -8,6 +8,7 @@ public struct Clip: Codable, Identifiable, Sendable, Equatable {
     public let cardId: UUID
     public let participantId: UUID
     public let videoUrl: String
+    public let thumbnailUrl: String?
     public let durationSeconds: Decimal?
     public let orderPosition: Int?
     public let status: String
@@ -19,6 +20,7 @@ public struct Clip: Codable, Identifiable, Sendable, Equatable {
         cardId: UUID,
         participantId: UUID,
         videoUrl: String,
+        thumbnailUrl: String? = nil,
         durationSeconds: Decimal? = nil,
         orderPosition: Int? = nil,
         status: String = "pending",
@@ -29,6 +31,7 @@ public struct Clip: Codable, Identifiable, Sendable, Equatable {
         self.cardId = cardId
         self.participantId = participantId
         self.videoUrl = videoUrl
+        self.thumbnailUrl = thumbnailUrl
         self.durationSeconds = durationSeconds
         self.orderPosition = orderPosition
         self.status = status
@@ -41,6 +44,7 @@ public struct Clip: Codable, Identifiable, Sendable, Equatable {
         case cardId = "card_id"
         case participantId = "participant_id"
         case videoUrl = "video_url"
+        case thumbnailUrl = "thumbnail_url"
         case durationSeconds = "duration_seconds"
         case orderPosition = "order_position"
         case status
@@ -56,6 +60,7 @@ public struct NewClip: Encodable, Sendable {
     public let cardId: UUID
     public let participantId: UUID
     public let videoUrl: String
+    public let thumbnailUrl: String?
     public let durationSeconds: Decimal?
     public let orderPosition: Int
     public let status: String
@@ -64,6 +69,7 @@ public struct NewClip: Encodable, Sendable {
         cardId: UUID,
         participantId: UUID,
         videoUrl: String,
+        thumbnailUrl: String? = nil,
         durationSeconds: Decimal? = nil,
         orderPosition: Int,
         status: String = "uploaded"
@@ -71,6 +77,7 @@ public struct NewClip: Encodable, Sendable {
         self.cardId = cardId
         self.participantId = participantId
         self.videoUrl = videoUrl
+        self.thumbnailUrl = thumbnailUrl
         self.durationSeconds = durationSeconds
         self.orderPosition = orderPosition
         self.status = status
@@ -80,6 +87,7 @@ public struct NewClip: Encodable, Sendable {
         case cardId = "card_id"
         case participantId = "participant_id"
         case videoUrl = "video_url"
+        case thumbnailUrl = "thumbnail_url"
         case durationSeconds = "duration_seconds"
         case orderPosition = "order_position"
         case status

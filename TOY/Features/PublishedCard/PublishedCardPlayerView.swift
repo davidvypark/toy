@@ -66,13 +66,15 @@ struct PublishedCardPlayerView: View {
                             dismiss()
                         } label: {
                             Image(systemName: "xmark")
-                                .font(.system(size: 18, weight: .light))
+                                .font(.system(size: 18, weight: .medium))
                                 .foregroundColor(.warmCream)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
                         }
                         Spacer()
                     }
-                    .padding(.horizontal, TOYSpacing.lg)
-                    .padding(.top, TOYSpacing.md)
+                    .padding(.horizontal, TOYSpacing.sm)
+                    .padding(.top, TOYSpacing.sm)
 
                     Spacer()
 
@@ -162,6 +164,8 @@ struct PublishedCardPlayerView: View {
         }
         .onDisappear {
             player?.pause()
+            player?.replaceCurrentItem(with: nil)
+            player = nil
         }
     }
 

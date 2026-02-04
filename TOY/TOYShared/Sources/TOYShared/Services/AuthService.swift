@@ -61,6 +61,12 @@ public protocol AuthServiceProtocol: Sendable {
 
     /// Stream of auth state changes
     func observeAuthState() -> AsyncStream<AuthState>
+
+    /// Update user's display name
+    func updateDisplayName(_ name: String, for userId: UUID) async throws
+
+    /// Update user's avatar image
+    func updateAvatar(_ imageData: Data, for userId: UUID) async throws -> URL
 }
 
 // MARK: - Supabase Implementation
@@ -99,10 +105,74 @@ public final class SupabaseAuthService: AuthServiceProtocol {
     public func getCurrentUser() async -> User? {
         do {
             let session = try await supabase.auth.session
-            return User(authUser: session.user)
+            let authUser = session.user
+
+            #if DEBUG
+            print("📱 [Auth] Getting current user: \(authUser.id)")
+            #endif
+
+            // Fetch profile data to get display_name and avatar_url
+            let profile = try? await fetchProfile(for: authUser.id)
+
+            #if DEBUG
+            print("📱 [Auth] Profile data loaded:")
+            print("   - displayName: \(profile?.displayName ?? "nil")")
+            print("   - avatarURL: \(profile?.avatarURL?.absoluteString ?? "nil")")
+            #endif
+
+            let user = User(
+                id: authUser.id,
+                email: authUser.email,
+                displayName: profile?.displayName
+                    ?? authUser.userMetadata["display_name"]?.stringValue
+                    ?? authUser.userMetadata["full_name"]?.stringValue,
+                avatarURL: profile?.avatarURL
+                    ?? authUser.userMetadata["avatar_url"]?.stringValue.flatMap { URL(string: $0) },
+                createdAt: authUser.createdAt
+            )
+
+            #if DEBUG
+            print("📱 [Auth] Final user avatarURL: \(user.avatarURL?.absoluteString ?? "nil")")
+            #endif
+
+            return user
         } catch {
+            #if DEBUG
+            print("📱 [Auth] Failed to get current user: \(error)")
+            #endif
             return nil
         }
+    }
+
+    /// Fetches profile data from the profiles table
+    private func fetchProfile(for userId: UUID) async throws -> (displayName: String?, avatarURL: URL?) {
+        struct ProfileRow: Decodable {
+            let displayName: String?
+            let avatarURL: URL?
+
+            enum CodingKeys: String, CodingKey {
+                case displayName = "display_name"
+                case avatarURL = "avatar_url"
+            }
+        }
+
+        #if DEBUG
+        print("📱 [Profile] Fetching profile for user: \(userId)")
+        #endif
+
+        let profile: ProfileRow = try await supabase
+            .from("profiles")
+            .select("display_name, avatar_url")
+            .eq("id", value: userId)
+            .single()
+            .execute()
+            .value
+
+        #if DEBUG
+        print("📱 [Profile] Fetched - displayName: \(profile.displayName ?? "nil"), avatarURL: \(profile.avatarURL?.absoluteString ?? "nil")")
+        #endif
+
+        return (displayName: profile.displayName, avatarURL: profile.avatarURL)
     }
 
     public func observeAuthState() -> AsyncStream<AuthState> {
@@ -120,7 +190,19 @@ public final class SupabaseAuthService: AuthServiceProtocol {
                     switch event {
                     case .signedIn, .tokenRefreshed:
                         if let authUser = session?.user {
-                            continuation.yield(.signedIn(User(authUser: authUser)))
+                            // Fetch profile data for complete user info
+                            let profile = try? await fetchProfile(for: authUser.id)
+                            let user = User(
+                                id: authUser.id,
+                                email: authUser.email,
+                                displayName: profile?.displayName
+                                    ?? authUser.userMetadata["display_name"]?.stringValue
+                                    ?? authUser.userMetadata["full_name"]?.stringValue,
+                                avatarURL: profile?.avatarURL
+                                    ?? authUser.userMetadata["avatar_url"]?.stringValue.flatMap { URL(string: $0) },
+                                createdAt: authUser.createdAt
+                            )
+                            continuation.yield(.signedIn(user))
                         }
                     case .signedOut:
                         continuation.yield(.signedOut)
@@ -134,6 +216,66 @@ public final class SupabaseAuthService: AuthServiceProtocol {
                 task.cancel()
             }
         }
+    }
+
+    // MARK: - Profile Updates
+
+    public func updateDisplayName(_ name: String, for userId: UUID) async throws {
+        struct ProfileUpdate: Encodable {
+            let display_name: String
+        }
+
+        try await supabase
+            .from("profiles")
+            .update(ProfileUpdate(display_name: name))
+            .eq("id", value: userId)
+            .execute()
+    }
+
+    public func updateAvatar(_ imageData: Data, for userId: UUID) async throws -> URL {
+        let fileName = "\(userId.uuidString)/avatar.jpg"
+        let bucket = supabase.storage.from("avatars")
+
+        #if DEBUG
+        print("📸 [Avatar] Starting upload for user: \(userId)")
+        print("📸 [Avatar] File path: \(fileName)")
+        print("📸 [Avatar] Image data size: \(imageData.count) bytes")
+        #endif
+
+        // Upload the image
+        try await bucket.upload(
+            fileName,
+            data: imageData,
+            options: FileOptions(contentType: "image/jpeg", upsert: true)
+        )
+
+        #if DEBUG
+        print("📸 [Avatar] Upload successful")
+        #endif
+
+        // Get the public URL
+        let publicURL = try bucket.getPublicURL(path: fileName)
+
+        #if DEBUG
+        print("📸 [Avatar] Public URL: \(publicURL.absoluteString)")
+        #endif
+
+        // Update the profile with the avatar URL
+        struct AvatarUpdate: Encodable {
+            let avatar_url: String
+        }
+
+        try await supabase
+            .from("profiles")
+            .update(AvatarUpdate(avatar_url: publicURL.absoluteString))
+            .eq("id", value: userId)
+            .execute()
+
+        #if DEBUG
+        print("📸 [Avatar] Profile updated with avatar URL")
+        #endif
+
+        return publicURL
     }
 
     // MARK: - Private Helpers

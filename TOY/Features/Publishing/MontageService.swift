@@ -109,6 +109,92 @@ actor MontageService {
         return montageURL
     }
 
+    /// Generates a montage with parallel downloads for faster processing.
+    /// Clips should already be sorted (host first).
+    /// - Parameters:
+    ///   - clips: Array of clips to stitch (pre-sorted)
+    ///   - hostId: The host's user ID
+    ///   - onProgress: Progress callback
+    /// - Returns: Local URL to the stitched montage file
+    /// - Throws: MontageError if generation fails
+    func generateMontageParallel(
+        clips: [Clip],
+        hostId: UUID,
+        onProgress: (@Sendable (MontageProgress) -> Void)? = nil
+    ) async throws -> URL {
+        guard !clips.isEmpty else {
+            throw MontageError.noClips
+        }
+
+        // 1. Create temp directory
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("montage-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+        // 2. Download all clips in parallel
+        onProgress?(.init(phase: .downloading(current: 0, total: clips.count)))
+
+        let downloadResults = await withTaskGroup(of: (Int, URL?, Error?).self) { group in
+            for (index, clip) in clips.enumerated() {
+                group.addTask { [self] in
+                    do {
+                        let localURL = try await self.downloadClip(clip, to: tempDir)
+                        return (index, localURL, nil)
+                    } catch {
+                        return (index, nil, error)
+                    }
+                }
+            }
+
+            var results: [(Int, URL?, Error?)] = []
+            for await result in group {
+                results.append(result)
+                // Update progress as each download completes
+                let completedCount = results.count
+                onProgress?(.init(phase: .downloading(current: completedCount, total: clips.count)))
+            }
+            return results.sorted { $0.0 < $1.0 }
+        }
+
+        // Check for download errors and collect URLs in order
+        var localURLs: [URL] = []
+        for (index, url, error) in downloadResults {
+            if let error {
+                throw MontageError.downloadFailed("Clip \(index + 1): \(error.localizedDescription)")
+            }
+            guard let url else {
+                throw MontageError.downloadFailed("Clip \(index + 1): No URL returned")
+            }
+            localURLs.append(url)
+        }
+
+        #if DEBUG
+        print("Downloaded \(localURLs.count) clips in parallel")
+        #endif
+
+        // 3. Stitch using VideoMerger
+        let montageURL: URL
+        do {
+            montageURL = try await videoMerger.mergeClipsWithProgress(localURLs) { progress in
+                onProgress?(.init(phase: .stitching(progress: progress)))
+            }
+        } catch {
+            throw MontageError.stitchingFailed(error.localizedDescription)
+        }
+
+        // 4. Cleanup temp clip files (keep montage)
+        for url in localURLs {
+            try? FileManager.default.removeItem(at: url)
+        }
+        try? FileManager.default.removeItem(at: tempDir)
+
+        #if DEBUG
+        print("Montage generated at: \(montageURL)")
+        #endif
+
+        return montageURL
+    }
+
     // MARK: - Private Helpers
 
     /// Sorts clips with host first, then by orderPosition, then by createdAt

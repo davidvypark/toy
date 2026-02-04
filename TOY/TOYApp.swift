@@ -5,6 +5,7 @@
 //  Created by David Park on 2/1/26.
 //
 
+import AVFoundation
 import RevenueCat
 import SwiftUI
 import TOYShared
@@ -16,6 +17,16 @@ struct TOYApp: App {
     @State private var pendingDeepLink: DeepLinkDestination?
 
     init() {
+        // Configure audio session to play sound even when silent switch is on
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            #if DEBUG
+            print("Failed to configure audio session: \(error)")
+            #endif
+        }
+
         // Configure RevenueCat for in-app purchases
         #if DEBUG
         Purchases.logLevel = .debug

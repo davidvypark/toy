@@ -9,6 +9,10 @@ import AVFoundation
 import Combine
 import SwiftUI
 
+#if canImport(UIKit)
+import UIKit
+#endif
+
 /// ViewModel for the recording screen.
 @MainActor
 public final class RecordingViewModel: ObservableObject {
@@ -177,10 +181,36 @@ public final class RecordingViewModel: ObservableObject {
             print("[DURATION DEBUG] Calculated duration: \(String(describing: duration))")
             #endif
 
+            // Generate thumbnail from local video file (fast - no network)
+            let thumbnailData = await generateThumbnail(from: videoURL)
+            #if DEBUG
+            if let data = thumbnailData {
+                print("[THUMBNAIL] Generated thumbnail: \(data.count / 1024) KB")
+            } else {
+                print("[THUMBNAIL] Failed to generate thumbnail")
+            }
+            #endif
+
+            // Upload video
             let path = try await storageService.uploadVideo(fileURL: videoURL, clipId: clipId)
             uploadedPath = path
             uploadState = .success(storagePath: path)
             print("Upload successful: \(path)")
+
+            // Upload thumbnail (best-effort, don't fail if thumbnail upload fails)
+            var thumbnailPath: String? = nil
+            if let thumbnailData {
+                do {
+                    thumbnailPath = try await storageService.uploadThumbnail(data: thumbnailData, clipId: clipId)
+                    #if DEBUG
+                    print("[THUMBNAIL] Uploaded thumbnail: \(thumbnailPath ?? "nil")")
+                    #endif
+                } catch {
+                    #if DEBUG
+                    print("[THUMBNAIL] Failed to upload thumbnail: \(error)")
+                    #endif
+                }
+            }
 
             // Create clip record if we have card context
             if let cardId = cardId, let participantId = participantId {
@@ -195,6 +225,7 @@ public final class RecordingViewModel: ObservableObject {
                         cardId: cardId,
                         participantId: participantId,
                         videoUrl: path,
+                        thumbnailUrl: thumbnailPath,
                         durationSeconds: duration,
                         orderPosition: orderPosition,
                         status: "uploaded"
@@ -254,6 +285,33 @@ public final class RecordingViewModel: ObservableObject {
             print("[DURATION DEBUG] Failed to load video duration: \(error)")
             return nil
         }
+    }
+
+    /// Generates a thumbnail image from a local video file.
+    /// - Parameter videoURL: The local URL of the video file
+    /// - Returns: JPEG data for the thumbnail, or nil if generation fails
+    private func generateThumbnail(from videoURL: URL) async -> Data? {
+        #if canImport(UIKit)
+        let asset = AVAsset(url: videoURL)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 150, height: 200)
+
+        let time = CMTime(seconds: 0.5, preferredTimescale: 600)
+
+        do {
+            let cgImage = try await generator.image(at: time).image
+            let uiImage = UIImage(cgImage: cgImage)
+            return uiImage.jpegData(compressionQuality: 0.7)
+        } catch {
+            #if DEBUG
+            print("[THUMBNAIL] Failed to generate thumbnail: \(error)")
+            #endif
+            return nil
+        }
+        #else
+        return nil
+        #endif
     }
 
     public func retryUpload() {

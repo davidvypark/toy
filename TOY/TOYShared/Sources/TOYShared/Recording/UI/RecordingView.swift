@@ -78,11 +78,12 @@ public struct RecordingView: View {
 
     private var recordingView: some View {
         ZStack {
-            // Camera preview
-            if viewModel.recorder.isSessionReady {
-                CameraPreview(session: viewModel.recorder.captureSession.session)
-                    .ignoresSafeArea()
-            }
+            // Camera preview - always mounted to prevent view recreation during state changes
+            // Using opacity instead of conditional rendering prevents SwiftUI from
+            // unmounting/remounting the UIViewRepresentable during segment transitions
+            CameraPreview(session: viewModel.recorder.captureSession.session)
+                .ignoresSafeArea()
+                .opacity(viewModel.recorder.isSessionReady ? 1 : 0)
 
             // Overlay controls
             VStack {

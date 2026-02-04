@@ -83,6 +83,40 @@ public actor StorageService {
         }
     }
 
+    // MARK: - Thumbnail Upload
+
+    /// Uploads a thumbnail image to Supabase Storage.
+    /// - Parameters:
+    ///   - data: The JPEG image data
+    ///   - clipId: The unique identifier for this clip (used in filename)
+    /// - Returns: The storage path of the uploaded thumbnail
+    /// - Throws: `UploadError` if upload fails
+    public func uploadThumbnail(data: Data, clipId: UUID) async throws -> String {
+        let path = "thumbnails/\(clipId).jpg"
+        let bucket = supabase.storage.from(bucketName)
+
+        do {
+            try await bucket.upload(
+                path: path,
+                file: data,
+                options: FileOptions(
+                    cacheControl: "2592000",  // 30 days
+                    contentType: "image/jpeg",
+                    upsert: false
+                )
+            )
+
+            #if DEBUG
+            let fileSizeKB = data.count / 1024
+            print("📤 Uploaded thumbnail \(path) (\(fileSizeKB) KB)")
+            #endif
+
+            return path
+        } catch {
+            throw UploadError.uploadFailed(error.localizedDescription)
+        }
+    }
+
     // MARK: - Signed URL
 
     /// Creates a time-limited signed URL for secure video access.

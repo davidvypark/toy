@@ -16,5 +16,7 @@
 	<string>TOY needs access to your camera to record video messages for your friends and family.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TOY needs access to your microphone to record audio with your video messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>TOY needs access to your photo library to set your profile picture.</string>
 </dict>
 </plist>

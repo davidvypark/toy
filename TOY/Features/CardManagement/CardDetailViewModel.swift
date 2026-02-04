@@ -26,9 +26,11 @@ final class CardDetailViewModel {
 
     // MARK: - Data Loading
 
-    /// Loads participants and clips for a card in parallel.
-    /// - Parameter cardId: The ID of the card to load data for
-    func loadData(for cardId: UUID) async {
+    /// Loads participants and clips for a card.
+    /// - Parameters:
+    ///   - cardId: The ID of the card to load data for
+    ///   - initialClips: Optional pre-fetched clips from HomeView to avoid re-fetching
+    func loadData(for cardId: UUID, initialClips: [Clip]? = nil) async {
         isLoading = true
         errorMessage = nil
 
@@ -37,25 +39,24 @@ final class CardDetailViewModel {
             print("Loading data for card: \(cardId)")
             #endif
 
-            // Fetch participants and clips in parallel
-            async let fetchedParticipants = cardService.fetchParticipantsForCard(cardId: cardId)
-            async let fetchedClips = cardService.fetchClipsForCard(cardId: cardId)
+            // Use initial clips if provided, otherwise fetch
+            if let initialClips {
+                clips = initialClips
+                // Only fetch participants
+                participants = try await cardService.fetchParticipantsForCard(cardId: cardId)
+            } else {
+                // Fetch participants and clips in parallel
+                async let fetchedParticipants = cardService.fetchParticipantsForCard(cardId: cardId)
+                async let fetchedClips = cardService.fetchClipsForCard(cardId: cardId)
 
-            participants = try await fetchedParticipants
-            clips = try await fetchedClips
+                participants = try await fetchedParticipants
+                clips = try await fetchedClips
+            }
 
             #if DEBUG
             print("Loaded \(participants.count) participants and \(clips.count) clips")
-            for clip in clips {
-                print("[DURATION DEBUG] Clip \(clip.id): duration = \(String(describing: clip.durationSeconds))")
-            }
             #endif
 
-            // Pre-fetch signed URLs for all clips (for faster thumbnail + preview loading)
-            await prefetchSignedURLs()
-
-            // NOTE: We no longer load missing durations from video assets.
-            // If duration is null in DB, we just display "—" instead of re-downloading the video.
         } catch {
             #if DEBUG
             print("Failed to load card data: \(error)")
@@ -64,6 +65,11 @@ final class CardDetailViewModel {
         }
 
         isLoading = false
+
+        // Pre-fetch signed URLs in background AFTER showing data
+        Task {
+            await prefetchSignedURLs()
+        }
     }
 
     // MARK: - Clip Operations

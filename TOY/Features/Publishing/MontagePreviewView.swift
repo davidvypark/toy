@@ -9,9 +9,31 @@ struct MontagePreviewView: View {
     let onPublished: () -> Void
 
     @State private var viewModel = PublishViewModel()
-    @State private var player: AVPlayer?
+    @State private var queuePlayer: AVQueuePlayer?
+    @State private var signedURLs: [URL] = []
+    @State private var isLoadingURLs = true
     @State private var isPlayerReady = false
     @State private var showPublishedView = false
+    @State private var looper: AVPlayerLooper?
+
+    @Environment(\.dismiss) private var dismiss
+    private let storageService = StorageService()
+
+    // MARK: - Sorted Clips
+
+    private var sortedClips: [Clip] {
+        // Host clip first, then by orderPosition/createdAt
+        let hostClip = clips.first { $0.participantId == card.hostId }
+        let participantClips = clips
+            .filter { $0.participantId != card.hostId }
+            .sorted { clip1, clip2 in
+                if let pos1 = clip1.orderPosition, let pos2 = clip2.orderPosition {
+                    if pos1 != pos2 { return pos1 < pos2 }
+                }
+                return clip1.createdAt < clip2.createdAt
+            }
+        return [hostClip].compactMap { $0 } + participantClips
+    }
 
     var body: some View {
         ZStack {
@@ -19,8 +41,8 @@ struct MontagePreviewView: View {
 
             VStack(spacing: 0) {
                 // Video player area
-                if let player {
-                    MontageVideoPlayer(player: player) {
+                if let queuePlayer {
+                    QueueVideoPlayer(player: queuePlayer) {
                         isPlayerReady = true
                     }
                     .aspectRatio(9/16, contentMode: .fit)
@@ -28,14 +50,14 @@ struct MontagePreviewView: View {
                     .opacity(isPlayerReady ? 1 : 0)
                 }
 
-                if viewModel.state.isInProgress || (player != nil && !isPlayerReady) {
+                if viewModel.state.isInProgress {
                     progressView
-                } else if player == nil {
+                } else if isLoadingURLs || (queuePlayer != nil && !isPlayerReady) {
                     VStack(spacing: TOYSpacing.md) {
-                        Image(systemName: "film.stack")
-                            .font(.system(size: 48, weight: .light))
-                            .foregroundColor(.warmGrayDark)
-                        Text("Generating preview...")
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(.warmCream)
+                        Text("Loading preview...")
                             .font(.toyBody())
                             .foregroundColor(.warmGrayDark)
                     }
@@ -49,34 +71,29 @@ struct MontagePreviewView: View {
                     .padding(.bottom, TOYSpacing.xl)
             }
         }
-        .navigationTitle("Preview Montage")
+        .navigationTitle("Preview")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if viewModel.montageURL != nil && !viewModel.state.isInProgress {
-                    Button("Regenerate") {
-                        Task {
-                            player = nil
-                            isPlayerReady = false
-                            await viewModel.generatePreview(card: card, clips: clips)
-                            setupPlayer()
-                        }
-                    }
-                    .font(.toyBody())
-                    .foregroundColor(.warmCream)
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.warmCream)
                 }
             }
         }
         .task {
-            await viewModel.generatePreview(card: card, clips: clips)
-            setupPlayer()
+            await setupQueuePlayer()
         }
         .onDisappear {
-            player?.pause()
-            player = nil
+            queuePlayer?.pause()
+            queuePlayer = nil
+            looper = nil
+            signedURLs = []
             isPlayerReady = false
-            viewModel.cleanup()
         }
         .onChange(of: viewModel.state) { _, newState in
             if case .success = newState {
@@ -142,66 +159,109 @@ struct MontagePreviewView: View {
     private var actionButtons: some View {
         VStack(spacing: TOYSpacing.md) {
             TOYButton.primary(
-                viewModel.state.isInProgress && viewModel.montageURL != nil ? "Publishing..." : "Publish Card",
-                isLoading: viewModel.state.isInProgress && viewModel.montageURL != nil
+                viewModel.state.isInProgress ? "Publishing..." : "Publish Card",
+                isLoading: viewModel.state.isInProgress
             ) {
                 Task {
-                    await viewModel.publish(
+                    await viewModel.publishWithStitching(
                         card: card,
-                        clipCount: clips.count,
-                        participantCount: Set(clips.map(\.participantId)).count
+                        clips: sortedClips
                     )
                 }
             }
-            .disabled(viewModel.montageURL == nil || viewModel.state.isInProgress)
+            .disabled(isLoadingURLs || viewModel.state.isInProgress)
+        }
+    }
 
-            if viewModel.montageURL == nil && !viewModel.state.isInProgress {
-                Text("Generate preview first")
-                    .font(.toyCaption())
-                    .foregroundColor(.warmGrayDark)
+    // MARK: - Queue Player Setup
+
+    private func setupQueuePlayer() async {
+        isLoadingURLs = true
+        defer { isLoadingURLs = false }
+
+        // Fetch signed URLs for all clips concurrently
+        let urls = await withTaskGroup(of: (Int, URL?).self) { group in
+            for (index, clip) in sortedClips.enumerated() {
+                group.addTask {
+                    do {
+                        let url = try await storageService.createSignedURL(path: clip.videoUrl)
+                        return (index, url)
+                    } catch {
+                        #if DEBUG
+                        print("Failed to get signed URL for clip \(clip.id): \(error)")
+                        #endif
+                        return (index, nil)
+                    }
+                }
+            }
+
+            var results: [(Int, URL?)] = []
+            for await result in group {
+                results.append(result)
+            }
+            return results.sorted { $0.0 < $1.0 }.compactMap { $0.1 }
+        }
+
+        guard !urls.isEmpty else { return }
+        signedURLs = urls
+
+        // Single clip: use AVPlayerLooper for seamless looping
+        if urls.count == 1 {
+            let item = AVPlayerItem(url: urls[0])
+            let player = AVQueuePlayer(playerItem: item)
+            looper = AVPlayerLooper(player: player, templateItem: item)
+            player.play()
+            queuePlayer = player
+        } else {
+            // Multiple clips: create queue player
+            let items = urls.map { AVPlayerItem(url: $0) }
+            let player = AVQueuePlayer(items: items)
+            player.actionAtItemEnd = .advance
+            player.play()
+            queuePlayer = player
+
+            // Observe when last item finishes to loop
+            setupLooping(player: player)
+        }
+    }
+
+    private func setupLooping(player: AVQueuePlayer) {
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: nil,
+            queue: .main
+        ) { [self] _ in
+            // Check if queue is empty (all items played)
+            if player.items().count <= 1 {
+                // Re-queue all items from stored URLs
+                for url in signedURLs {
+                    let newItem = AVPlayerItem(url: url)
+                    player.insert(newItem, after: nil)
+                }
             }
         }
     }
-
-    private func setupPlayer() {
-        guard let url = viewModel.montageURL else { return }
-        isPlayerReady = false
-        let newPlayer = AVPlayer(url: url)
-        newPlayer.automaticallyWaitsToMinimizeStalling = false
-        newPlayer.play()
-
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: newPlayer.currentItem,
-            queue: .main
-        ) { _ in
-            newPlayer.seek(to: .zero)
-            newPlayer.play()
-        }
-
-        player = newPlayer
-    }
 }
 
-// MARK: - Montage Video Player
+// MARK: - Queue Video Player
 
-private struct MontageVideoPlayer: UIViewRepresentable {
-    let player: AVPlayer
+private struct QueueVideoPlayer: UIViewRepresentable {
+    let player: AVQueuePlayer
     let onReadyToDisplay: () -> Void
 
-    func makeUIView(context: Context) -> MontagePlayerUIView {
-        let view = MontagePlayerUIView()
+    func makeUIView(context: Context) -> QueuePlayerUIView {
+        let view = QueuePlayerUIView()
         view.player = player
         view.onReadyToDisplay = onReadyToDisplay
         return view
     }
 
-    func updateUIView(_ uiView: MontagePlayerUIView, context: Context) {
+    func updateUIView(_ uiView: QueuePlayerUIView, context: Context) {
         uiView.player = player
     }
 }
 
-private class MontagePlayerUIView: UIView {
+private class QueuePlayerUIView: UIView {
     private var layerObserver: NSKeyValueObservation?
     var onReadyToDisplay: (() -> Void)?
 
@@ -213,8 +273,8 @@ private class MontagePlayerUIView: UIView {
         layer as! AVPlayerLayer
     }
 
-    var player: AVPlayer? {
-        get { playerLayer.player }
+    var player: AVQueuePlayer? {
+        get { playerLayer.player as? AVQueuePlayer }
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill

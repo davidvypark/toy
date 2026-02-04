@@ -14,12 +14,14 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/supabase/supabase-swift.git", from: "2.0.0"),
+        .package(url: "https://github.com/onevcat/Kingfisher.git", from: "8.0.0"),
     ],
     targets: [
         .target(
             name: "TOYShared",
             dependencies: [
-                .product(name: "Supabase", package: "supabase-swift")
+                .product(name: "Supabase", package: "supabase-swift"),
+                .product(name: "Kingfisher", package: "Kingfisher"),
             ]
         ),
         .testTarget(

@@ -234,6 +234,7 @@ public actor CardService {
     ///   - cardId: The ID of the card this clip belongs to
     ///   - participantId: The ID of the participant who recorded the clip
     ///   - videoUrl: The storage URL of the uploaded video
+    ///   - thumbnailUrl: The storage URL of the pre-generated thumbnail (optional)
     ///   - durationSeconds: The duration of the clip in seconds (optional)
     ///   - orderPosition: The position in the montage order
     ///   - status: The clip status (default: "uploaded")
@@ -243,6 +244,7 @@ public actor CardService {
         cardId: UUID,
         participantId: UUID,
         videoUrl: String,
+        thumbnailUrl: String? = nil,
         durationSeconds: Decimal?,
         orderPosition: Int,
         status: String = "uploaded"
@@ -251,6 +253,7 @@ public actor CardService {
             cardId: cardId,
             participantId: participantId,
             videoUrl: videoUrl,
+            thumbnailUrl: thumbnailUrl,
             durationSeconds: durationSeconds,
             orderPosition: orderPosition,
             status: status

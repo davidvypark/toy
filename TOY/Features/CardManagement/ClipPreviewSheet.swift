@@ -40,7 +40,7 @@ struct ClipPreviewSheet: View {
                                 isPlayerReady = true
                             }
                             .aspectRatio(9/16, contentMode: .fit)
-                            .background(Color.toyVideoContainer)
+                            .clipped()
                             .opacity(isPlayerReady ? 1 : 0)
                         }
 
@@ -53,6 +53,8 @@ struct ClipPreviewSheet: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
+                    .background(Color.toyVideoContainer)
+                    .clipped()
                     .padding(.horizontal, TOYSpacing.lg)
 
                     Spacer()

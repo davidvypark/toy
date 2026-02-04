@@ -5,6 +5,7 @@ import TOYShared
 /// The main card detail/management view for hosts.
 struct CardDetailView: View {
     let card: Card
+    var initialClips: [Clip] = []
 
     @State private var viewModel = CardDetailViewModel()
     @State private var selectedClip: Clip?
@@ -23,7 +24,11 @@ struct CardDetailView: View {
     private var allContributors: [ContributorRow] {
         var contributors: [ContributorRow] = []
 
-        let hostClip = viewModel.clips.first { $0.participantId == card.hostId }
+        // Use viewModel clips if available, otherwise fall back to initialClips
+        let clips = viewModel.clips.isEmpty ? initialClips : viewModel.clips
+
+        // Host is always first
+        let hostClip = clips.first { $0.participantId == card.hostId }
         let hostDuration = hostClip.flatMap { viewModel.effectiveDuration(for: $0) }
         let hostCachedURL = hostClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
         contributors.append(ContributorRow(
@@ -35,21 +40,43 @@ struct CardDetailView: View {
             cachedURL: hostCachedURL
         ))
 
-        for participant in viewModel.participants {
-            guard participant.id != card.hostId else { continue }
+        // Get unique participant IDs from clips (excluding host)
+        let clipParticipantIds = Set(clips.map(\.participantId)).subtracting([card.hostId])
 
-            let participantClip = viewModel.clips.first { $0.participantId == participant.id }
-            let participantDuration = participantClip.flatMap { viewModel.effectiveDuration(for: $0) }
-            let participantCachedURL = participantClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
-            contributors.append(ContributorRow(
-                id: participant.id,
-                name: participant.email ?? "Invited Guest",
-                clip: participantClip,
-                isHost: false,
-                participant: participant,
-                effectiveDuration: participantDuration,
-                cachedURL: participantCachedURL
-            ))
+        // If participants have loaded, use them; otherwise derive from clips
+        if !viewModel.participants.isEmpty {
+            for participant in viewModel.participants {
+                guard participant.id != card.hostId else { continue }
+
+                let participantClip = clips.first { $0.participantId == participant.id }
+                let participantDuration = participantClip.flatMap { viewModel.effectiveDuration(for: $0) }
+                let participantCachedURL = participantClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
+                contributors.append(ContributorRow(
+                    id: participant.id,
+                    name: participant.email ?? "Invited Guest",
+                    clip: participantClip,
+                    isHost: false,
+                    participant: participant,
+                    effectiveDuration: participantDuration,
+                    cachedURL: participantCachedURL
+                ))
+            }
+        } else if !clipParticipantIds.isEmpty {
+            // Participants not loaded yet - show rows from clips with placeholder names
+            for participantId in clipParticipantIds.sorted(by: { $0.uuidString < $1.uuidString }) {
+                let participantClip = clips.first { $0.participantId == participantId }
+                let participantDuration = participantClip.flatMap { viewModel.effectiveDuration(for: $0) }
+                let participantCachedURL = participantClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
+                contributors.append(ContributorRow(
+                    id: participantId,
+                    name: "Contributor",
+                    clip: participantClip,
+                    isHost: false,
+                    participant: nil,
+                    effectiveDuration: participantDuration,
+                    cachedURL: participantCachedURL
+                ))
+            }
         }
 
         return contributors
@@ -144,7 +171,7 @@ struct CardDetailView: View {
             await viewModel.loadData(for: card.id)
         }
         .task {
-            await viewModel.loadData(for: card.id)
+            await viewModel.loadData(for: card.id, initialClips: initialClips.isEmpty ? nil : initialClips)
         }
         .sheet(item: $selectedClip) { clip in
             ClipPreviewSheet(
@@ -327,24 +354,19 @@ struct CardDetailView: View {
                 .foregroundColor(.toyTextSecondary)
                 .toyLetterSpacing(1.5)
 
-            if viewModel.isLoading {
-                ForEach(0..<3, id: \.self) { _ in
-                    ContributorSkeletonRow()
-                }
-            } else {
-                ForEach(allContributors) { contributor in
-                    ContributorClipRow(
-                        contributor: contributor,
-                        onTapClip: { clip in
-                            selectedClip = clip
-                        }
-                    )
-
-                    if contributor.id != allContributors.last?.id {
-                        Rectangle()
-                            .fill(Color.toyDivider)
-                            .frame(height: 1)
+            // Show contributors immediately - names may update when participants load
+            ForEach(allContributors) { contributor in
+                ContributorClipRow(
+                    contributor: contributor,
+                    onTapClip: { clip in
+                        selectedClip = clip
                     }
+                )
+
+                if contributor.id != allContributors.last?.id {
+                    Rectangle()
+                        .fill(Color.toyDivider)
+                        .frame(height: 1)
                 }
             }
         }
@@ -360,24 +382,23 @@ struct CardDetailView: View {
                 VStack(alignment: .leading, spacing: TOYSpacing.xs) {
                     Text("Preview Montage")
                         .font(.toyBodyMedium())
-                        .foregroundColor(.toyText)
+                        .foregroundColor(.toyBackground)
                     Text("\(viewModel.clips.count) clips - \(formattedDuration) total")
                         .font(.toyCaption())
-                        .foregroundColor(.toyTextSecondary)
+                        .foregroundColor(.toyBackground.opacity(0.7))
                 }
 
                 Spacer()
 
                 Image(systemName: "play.fill")
                     .font(.system(size: 14))
-                    .foregroundColor(.toyText)
+                    .foregroundColor(.toyBackground)
             }
             .padding(TOYSpacing.md)
             .background(
                 Rectangle()
                     .fill(Color.toyText)
             )
-            .foregroundColor(.toyBackground)
         }
         .buttonStyle(.plain)
     }
@@ -568,6 +589,23 @@ private struct ClipThumbnailView: View {
         isLoading = true
         defer { isLoading = false }
 
+        // Fast path: load from pre-generated thumbnail URL if available
+        if let thumbnailUrl = clip.thumbnailUrl {
+            do {
+                let signedURL = try await storageService.createSignedURL(path: thumbnailUrl)
+                let (data, _) = try await URLSession.shared.data(from: signedURL)
+                if let image = UIImage(data: data) {
+                    thumbnail = image
+                    return
+                }
+            } catch {
+                #if DEBUG
+                print("Failed to load thumbnail from URL, falling back to video: \(error)")
+                #endif
+            }
+        }
+
+        // Fallback: generate from video (for old clips without thumbnails)
         do {
             let signedURL: URL
             if let cachedURL {

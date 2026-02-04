@@ -5,6 +5,7 @@
 //  Created by David Park on 2/1/26.
 //
 
+import Kingfisher
 import SwiftUI
 import TOYShared
 
@@ -20,7 +21,7 @@ struct HomeView: View {
 
     // Card list state
     @State private var hostedCards: [Card] = []
-    @State private var clipCounts: [UUID: Int] = [:]
+    @State private var cardClips: [UUID: [Clip]] = [:]
     @State private var participatingCards: [Card] = []
     @State private var isLoadingCards = false
 
@@ -60,11 +61,12 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(for: Card.self) { card in
-                CardDetailView(card: card)
+                CardDetailView(card: card, initialClips: cardClips[card.id] ?? [])
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView(authViewModel: viewModel)
             }
+            .navigationBarHidden(true)
             .fullScreenCover(item: $publishedCardToPlay) { card in
                 PublishedCardPlayerView(card: card)
             }
@@ -112,13 +114,10 @@ struct HomeView: View {
                 Button {
                     showSettings = true
                 } label: {
-                    Image(systemName: "person.crop.circle")
-                        .font(.system(size: 24, weight: .light))
-                        .foregroundColor(.toyTextSecondary)
+                    profileAvatarView
                 }
             }
             .padding(.horizontal, TOYSpacing.lg)
-            .padding(.top, TOYSpacing.sm)
 
             // Cropped title - extends beyond leading edge
             Text("Thinking\nOf You")
@@ -126,9 +125,36 @@ struct HomeView: View {
                 .foregroundColor(.toyText)
                 .lineSpacing(-8)
                 .padding(.leading, -8) // Slight crop effect
-                .padding(.top, TOYSpacing.lg)
-                .padding(.bottom, TOYSpacing.lg)
+                .padding(.top, TOYSpacing.sm)
+                .padding(.bottom, TOYSpacing.sm)
                 .padding(.leading, TOYSpacing.lg)
+        }
+    }
+
+    @ViewBuilder
+    private var profileAvatarView: some View {
+        // Prefer pending image for optimistic UI
+        if let pendingImage = viewModel.pendingAvatarImage {
+            Image(uiImage: pendingImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 28, height: 28)
+                .clipShape(Circle())
+        } else if let user = viewModel.authState.user, let avatarURL = user.avatarURL {
+            KFImage(avatarURL)
+                .placeholder {
+                    Image(systemName: "person.crop.circle")
+                        .font(.system(size: 24, weight: .light))
+                        .foregroundColor(.toyTextSecondary)
+                }
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 28, height: 28)
+                .clipShape(Circle())
+        } else {
+            Image(systemName: "person.crop.circle")
+                .font(.system(size: 24, weight: .light))
+                .foregroundColor(.toyTextSecondary)
         }
     }
 
@@ -179,12 +205,12 @@ struct HomeView: View {
     private var cardListView: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: TOYSpacing.xxl) {
+                VStack(alignment: .leading, spacing: TOYSpacing.lg) {
                     // In Progress section
                     if !inProgressCards.isEmpty {
                         InProgressSectionView(
                             cards: inProgressCards,
-                            clipCounts: clipCounts
+                            cardClips: cardClips
                         )
                     }
 
@@ -192,7 +218,6 @@ struct HomeView: View {
                     if !publishedCards.isEmpty {
                         PublishedSectionView(
                             cards: publishedCards,
-                            clipCounts: clipCounts,
                             onCardTapped: { card in
                                 publishedCardToPlay = card
                             }
@@ -204,14 +229,13 @@ struct HomeView: View {
                         PublishedSectionView(
                             title: "Participating",
                             cards: participatingCards,
-                            clipCounts: clipCounts,
                             onCardTapped: { card in
                                 publishedCardToPlay = card
                             }
                         )
                     }
                 }
-                .padding(.vertical, TOYSpacing.md)
+                .padding(.vertical, TOYSpacing.sm)
             }
             .scrollBounceBehavior(.basedOnSize)
 
@@ -235,12 +259,12 @@ struct HomeView: View {
         do {
             hostedCards = try await cardService.fetchCardsForHost(hostId: user.id)
 
-            var counts: [UUID: Int] = [:]
+            var clipsDict: [UUID: [Clip]] = [:]
             for card in hostedCards {
                 let clips = try await cardService.fetchClipsForCard(cardId: card.id)
-                counts[card.id] = clips.count
+                clipsDict[card.id] = clips
             }
-            clipCounts = counts
+            cardClips = clipsDict
             participatingCards = []
         } catch {
             #if DEBUG
@@ -254,7 +278,7 @@ struct HomeView: View {
 
 private struct InProgressSectionView: View {
     let cards: [Card]
-    let clipCounts: [UUID: Int]
+    let cardClips: [UUID: [Clip]]
 
     @State private var currentIndex: Int = 0
 
@@ -273,7 +297,7 @@ private struct InProgressSectionView: View {
                     NavigationLink(value: card) {
                         InProgressCardTile(
                             card: card,
-                            clipCount: clipCounts[card.id] ?? 0
+                            clipCount: cardClips[card.id]?.count ?? 0
                         )
                     }
                     .buttonStyle(.plain)
@@ -305,8 +329,12 @@ private struct InProgressSectionView: View {
 private struct PublishedSectionView: View {
     var title: String = "Published"
     let cards: [Card]
-    let clipCounts: [UUID: Int]
     var onCardTapped: ((Card) -> Void)? = nil
+
+    private let columns = [
+        GridItem(.flexible(), spacing: TOYSpacing.md),
+        GridItem(.flexible(), spacing: TOYSpacing.md)
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: TOYSpacing.md) {
@@ -317,23 +345,18 @@ private struct PublishedSectionView: View {
                 .toyLetterSpacing(1.5)
                 .padding(.horizontal, TOYSpacing.lg)
 
-            // Horizontal scroll
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: TOYSpacing.md) {
-                    ForEach(cards) { card in
-                        Button {
-                            onCardTapped?(card)
-                        } label: {
-                            PublishedCardTile(
-                                card: card,
-                                clipCount: clipCounts[card.id] ?? 0
-                            )
-                        }
-                        .buttonStyle(.plain)
+            // 2-column grid
+            LazyVGrid(columns: columns, spacing: TOYSpacing.md) {
+                ForEach(cards) { card in
+                    Button {
+                        onCardTapped?(card)
+                    } label: {
+                        PublishedCardTile(card: card)
                     }
+                    .buttonStyle(.plain)
                 }
-                .padding(.horizontal, TOYSpacing.lg)
             }
+            .padding(.horizontal, TOYSpacing.lg)
         }
     }
 }
@@ -369,7 +392,7 @@ private struct InProgressCardTile: View {
             Spacer()
 
             // Clip count - bottom, minimal
-            Text("\(clipCount)/\(card.maxParticipants) clips")
+            Text("\(clipCount) clip\(clipCount == 1 ? "" : "s") submitted")
                 .font(.toyCaption())
                 .foregroundColor(.toyTextSecondary)
         }
@@ -392,7 +415,14 @@ private struct InProgressCardTile: View {
 
 private struct PublishedCardTile: View {
     let card: Card
-    let clipCount: Int
+
+    private var publishedDateText: String {
+        guard let publishedAt = card.publishedAt else { return "" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: publishedAt)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: TOYSpacing.xs) {
@@ -408,12 +438,13 @@ private struct PublishedCardTile: View {
 
             Spacer()
 
-            Text("\(clipCount) clips")
+            Text(publishedDateText)
                 .font(.toyCaption2())
                 .foregroundColor(.toyTextSecondary)
         }
         .padding(TOYSpacing.md)
-        .frame(width: 140, height: 110, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 110)
         .background(
             Rectangle()
                 .fill(Color.toyBackground)
