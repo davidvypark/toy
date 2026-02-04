@@ -32,15 +32,13 @@ struct ClipPreviewSheet: View {
             ZStack {
                 TOYBackground()
 
-                VStack(spacing: TOYSpacing.lg) {
-                    // Video player area
+                VStack(spacing: 0) {
+                    // Video player area - takes up most of the screen
                     ZStack {
                         if let player {
                             ClipVideoPlayer(player: player) {
                                 isPlayerReady = true
                             }
-                            .aspectRatio(9/16, contentMode: .fit)
-                            .clipped()
                             .opacity(isPlayerReady ? 1 : 0)
                         }
 
@@ -52,24 +50,34 @@ struct ClipPreviewSheet: View {
                             errorView(error)
                         }
                     }
+                    .aspectRatio(9/16, contentMode: .fit)
                     .frame(maxWidth: .infinity)
                     .background(Color.toyVideoContainer)
                     .clipped()
                     .padding(.horizontal, TOYSpacing.lg)
+                    .padding(.top, TOYSpacing.md)
 
                     Spacer()
 
-                    // Delete button
-                    TOYButton(
-                        "Delete Clip",
-                        style: .destructive,
-                        size: .large,
-                        isLoading: isDeleting
-                    ) {
+                    // Delete button - subtle, secondary action
+                    Button {
                         showDeleteConfirmation = true
+                    } label: {
+                        HStack(spacing: TOYSpacing.sm) {
+                            if isDeleting {
+                                ProgressView()
+                                    .tint(.toyTextSecondary)
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 14))
+                            }
+                            Text("Delete Clip")
+                                .font(.toyCaption())
+                        }
+                        .foregroundColor(.toyTextSecondary)
                     }
                     .disabled(isDeleting)
-                    .padding(.horizontal, TOYSpacing.lg)
                     .padding(.bottom, TOYSpacing.xl)
                 }
             }
@@ -108,42 +116,32 @@ struct ClipPreviewSheet: View {
     // MARK: - Subviews
 
     private var loadingView: some View {
-        Rectangle()
-            .fill(Color.toyVideoContainer)
-            .aspectRatio(9/16, contentMode: .fit)
-            .overlay {
-                VStack(spacing: TOYSpacing.md) {
-                    ProgressView()
-                        .tint(.warmCream)
-                        .scaleEffect(1.2)
-                    Text("Loading...")
-                        .font(.toyCaption())
-                        .foregroundColor(.warmGrayDark)
-                }
-            }
+        VStack(spacing: TOYSpacing.md) {
+            ProgressView()
+                .tint(.warmCream)
+                .scaleEffect(1.2)
+            Text("Loading...")
+                .font(.toyCaption())
+                .foregroundColor(.warmGrayDark)
+        }
     }
 
     private func errorView(_ error: String) -> some View {
-        Rectangle()
-            .fill(Color.toyVideoContainer)
-            .aspectRatio(9/16, contentMode: .fit)
-            .overlay {
-                VStack(spacing: TOYSpacing.md) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 40, weight: .light))
-                        .foregroundColor(.warmGrayDark)
+        VStack(spacing: TOYSpacing.md) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 40, weight: .light))
+                .foregroundColor(.warmGrayDark)
 
-                    Text("Failed to load video")
-                        .font(.toyBody())
-                        .foregroundColor(.warmCream)
+            Text("Failed to load video")
+                .font(.toyBody())
+                .foregroundColor(.warmCream)
 
-                    Text(error)
-                        .font(.toyCaption())
-                        .foregroundColor(.warmGrayDark)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-            }
+            Text(error)
+                .font(.toyCaption())
+                .foregroundColor(.warmGrayDark)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+        }
     }
 
     // MARK: - Actions

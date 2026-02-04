@@ -328,6 +328,100 @@ public actor CardService {
         }
     }
 
+    /// Joins a card as a participant without recording yet (for "Save for Later").
+    /// - Parameters:
+    ///   - userId: The ID of the user joining
+    ///   - shareToken: The share token from the invite link
+    /// - Returns: The card that was joined
+    /// - Throws: `CardError.fetchFailed` if card not found or join fails
+    public func joinCard(userId: UUID, shareToken: String) async throws -> Card {
+        // Fetch the card
+        let card = try await fetchCardByShareToken(shareToken: shareToken)
+
+        // Check if already a participant
+        let existing: [Participant] = try await supabase
+            .from("participants")
+            .select()
+            .eq("card_id", value: card.id)
+            .eq("user_id", value: userId)
+            .execute()
+            .value
+
+        if existing.isEmpty {
+            // Create participant record
+            let newParticipant: [String: String] = [
+                "card_id": card.id.uuidString,
+                "user_id": userId.uuidString,
+                "invite_token": UUID().uuidString,
+                "status": "joined"
+            ]
+            try await supabase
+                .from("participants")
+                .insert(newParticipant)
+                .execute()
+
+            #if DEBUG
+            print("👤 User \(userId) joined card \(card.id)")
+            #endif
+        }
+
+        return card
+    }
+
+    /// Fetches cards where the user is a participant (not host), along with their submission status.
+    /// - Parameter userId: The ID of the user
+    /// - Returns: Array of tuples containing the card and whether the user has submitted a clip
+    /// - Throws: `CardError.fetchFailed` if fetch fails
+    public func fetchParticipatingCards(userId: UUID) async throws -> [(card: Card, hasSubmitted: Bool)] {
+        do {
+            // First get all participants for this user
+            let participants: [Participant] = try await supabase
+                .from("participants")
+                .select()
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+
+            guard !participants.isEmpty else { return [] }
+
+            // Get unique card IDs
+            let cardIds = participants.map(\.cardId)
+
+            // Fetch those cards (excluding where user is host)
+            let cards: [Card] = try await supabase
+                .from("cards")
+                .select()
+                .in("id", values: cardIds)
+                .neq("host_id", value: userId)
+                .neq("status", value: "published")  // Only in-progress cards
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+
+            // For each card, check if user has submitted a clip
+            var results: [(card: Card, hasSubmitted: Bool)] = []
+            for card in cards {
+                let clips: [Clip] = try await supabase
+                    .from("clips")
+                    .select()
+                    .eq("card_id", value: card.id)
+                    .eq("participant_id", value: userId)
+                    .execute()
+                    .value
+
+                results.append((card: card, hasSubmitted: !clips.isEmpty))
+            }
+
+            #if DEBUG
+            print("📋 Fetched \(results.count) participating cards for user \(userId)")
+            #endif
+
+            return results
+        } catch {
+            throw CardError.fetchFailed(error.localizedDescription)
+        }
+    }
+
     /// Deletes a clip from storage and database.
     /// - Parameters:
     ///   - clipId: The ID of the clip to delete

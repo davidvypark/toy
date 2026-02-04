@@ -117,19 +117,30 @@ struct CardDetailView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: TOYSpacing.xl) {
-                    // Card title - large, type-forward
-                    Text(card.title)
-                        .font(.toyTitle())
-                        .foregroundColor(.toyText)
-                        .lineSpacing(-4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, TOYSpacing.sm)
+                    // Card title and recipient
+                    VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                        Text(card.title)
+                            .font(.toyTitle())
+                            .foregroundColor(.toyText)
+                            .lineSpacing(-4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        HStack(spacing: TOYSpacing.xs) {
+                            Text("For")
+                                .font(.toyBody())
+                                .foregroundColor(.toyTextSecondary)
+                            Text(card.recipientName)
+                                .font(.toyBodyMedium())
+                                .foregroundColor(.toyText)
+                        }
+                    }
+                    .padding(.top, TOYSpacing.sm)
+
+                    // Invite link - prominent CTA
+                    inviteLinkView
 
                     // Summary stats
                     summaryStatsView
-
-                    // Card info with share link
-                    cardInfoView
 
                     // Upgrade banner
                     if needsUpgrade {
@@ -185,7 +196,8 @@ struct CardDetailView: View {
             NavigationStack {
                 MontagePreviewView(
                     card: card,
-                    clips: viewModel.clips
+                    clips: viewModel.clips,
+                    cachedSignedURLs: viewModel.cachedSignedURLs
                 ) {
                     showMontagePreview = false
                     Task { await viewModel.loadData(for: card.id) }
@@ -275,42 +287,38 @@ struct CardDetailView: View {
         .padding(.vertical, TOYSpacing.md)
     }
 
-    // MARK: - Card Info
+    // MARK: - Invite Link
 
-    private var cardInfoView: some View {
-        VStack(alignment: .leading, spacing: TOYSpacing.md) {
-            HStack(spacing: TOYSpacing.xs) {
-                Text("For")
-                    .font(.toyBody())
-                    .foregroundColor(.toyTextSecondary)
-                Text(card.recipientName)
-                    .font(.toyBodyMedium())
-                    .foregroundColor(.toyText)
-            }
-
-            if let url = inviteURL {
-                ShareLink(
-                    item: url,
-                    subject: Text("Join my TOY card!"),
-                    message: Text("Record a video message for \(card.recipientName)")
-                ) {
-                    HStack(spacing: TOYSpacing.sm) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 14))
-                        Text("Share Invite Link")
-                            .font(.toySubheadline())
+    @ViewBuilder
+    private var inviteLinkView: some View {
+        if let url = inviteURL {
+            ShareLink(
+                item: url,
+                subject: Text("Join my TOY card!"),
+                message: Text("Record a video message for \(card.recipientName)")
+            ) {
+                HStack(spacing: TOYSpacing.md) {
+                    VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                        Text("Invite Contributors")
+                            .font(.toyBodyMedium())
+                            .foregroundColor(.toyText)
+                        Text("Share this link with friends and family")
+                            .font(.toyCaption())
+                            .foregroundColor(.toyTextSecondary)
                     }
-                    .foregroundColor(.toyText)
-                    .underline()
+
+                    Spacer()
+
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.toyText)
                 }
+                .padding(TOYSpacing.md)
+                .background(
+                    Rectangle()
+                        .stroke(Color.toyText, lineWidth: 1)
+                )
             }
-        }
-        .padding(.vertical, TOYSpacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.toyDivider)
-                .frame(height: 1)
         }
     }
 

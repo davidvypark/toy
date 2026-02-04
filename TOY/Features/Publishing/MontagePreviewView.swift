@@ -6,6 +6,7 @@ import TOYShared
 struct MontagePreviewView: View {
     let card: Card
     let clips: [Clip]
+    let cachedSignedURLs: [UUID: URL]
     let onPublished: () -> Void
 
     @State private var viewModel = PublishViewModel()
@@ -18,6 +19,13 @@ struct MontagePreviewView: View {
 
     @Environment(\.dismiss) private var dismiss
     private let storageService = StorageService()
+
+    init(card: Card, clips: [Clip], cachedSignedURLs: [UUID: URL] = [:], onPublished: @escaping () -> Void) {
+        self.card = card
+        self.clips = clips
+        self.cachedSignedURLs = cachedSignedURLs
+        self.onPublished = onPublished
+    }
 
     // MARK: - Sorted Clips
 
@@ -40,29 +48,37 @@ struct MontagePreviewView: View {
             Color.black.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Video player area
-                if let queuePlayer {
-                    QueueVideoPlayer(player: queuePlayer) {
-                        isPlayerReady = true
+                // Video player area - always reserve space
+                ZStack {
+                    // Video player
+                    if let queuePlayer {
+                        QueueVideoPlayer(player: queuePlayer) {
+                            isPlayerReady = true
+                        }
+                        .opacity(isPlayerReady ? 1 : 0)
                     }
-                    .aspectRatio(9/16, contentMode: .fit)
-                    .padding()
-                    .opacity(isPlayerReady ? 1 : 0)
-                }
 
-                if viewModel.state.isInProgress {
-                    progressView
-                } else if isLoadingURLs || (queuePlayer != nil && !isPlayerReady) {
-                    VStack(spacing: TOYSpacing.md) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .tint(.warmCream)
-                        Text("Loading preview...")
-                            .font(.toyBody())
-                            .foregroundColor(.warmGrayDark)
+                    // Loading overlay - centered in video area
+                    if !isPlayerReady && !viewModel.state.isInProgress {
+                        VStack(spacing: TOYSpacing.md) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .tint(.warmCream)
+                            Text("Loading preview...")
+                                .font(.toyBody())
+                                .foregroundColor(.warmGrayDark)
+                        }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    // Progress overlay during publishing
+                    if viewModel.state.isInProgress {
+                        progressView
+                            .background(Color.black.opacity(0.8))
+                    }
                 }
+                .aspectRatio(9/16, contentMode: .fit)
+                .background(Color.toyVideoContainer)
+                .padding()
 
                 Spacer()
 
@@ -152,7 +168,7 @@ struct MontagePreviewView: View {
                 EmptyView()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(TOYSpacing.lg)
     }
 
     @ViewBuilder
@@ -179,10 +195,15 @@ struct MontagePreviewView: View {
         isLoadingURLs = true
         defer { isLoadingURLs = false }
 
-        // Fetch signed URLs for all clips concurrently
+        // Use cached URLs when available, fetch only missing ones
         let urls = await withTaskGroup(of: (Int, URL?).self) { group in
             for (index, clip) in sortedClips.enumerated() {
                 group.addTask {
+                    // Use cached URL if available (fast path)
+                    if let cachedURL = cachedSignedURLs[clip.id] {
+                        return (index, cachedURL)
+                    }
+                    // Otherwise fetch (slow path)
                     do {
                         let url = try await storageService.createSignedURL(path: clip.videoUrl)
                         return (index, url)

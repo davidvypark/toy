@@ -19,13 +19,26 @@ struct HomeView: View {
     @State private var showSettings = false
     @State private var publishedCardToPlay: Card? = nil
 
+    // Participant recording flow state
+    @State private var participantRecordingCard: Card? = nil
+
     // Card list state
     @State private var hostedCards: [Card] = []
     @State private var cardClips: [UUID: [Clip]] = [:]
-    @State private var participatingCards: [Card] = []
+    @State private var participatingCardsData: [(card: Card, hasSubmitted: Bool)] = []
     @State private var isLoadingCards = false
 
     private let cardService = CardService()
+
+    // Participant cards that need action (not submitted)
+    private var participatingCardsNeedingAction: [Card] {
+        participatingCardsData.filter { !$0.hasSubmitted }.map(\.card)
+    }
+
+    // Participant cards that are done (submitted)
+    private var participatingCardsSubmitted: [Card] {
+        participatingCardsData.filter { $0.hasSubmitted }.map(\.card)
+    }
 
     // MARK: - Computed Properties
 
@@ -38,7 +51,7 @@ struct HomeView: View {
     }
 
     private var hasCards: Bool {
-        !hostedCards.isEmpty || !participatingCards.isEmpty
+        !hostedCards.isEmpty || !participatingCardsData.isEmpty
     }
 
     var body: some View {
@@ -96,6 +109,18 @@ struct HomeView: View {
                 CardCreatedView(card: card) {
                     completedCard = nil
                     Task { await loadCards() }
+                }
+            }
+            .fullScreenCover(item: $participantRecordingCard) { card in
+                if let user = viewModel.authState.user {
+                    RecordingView(
+                        cardId: card.id,
+                        participantId: user.id,
+                        isHostClip: false
+                    )
+                    .onDisappear {
+                        Task { await loadCards() }
+                    }
                 }
             }
             .task {
@@ -206,11 +231,28 @@ struct HomeView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: TOYSpacing.lg) {
-                    // In Progress section
+                    // Participating cards needing action (top priority - user needs to do something)
+                    if !participatingCardsNeedingAction.isEmpty {
+                        ParticipantActionSectionView(
+                            cards: participatingCardsNeedingAction,
+                            onRecordTapped: { card in
+                                participantRecordingCard = card
+                            }
+                        )
+                    }
+
+                    // Director's in-progress cards
                     if !inProgressCards.isEmpty {
-                        InProgressSectionView(
+                        DirectorSectionView(
                             cards: inProgressCards,
                             cardClips: cardClips
+                        )
+                    }
+
+                    // Participating cards already submitted (done)
+                    if !participatingCardsSubmitted.isEmpty {
+                        ParticipantSubmittedSectionView(
+                            cards: participatingCardsSubmitted
                         )
                     }
 
@@ -218,17 +260,6 @@ struct HomeView: View {
                     if !publishedCards.isEmpty {
                         PublishedSectionView(
                             cards: publishedCards,
-                            onCardTapped: { card in
-                                publishedCardToPlay = card
-                            }
-                        )
-                    }
-
-                    // Participating section
-                    if !participatingCards.isEmpty {
-                        PublishedSectionView(
-                            title: "Participating",
-                            cards: participatingCards,
                             onCardTapped: { card in
                                 publishedCardToPlay = card
                             }
@@ -257,15 +288,20 @@ struct HomeView: View {
         defer { isLoadingCards = false }
 
         do {
-            hostedCards = try await cardService.fetchCardsForHost(hostId: user.id)
+            // Fetch hosted cards and participating cards in parallel
+            async let fetchedHostedCards = cardService.fetchCardsForHost(hostId: user.id)
+            async let fetchedParticipatingCards = cardService.fetchParticipatingCards(userId: user.id)
 
+            hostedCards = try await fetchedHostedCards
+            participatingCardsData = try await fetchedParticipatingCards
+
+            // Fetch clips for hosted cards
             var clipsDict: [UUID: [Clip]] = [:]
             for card in hostedCards {
                 let clips = try await cardService.fetchClipsForCard(cardId: card.id)
                 clipsDict[card.id] = clips
             }
             cardClips = clipsDict
-            participatingCards = []
         } catch {
             #if DEBUG
             print("Failed to load cards: \(error.localizedDescription)")
@@ -274,9 +310,64 @@ struct HomeView: View {
     }
 }
 
-// MARK: - In Progress Section
+// MARK: - Participant Action Section (Needs to Record)
 
-private struct InProgressSectionView: View {
+private struct ParticipantActionSectionView: View {
+    let cards: [Card]
+    let onRecordTapped: (Card) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: TOYSpacing.md) {
+            // Section label with empty checkbox
+            HStack(spacing: TOYSpacing.sm) {
+                Image(systemName: "square")
+                    .font(.system(size: 12))
+                Text("NEEDS RECORDING")
+                    .toyLetterSpacing(1.5)
+            }
+            .font(.toyCaption())
+            .foregroundColor(.toyText)
+            .padding(.horizontal, TOYSpacing.lg)
+
+            ForEach(cards) { card in
+                ParticipantActionTile(card: card) {
+                    onRecordTapped(card)
+                }
+                .padding(.horizontal, TOYSpacing.lg)
+            }
+        }
+    }
+}
+
+// MARK: - Participant Submitted Section (Done)
+
+private struct ParticipantSubmittedSectionView: View {
+    let cards: [Card]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: TOYSpacing.md) {
+            // Section label with filled checkbox
+            HStack(spacing: TOYSpacing.sm) {
+                Image(systemName: "checkmark.square.fill")
+                    .font(.system(size: 12))
+                Text("SUBMITTED")
+                    .toyLetterSpacing(1.5)
+            }
+            .font(.toyCaption())
+            .foregroundColor(.toyTextSecondary)
+            .padding(.horizontal, TOYSpacing.lg)
+
+            ForEach(cards) { card in
+                ParticipantSubmittedTile(card: card)
+                    .padding(.horizontal, TOYSpacing.lg)
+            }
+        }
+    }
+}
+
+// MARK: - Director Section (Hosting In Progress Cards)
+
+private struct DirectorSectionView: View {
     let cards: [Card]
     let cardClips: [UUID: [Clip]]
 
@@ -285,7 +376,7 @@ private struct InProgressSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: TOYSpacing.md) {
             // Section label - small, understated
-            Text("IN PROGRESS\(cards.count > 1 ? " - \(cards.count)" : "")")
+            Text("DIRECTING\(cards.count > 1 ? " - \(cards.count)" : "")")
                 .font(.toyCaption())
                 .foregroundColor(.toyTextSecondary)
                 .toyLetterSpacing(1.5)
@@ -295,7 +386,7 @@ private struct InProgressSectionView: View {
             TabView(selection: $currentIndex) {
                 ForEach(Array(cards.enumerated()), id: \.element.id) { index, card in
                     NavigationLink(value: card) {
-                        InProgressCardTile(
+                        DirectorCardTile(
                             card: card,
                             clipCount: cardClips[card.id]?.count ?? 0
                         )
@@ -361,9 +452,86 @@ private struct PublishedSectionView: View {
     }
 }
 
-// MARK: - In Progress Card Tile
+// MARK: - Participant Action Tile (Needs to Record)
 
-private struct InProgressCardTile: View {
+private struct ParticipantActionTile: View {
+    let card: Card
+    let onRecordTapped: () -> Void
+
+    var body: some View {
+        Button(action: onRecordTapped) {
+            HStack(spacing: TOYSpacing.md) {
+                // Card info
+                VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                    Text(card.title)
+                        .font(.toyHeadline())
+                        .foregroundColor(.toyBackground)
+                        .lineLimit(1)
+
+                    Text("For \(card.recipientName)")
+                        .font(.toyCaption())
+                        .foregroundColor(.toyBackground.opacity(0.7))
+                }
+
+                Spacer()
+
+                // Record CTA
+                HStack(spacing: TOYSpacing.xs) {
+                    Image(systemName: "video.fill")
+                        .font(.system(size: 14))
+                    Text("Record")
+                        .font(.toyBodyMedium())
+                }
+                .foregroundColor(.toyBackground)
+            }
+            .padding(TOYSpacing.md)
+            .background(Color.toyText)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Participant Submitted Tile (Done)
+
+private struct ParticipantSubmittedTile: View {
+    let card: Card
+
+    var body: some View {
+        HStack(spacing: TOYSpacing.md) {
+            // Checkmark
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 20))
+                .foregroundColor(.green)
+
+            // Card info
+            VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                Text(card.title)
+                    .font(.toyBody())
+                    .foregroundColor(.toyText)
+                    .lineLimit(1)
+
+                Text("For \(card.recipientName)")
+                    .font(.toyCaption())
+                    .foregroundColor(.toyTextSecondary)
+            }
+
+            Spacer()
+
+            Text("Submitted")
+                .font(.toyCaption())
+                .foregroundColor(.toyTextSecondary)
+        }
+        .padding(TOYSpacing.md)
+        .background(
+            Rectangle()
+                .stroke(Color.toyDivider, lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Director Card Tile
+
+private struct DirectorCardTile: View {
     let card: Card
     let clipCount: Int
 

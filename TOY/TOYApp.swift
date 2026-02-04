@@ -16,6 +16,11 @@ struct TOYApp: App {
     @State private var authViewModel = AuthViewModel()
     @State private var pendingDeepLink: DeepLinkDestination?
 
+    // Invite flow state
+    @State private var pendingShareToken: String?
+    @State private var showInviteSheet = false
+    @State private var cardToRecord: Card?
+
     init() {
         // Configure audio session to play sound even when silent switch is on
         do {
@@ -46,6 +51,26 @@ struct TOYApp: App {
                 .onOpenURL { url in
                     handleDeepLink(url)
                 }
+                .sheet(isPresented: $showInviteSheet) {
+                    if let token = pendingShareToken,
+                       let user = authViewModel.authState.user {
+                        InviteReceivedSheet(
+                            shareToken: token,
+                            userId: user.id
+                        ) { action in
+                            handleInviteAction(action)
+                        }
+                    }
+                }
+                .fullScreenCover(item: $cardToRecord) { card in
+                    if let user = authViewModel.authState.user {
+                        RecordingView(
+                            cardId: card.id,
+                            participantId: user.id,
+                            isHostClip: false
+                        )
+                    }
+                }
         }
     }
 
@@ -59,11 +84,34 @@ struct TOYApp: App {
 
         switch destination {
         case .card(let shareToken):
-            // Store for navigation - actual navigation will be implemented in Phase 4
             pendingDeepLink = .card(shareToken: shareToken)
+
+            // Only show invite sheet if user is signed in
+            if case .signedIn = authViewModel.authState {
+                pendingShareToken = shareToken
+                showInviteSheet = true
+            }
         case .unknown:
             // Ignore unrecognized deep links
             break
+        }
+    }
+
+    private func handleInviteAction(_ action: InviteReceivedSheet.InviteAction) {
+        showInviteSheet = false
+
+        switch action {
+        case .recordNow(let card):
+            // Small delay to let sheet dismiss before showing full screen cover
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                cardToRecord = card
+            }
+        case .savedForLater:
+            // Card is now in the user's participating cards list
+            // HomeView will refresh and show it
+            pendingShareToken = nil
+        case .dismiss:
+            pendingShareToken = nil
         }
     }
 }
