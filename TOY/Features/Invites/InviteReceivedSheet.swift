@@ -158,13 +158,19 @@ struct InviteReceivedSheet: View {
         // Optimistic UI - dismiss immediately with card
         onAction(.savedForLater(card))
 
-        // Fire-and-forget background join
-        Task {
+        // Detached task continues running after view dismisses
+        let service = cardService
+        let token = shareToken
+        let uid = userId
+        Task.detached {
             do {
-                _ = try await cardService.joinCard(userId: userId, shareToken: shareToken)
+                _ = try await service.joinCard(userId: uid, shareToken: token)
+                #if DEBUG
+                print("✅ Card joined successfully")
+                #endif
             } catch {
                 #if DEBUG
-                print("Failed to join card: \(error.localizedDescription)")
+                print("❌ Failed to join card: \(error.localizedDescription)")
                 #endif
             }
         }

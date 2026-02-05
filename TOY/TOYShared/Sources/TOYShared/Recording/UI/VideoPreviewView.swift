@@ -33,6 +33,13 @@ public struct VideoPreviewView: View {
                 if let player {
                     LoopingVideoPlayer(player: player)
                         .aspectRatio(9/16, contentMode: .fit)
+                        .overlay(alignment: .bottom) {
+                            Text("Thinking Of You")
+                                .font(.custom("DMSerifDisplay-Regular", size: 24))
+                                .foregroundColor(.white)
+                                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                                .padding(.bottom, 16)
+                        }
                 } else {
                     Rectangle()
                         .fill(Color.black)
@@ -42,6 +49,7 @@ public struct VideoPreviewView: View {
                                 .tint(.white)
                         }
                 }
+
             }
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .padding(.horizontal, 24)

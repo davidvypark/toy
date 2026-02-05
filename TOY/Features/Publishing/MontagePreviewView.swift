@@ -50,12 +50,21 @@ struct MontagePreviewView: View {
             VStack(spacing: 0) {
                 // Video player area - always reserve space
                 ZStack {
-                    // Video player
+                    // Video player with brand overlay
                     if let queuePlayer {
                         QueueVideoPlayer(player: queuePlayer) {
                             isPlayerReady = true
                         }
                         .opacity(isPlayerReady ? 1 : 0)
+                        .overlay(alignment: .bottom) {
+                            if isPlayerReady {
+                                Text("Thinking Of You")
+                                    .font(.custom("DMSerifDisplay-Regular", size: 24))
+                                    .foregroundColor(.white)
+                                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                                    .padding(.bottom, 16)
+                            }
+                        }
                     }
 
                     // Loading overlay - centered in video area

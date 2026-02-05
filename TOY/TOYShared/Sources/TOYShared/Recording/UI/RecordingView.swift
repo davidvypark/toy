@@ -167,7 +167,12 @@ public struct RecordingView: View {
 
             // Record button (center) - hide when max duration reached
             if viewModel.recorder.progress < 1.0 {
-                recordButton
+                VStack(spacing: 8) {
+                    Text("Hold to Record")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+                    recordButton
+                }
             } else {
                 Spacer()
                     .frame(width: 80)

@@ -377,7 +377,7 @@ public actor CardService {
                 "card_id": card.id.uuidString,
                 "user_id": userId.uuidString,
                 "invite_token": UUID().uuidString,
-                "status": "joined"
+                "status": "viewed"
             ]
             try await supabase
                 .from("participants")

@@ -55,6 +55,7 @@ public struct UploadProgressView: View {
                         .font(.toyHeadline())
                         .foregroundColor(.warmCream)
                     TOYButton("Done", style: .primary, size: .large, action: onDismiss)
+                        .environment(\.colorScheme, .dark)
                         .frame(maxWidth: 200)
 
                 case .failed(let error):

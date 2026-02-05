@@ -97,16 +97,7 @@ public final class VideoMerger {
         exporter.outputFileType = .mov
         exporter.shouldOptimizeForNetworkUse = true
 
-        // Add text overlay video composition
-        #if canImport(UIKit)
-        let videoComposition = createVideoCompositionWithOverlay(
-            for: composition,
-            videoTrack: videoTrack,
-            videoSize: videoSize,
-            duration: composition.duration
-        )
-        exporter.videoComposition = videoComposition
-        #endif
+        // No text overlay for individual clips - overlay only added to final montage
 
         await exporter.export()
 
@@ -338,23 +329,27 @@ public final class VideoMerger {
     private func createTextOverlayLayer(size: CGSize) -> CATextLayer {
         let textLayer = CATextLayer()
 
-        // Font size relative to video width (approximately 5%)
-        let fontSize: CGFloat = size.width * 0.05
+        // Font size relative to video width (approximately 7%)
+        let fontSize: CGFloat = size.width * 0.07
 
         // Try to use DM Serif Display (same as home header), fall back to system font
         let font = UIFont(name: "DMSerifDisplay-Regular", size: fontSize)
             ?? UIFont.systemFont(ofSize: fontSize, weight: .regular)
 
-        // Create attributed string with white fill and black stroke
+        // Create attributed string with white fill (no stroke)
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: UIColor.white,
-            .strokeColor: UIColor.black,
-            .strokeWidth: NSNumber(value: -2.5)  // Negative = fill + stroke
+            .foregroundColor: UIColor.white
         ]
 
         let attributedString = NSAttributedString(string: overlayText, attributes: attributes)
         textLayer.string = attributedString
+
+        // Subtle shadow for readability on light backgrounds
+        textLayer.shadowColor = UIColor.black.cgColor
+        textLayer.shadowOffset = CGSize(width: 0, height: 2)
+        textLayer.shadowOpacity = 0.3
+        textLayer.shadowRadius = 4
 
         // Calculate text size for positioning
         let textSize = attributedString.size()
