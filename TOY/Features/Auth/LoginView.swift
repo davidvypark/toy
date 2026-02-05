@@ -21,7 +21,7 @@ struct LoginView: View {
             VStack(spacing: 16) {
                 TOYLabel.largeTitle("Thinking Of You")
 
-                TOYLabel("Create heartfelt group video messages", style: .subheadline, color: .toyTextSecondary)
+                TOYLabel("Create heartfelt group video cards", style: .subheadline, color: .toyTextSecondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 40)

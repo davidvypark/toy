@@ -1,7 +1,13 @@
 import AVFoundation
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
 
 public final class VideoMerger {
+
+    /// Brand text overlay for final videos
+    private let overlayText = "Thinking Of You"
 
     public init() {}
 
@@ -39,7 +45,10 @@ public final class VideoMerger {
         var firstTransform: CGAffineTransform?
 
         for clipURL in clipURLs {
-            let asset = AVURLAsset(url: clipURL)
+            // Use options to reduce memory footprint for large montages
+            let asset = AVURLAsset(url: clipURL, options: [
+                AVURLAssetPreferPreciseDurationAndTimingKey: false
+            ])
 
             // Load duration
             let duration = try await asset.load(.duration)
@@ -73,6 +82,9 @@ public final class VideoMerger {
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("mov")
 
+        // Determine video size (9:16 vertical)
+        let videoSize = CGSize(width: 720, height: 1280)
+
         // Export merged composition
         guard let exporter = AVAssetExportSession(
             asset: composition,
@@ -84,6 +96,17 @@ public final class VideoMerger {
         exporter.outputURL = outputURL
         exporter.outputFileType = .mov
         exporter.shouldOptimizeForNetworkUse = true
+
+        // Add text overlay video composition
+        #if canImport(UIKit)
+        let videoComposition = createVideoCompositionWithOverlay(
+            for: composition,
+            videoTrack: videoTrack,
+            videoSize: videoSize,
+            duration: composition.duration
+        )
+        exporter.videoComposition = videoComposition
+        #endif
 
         await exporter.export()
 
@@ -143,7 +166,10 @@ public final class VideoMerger {
         var firstTransform: CGAffineTransform?
 
         for clipURL in clipURLs {
-            let asset = AVURLAsset(url: clipURL)
+            // Use options to reduce memory footprint for large montages
+            let asset = AVURLAsset(url: clipURL, options: [
+                AVURLAssetPreferPreciseDurationAndTimingKey: false
+            ])
 
             // Load duration
             let duration = try await asset.load(.duration)
@@ -177,6 +203,9 @@ public final class VideoMerger {
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("mov")
 
+        // Determine video size (9:16 vertical)
+        let videoSize = CGSize(width: 720, height: 1280)
+
         // Export merged composition
         guard let exporter = AVAssetExportSession(
             asset: composition,
@@ -188,6 +217,17 @@ public final class VideoMerger {
         exporter.outputURL = outputURL
         exporter.outputFileType = .mov
         exporter.shouldOptimizeForNetworkUse = true
+
+        // Add text overlay video composition
+        #if canImport(UIKit)
+        let videoComposition = createVideoCompositionWithOverlay(
+            for: composition,
+            videoTrack: videoTrack,
+            videoSize: videoSize,
+            duration: composition.duration
+        )
+        exporter.videoComposition = videoComposition
+        #endif
 
         // Start progress monitoring task
         let progressTask = Task {
@@ -242,4 +282,96 @@ public final class VideoMerger {
 
         return CMTimeGetSeconds(total)
     }
+
+    // MARK: - Text Overlay
+
+    #if canImport(UIKit)
+    /// Creates a video composition with "Thinking Of You" text overlay at the bottom.
+    private func createVideoCompositionWithOverlay(
+        for composition: AVMutableComposition,
+        videoTrack: AVMutableCompositionTrack,
+        videoSize: CGSize,
+        duration: CMTime
+    ) -> AVMutableVideoComposition {
+        // Create the video layer (where the actual video content goes)
+        let videoLayer = CALayer()
+        videoLayer.frame = CGRect(origin: .zero, size: videoSize)
+
+        // Create the text overlay layer
+        let textLayer = createTextOverlayLayer(size: videoSize)
+
+        // Create parent layer that composites video and text
+        let parentLayer = CALayer()
+        parentLayer.frame = CGRect(origin: .zero, size: videoSize)
+        parentLayer.addSublayer(videoLayer)
+        parentLayer.addSublayer(textLayer)
+
+        // Create video composition
+        let videoComposition = AVMutableVideoComposition()
+        videoComposition.renderSize = videoSize
+        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+
+        // Create layer instruction for the video track
+        let instruction = AVMutableVideoCompositionInstruction()
+        instruction.timeRange = CMTimeRange(start: .zero, duration: duration)
+
+        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
+
+        // Apply transform to fit video into the render size
+        // Videos are recorded at 720x1280 (portrait), so we need to handle the transform
+        let transform = videoTrack.preferredTransform
+        layerInstruction.setTransform(transform, at: .zero)
+
+        instruction.layerInstructions = [layerInstruction]
+        videoComposition.instructions = [instruction]
+
+        // Apply the animation tool to composite video + text layers
+        videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(
+            postProcessingAsVideoLayer: videoLayer,
+            in: parentLayer
+        )
+
+        return videoComposition
+    }
+
+    /// Creates a CATextLayer with the brand overlay text.
+    private func createTextOverlayLayer(size: CGSize) -> CATextLayer {
+        let textLayer = CATextLayer()
+
+        // Font size relative to video width (approximately 5%)
+        let fontSize: CGFloat = size.width * 0.05
+
+        // Try to use DM Serif Display (same as home header), fall back to system font
+        let font = UIFont(name: "DMSerifDisplay-Regular", size: fontSize)
+            ?? UIFont.systemFont(ofSize: fontSize, weight: .regular)
+
+        // Create attributed string with white fill and black stroke
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: UIColor.white,
+            .strokeColor: UIColor.black,
+            .strokeWidth: NSNumber(value: -2.5)  // Negative = fill + stroke
+        ]
+
+        let attributedString = NSAttributedString(string: overlayText, attributes: attributes)
+        textLayer.string = attributedString
+
+        // Calculate text size for positioning
+        let textSize = attributedString.size()
+
+        // Position at bottom center with padding (8% from bottom)
+        let bottomPadding = size.height * 0.08
+        let x = (size.width - textSize.width) / 2
+        let y = bottomPadding
+
+        textLayer.frame = CGRect(x: x, y: y, width: textSize.width + 10, height: textSize.height + 4)
+        textLayer.alignmentMode = .center
+        textLayer.contentsScale = UIScreen.main.scale
+
+        // Disable implicit animations
+        textLayer.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull()]
+
+        return textLayer
+    }
+    #endif
 }

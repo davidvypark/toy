@@ -12,12 +12,19 @@ public struct RecordingView: View {
     @StateObject private var viewModel: RecordingViewModel
     @Environment(\.dismiss) private var dismiss
 
-    public init(cardId: UUID? = nil, participantId: UUID? = nil, isHostClip: Bool = false) {
-        _viewModel = StateObject(wrappedValue: RecordingViewModel(
+    public init(
+        cardId: UUID? = nil,
+        participantId: UUID? = nil,
+        isHostClip: Bool = false,
+        onParticipantClipUploaded: ((Card) async -> Void)? = nil
+    ) {
+        let vm = RecordingViewModel(
             cardId: cardId,
             participantId: participantId,
             isHostClip: isHostClip
-        ))
+        )
+        vm.onParticipantClipUploaded = onParticipantClipUploaded
+        _viewModel = StateObject(wrappedValue: vm)
     }
 
     /// Initializer that accepts an external view model (used by App Clip).

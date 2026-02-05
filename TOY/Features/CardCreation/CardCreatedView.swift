@@ -9,6 +9,9 @@ struct CardCreatedView: View {
     let card: Card
     let onDone: () -> Void
 
+    @State private var showNotificationPrompt = false
+    @State private var hasRequestedNotifications = false
+
     // MARK: - Body
 
     var body: some View {
@@ -69,6 +72,11 @@ struct CardCreatedView: View {
                     }
                 }
 
+                // Notification prompt - shown if permission not yet requested
+                if showNotificationPrompt && !hasRequestedNotifications {
+                    notificationPromptView
+                }
+
                 // Done button - secondary
                 TOYButton("Done", style: .text) {
                     onDone()
@@ -76,7 +84,43 @@ struct CardCreatedView: View {
                 .padding(.bottom, TOYSpacing.lg)
             }
             .padding(.horizontal, TOYSpacing.lg)
+            .task {
+                // Check if we should show notification prompt
+                showNotificationPrompt = await NotificationService.shared.needsPermissionRequest()
+            }
         }
+    }
+
+    // MARK: - Notification Prompt
+
+    private var notificationPromptView: some View {
+        VStack(spacing: TOYSpacing.md) {
+            HStack(spacing: TOYSpacing.sm) {
+                Image(systemName: "bell.fill")
+                    .foregroundColor(.toyText)
+                Text("Get notified when people submit clips")
+                    .font(.toyBody())
+                    .foregroundColor(.toyText)
+            }
+
+            Button {
+                Task {
+                    hasRequestedNotifications = true
+                    _ = await NotificationService.shared.requestPermissionForDirector()
+                }
+            } label: {
+                Text("Enable Notifications")
+                    .font(.toyBodyMedium())
+                    .foregroundColor(.toyTextSecondary)
+                    .underline()
+            }
+        }
+        .padding(TOYSpacing.md)
+        .frame(maxWidth: .infinity)
+        .background(
+            Rectangle()
+                .stroke(Color.toyDivider, lineWidth: 1)
+        )
     }
 
     // MARK: - Helpers

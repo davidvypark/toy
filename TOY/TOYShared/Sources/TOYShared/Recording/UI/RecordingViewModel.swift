@@ -17,48 +17,52 @@ import UIKit
 @MainActor
 public final class RecordingViewModel: ObservableObject {
     // MARK: - Published State
-
+    
     @Published public var permissionStatus: PermissionStatus = .unknown
     @Published public var showPreview: Bool = false
     @Published public var uploadState: UploadState? = nil
     @Published public var uploadedPath: String? = nil
     @Published public var createdClip: Clip? = nil
-
+    
     // MARK: - Card Context
-
+    
     public var cardId: UUID?
     public var participantId: UUID?
     public var isHostClip: Bool
-
+    
+    /// Optional callback when a participant (non-host) clip is successfully uploaded.
+    /// Used by the main app to send push notifications to the director.
+    public var onParticipantClipUploaded: ((Card) async -> Void)?
+    
     // MARK: - Dependencies
-
+    
     public let recorder = VideoRecorder()
     private var cancellables = Set<AnyCancellable>()
     private let storageService = StorageService()
     private let cardService = CardService()
-
+    
     // MARK: - Upload State
-
+    
     private var currentVideoURL: URL?
     private var uploadRetryCount = 0
     private let maxRetries = 3
-
+    
     // MARK: - Permission Status
-
+    
     public enum PermissionStatus {
         case unknown
         case granted
         case denied
         case restricted
     }
-
+    
     // MARK: - Initialization
-
+    
     public init(cardId: UUID? = nil, participantId: UUID? = nil, isHostClip: Bool = false) {
         self.cardId = cardId
         self.participantId = participantId
         self.isHostClip = isHostClip
-
+        
         // Forward changes from nested ObservableObject to trigger view updates
         recorder.objectWillChange
             .receive(on: RunLoop.main)
@@ -67,53 +71,53 @@ public final class RecordingViewModel: ObservableObject {
             }
             .store(in: &cancellables)
     }
-
+    
     // MARK: - Lifecycle
-
+    
     public func onAppear() async {
         await checkAndRequestPermissions()
     }
-
+    
     public func onDisappear() {
         recorder.teardownSession()
     }
-
+    
     // MARK: - Permissions
-
+    
     private func checkAndRequestPermissions() async {
         let cameraStatus = AVCaptureDevice.authorizationStatus(for: .video)
         let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-
+        
         // Check if already granted
         if cameraStatus == .authorized && micStatus == .authorized {
             permissionStatus = .granted
             await setupRecorder()
             return
         }
-
+        
         // Check if restricted or denied
         if cameraStatus == .restricted || micStatus == .restricted {
             permissionStatus = .restricted
             return
         }
-
+        
         if cameraStatus == .denied || micStatus == .denied {
             permissionStatus = .denied
             return
         }
-
+        
         // Request permissions
         var cameraGranted = cameraStatus == .authorized
         var micGranted = micStatus == .authorized
-
+        
         if cameraStatus == .notDetermined {
             cameraGranted = await AVCaptureDevice.requestAccess(for: .video)
         }
-
+        
         if micStatus == .notDetermined {
             micGranted = await AVCaptureDevice.requestAccess(for: .audio)
         }
-
+        
         if cameraGranted && micGranted {
             permissionStatus = .granted
             await setupRecorder()
@@ -121,7 +125,7 @@ public final class RecordingViewModel: ObservableObject {
             permissionStatus = .denied
         }
     }
-
+    
     private func setupRecorder() async {
         do {
             try await recorder.setupSession()
@@ -130,17 +134,17 @@ public final class RecordingViewModel: ObservableObject {
             print("Failed to setup recorder: \(error)")
         }
     }
-
+    
     // MARK: - Actions
-
+    
     public func startRecording() {
         recorder.startRecording()
     }
-
+    
     public func stopRecording() {
         recorder.stopRecording()
     }
-
+    
     public func finishRecording() async {
         do {
             try await recorder.finishAndMerge()
@@ -149,12 +153,12 @@ public final class RecordingViewModel: ObservableObject {
             // Error is captured in recorder.state
         }
     }
-
+    
     public func startOver() {
         showPreview = false
         recorder.startOver()
     }
-
+    
     public func confirmVideo() {
         guard case .completed(let url) = recorder.state else { return }
         currentVideoURL = url
@@ -164,63 +168,63 @@ public final class RecordingViewModel: ObservableObject {
             await performUpload()
         }
     }
-
+    
     private func performUpload() async {
         guard let videoURL = currentVideoURL else {
             uploadState = .failed(error: "No video to upload")
             return
         }
-
+        
         let clipId = UUID()
-
+        
         do {
             // Calculate video duration before upload
             let duration = await getVideoDuration(url: videoURL)
-            #if DEBUG
+#if DEBUG
             print("[DURATION DEBUG] Video URL: \(videoURL)")
             print("[DURATION DEBUG] Calculated duration: \(String(describing: duration))")
-            #endif
-
+#endif
+            
             // Generate thumbnail from local video file (fast - no network)
             let thumbnailData = await generateThumbnail(from: videoURL)
-            #if DEBUG
+#if DEBUG
             if let data = thumbnailData {
                 print("[THUMBNAIL] Generated thumbnail: \(data.count / 1024) KB")
             } else {
                 print("[THUMBNAIL] Failed to generate thumbnail")
             }
-            #endif
-
+#endif
+            
             // Upload video
             let path = try await storageService.uploadVideo(fileURL: videoURL, clipId: clipId)
             uploadedPath = path
             uploadState = .success(storagePath: path)
             print("Upload successful: \(path)")
-
+            
             // Upload thumbnail (best-effort, don't fail if thumbnail upload fails)
             var thumbnailPath: String? = nil
             if let thumbnailData {
                 do {
                     thumbnailPath = try await storageService.uploadThumbnail(data: thumbnailData, clipId: clipId)
-                    #if DEBUG
+#if DEBUG
                     print("[THUMBNAIL] Uploaded thumbnail: \(thumbnailPath ?? "nil")")
-                    #endif
+#endif
                 } catch {
-                    #if DEBUG
+#if DEBUG
                     print("[THUMBNAIL] Failed to upload thumbnail: \(error)")
-                    #endif
+#endif
                 }
             }
-
+            
             // Create clip record if we have card context
             if let cardId = cardId, let participantId = participantId {
                 do {
                     // Host clip = orderPosition 0 (appears first in montage)
                     let orderPosition = isHostClip ? 0 : 1
-                    #if DEBUG
+#if DEBUG
                     print("[DURATION DEBUG] Creating clip with duration: \(String(describing: duration))")
                     print("[DURATION DEBUG] cardId: \(cardId), participantId: \(participantId)")
-                    #endif
+#endif
                     let clip = try await cardService.createClip(
                         cardId: cardId,
                         participantId: participantId,
@@ -231,13 +235,18 @@ public final class RecordingViewModel: ObservableObject {
                         status: "uploaded"
                     )
                     createdClip = clip
-                    #if DEBUG
+#if DEBUG
                     print("[DURATION DEBUG] Created clip, returned duration: \(String(describing: clip.durationSeconds))")
-                    #endif
-
+#endif
+                    
                     // If host clip, update card status to 'collecting'
                     if isHostClip {
                         try await cardService.updateCardStatus(cardId: cardId, status: "collecting")
+                    } else if let callback = onParticipantClipUploaded {
+                        // Notify director of new participant clip (main app provides this callback)
+                        if let card = try? await cardService.fetchCardById(cardId: cardId) {
+                            await callback(card)
+                        }
                     }
                 } catch {
                     // Best-effort: don't fail the upload if clip record fails

@@ -16,14 +16,13 @@ struct InviteReceivedSheet: View {
 
     @State private var card: Card?
     @State private var isLoading = true
-    @State private var isSaving = false
     @State private var errorMessage: String?
 
     private let cardService = CardService()
 
     enum InviteAction {
         case recordNow(Card)
-        case savedForLater
+        case savedForLater(Card)
         case dismiss
     }
 
@@ -98,18 +97,12 @@ struct InviteReceivedSheet: View {
                 }
 
                 Button {
-                    Task { await saveForLater() }
+                    saveForLater()
                 } label: {
-                    if isSaving {
-                        ProgressView()
-                            .tint(.toyTextSecondary)
-                    } else {
-                        Text("Save for Later")
-                            .font(.toyBody())
-                            .foregroundColor(.toyTextSecondary)
-                    }
+                    Text("Save for Later")
+                        .font(.toyBody())
+                        .foregroundColor(.toyTextSecondary)
                 }
-                .disabled(isSaving)
                 .frame(height: 44)
             }
             .padding(.horizontal, TOYSpacing.lg)
@@ -159,19 +152,22 @@ struct InviteReceivedSheet: View {
         isLoading = false
     }
 
-    private func saveForLater() async {
+    private func saveForLater() {
         guard let card else { return }
 
-        isSaving = true
+        // Optimistic UI - dismiss immediately with card
+        onAction(.savedForLater(card))
 
-        do {
-            _ = try await cardService.joinCard(userId: userId, shareToken: shareToken)
-            onAction(.savedForLater)
-        } catch {
-            errorMessage = error.localizedDescription
+        // Fire-and-forget background join
+        Task {
+            do {
+                _ = try await cardService.joinCard(userId: userId, shareToken: shareToken)
+            } catch {
+                #if DEBUG
+                print("Failed to join card: \(error.localizedDescription)")
+                #endif
+            }
         }
-
-        isSaving = false
     }
 }
 

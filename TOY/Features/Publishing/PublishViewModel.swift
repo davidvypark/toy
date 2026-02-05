@@ -130,11 +130,40 @@ final class PublishViewModel {
 
             state = .success(videoURL: signedURL)
 
+            // Send push notification to all participants
+            await notifyParticipantsOfPublish(card: card)
+
             #if DEBUG
             print("Card published! Video URL: \(signedURL)")
             #endif
         } catch {
             state = .failed(error: error.localizedDescription)
+        }
+    }
+
+    /// Notifies all participants that the card has been published.
+    private func notifyParticipantsOfPublish(card: Card) async {
+        do {
+            // Fetch all participants
+            let participants = try await cardService.fetchParticipantsForCard(cardId: card.id)
+
+            // Get unique user IDs (excluding the host who just published)
+            let participantUserIds = participants
+                .compactMap { $0.userId }
+                .filter { $0 != card.hostId }
+
+            guard !participantUserIds.isEmpty else { return }
+
+            // Send notification via edge function
+            await NotificationService.shared.notifyParticipantsOfPublish(
+                participantIds: participantUserIds,
+                cardTitle: card.title,
+                cardId: card.id
+            )
+        } catch {
+            #if DEBUG
+            print("Failed to notify participants: \(error)")
+            #endif
         }
     }
 
@@ -164,6 +193,9 @@ final class PublishViewModel {
             let signedURL = try await storageService.createSignedVideoURL(path: storagePath)
 
             state = .success(videoURL: signedURL)
+
+            // Send push notification to all participants
+            await notifyParticipantsOfPublish(card: card)
 
             // Cleanup local file
             try? FileManager.default.removeItem(at: montageURL)

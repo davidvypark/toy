@@ -102,6 +102,30 @@ public actor CardService {
         }
     }
 
+    /// Fetches a card by its ID.
+    /// - Parameter cardId: The ID of the card
+    /// - Returns: The Card if found
+    /// - Throws: `CardError.fetchFailed` if not found or fetch fails
+    public func fetchCardById(cardId: UUID) async throws -> Card {
+        do {
+            let card: Card = try await supabase
+                .from("cards")
+                .select()
+                .eq("id", value: cardId)
+                .single()
+                .execute()
+                .value
+
+            #if DEBUG
+            print("📋 Fetched card by ID: \(card.title)")
+            #endif
+
+            return card
+        } catch {
+            throw CardError.fetchFailed(error.localizedDescription)
+        }
+    }
+
     /// Fetches a card by its share token (for unauthenticated access).
     /// - Parameter shareToken: The unique share token from the invite URL
     /// - Returns: The Card if found

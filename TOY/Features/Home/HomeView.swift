@@ -126,6 +126,15 @@ struct HomeView: View {
             .task {
                 await loadCards()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .cardSavedForLater)) { notification in
+                // Optimistic UI - add card immediately
+                if let card = notification.object as? Card {
+                    // Only add if not already in list
+                    if !participatingCardsData.contains(where: { $0.card.id == card.id }) {
+                        participatingCardsData.insert((card: card, hasSubmitted: false), at: 0)
+                    }
+                }
+            }
         }
     }
 
