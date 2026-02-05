@@ -12,6 +12,7 @@ import TOYShared
 struct InviteReceivedSheet: View {
     let shareToken: String
     let userId: UUID
+    let userEmail: String?
     let onAction: (InviteAction) -> Void
 
     @State private var card: Card?
@@ -162,9 +163,10 @@ struct InviteReceivedSheet: View {
         let service = cardService
         let token = shareToken
         let uid = userId
+        let email = userEmail
         Task.detached {
             do {
-                _ = try await service.joinCard(userId: uid, shareToken: token)
+                _ = try await service.joinCard(userId: uid, shareToken: token, email: email)
                 #if DEBUG
                 print("✅ Card joined successfully")
                 #endif
@@ -182,7 +184,8 @@ struct InviteReceivedSheet: View {
 #Preview {
     InviteReceivedSheet(
         shareToken: "test-token",
-        userId: UUID()
+        userId: UUID(),
+        userEmail: "test@example.com"
     ) { action in
         print("Action: \(action)")
     }

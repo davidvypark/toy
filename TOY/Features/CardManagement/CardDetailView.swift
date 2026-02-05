@@ -1,4 +1,5 @@
 import AVFoundation
+import Kingfisher
 import SwiftUI
 import TOYShared
 
@@ -6,6 +7,9 @@ import TOYShared
 struct CardDetailView: View {
     let card: Card
     var initialClips: [Clip] = []
+    var initialProfiles: [UUID: (displayName: String?, avatarURL: URL?)] = [:]
+    var initialThumbnailURLs: [UUID: URL] = [:]  // clipId -> signedURL
+    var currentUser: User?
 
     @State private var viewModel = CardDetailViewModel()
     @State private var selectedClip: Clip?
@@ -27,56 +31,38 @@ struct CardDetailView: View {
         // Use viewModel clips if available, otherwise fall back to initialClips
         let clips = viewModel.clips.isEmpty ? initialClips : viewModel.clips
 
-        // Host is always first
+        // Host is always first - use currentUser avatar (already in memory) for instant display
         let hostClip = clips.first { $0.participantId == card.hostId }
         let hostDuration = hostClip.flatMap { viewModel.effectiveDuration(for: $0) }
-        let hostCachedURL = hostClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
+        let hostThumbnailURL = hostClip.flatMap { initialThumbnailURLs[$0.id] }
         contributors.append(ContributorRow(
             id: card.hostId,
             name: "You (Host)",
             clip: hostClip,
             isHost: true,
             effectiveDuration: hostDuration,
-            cachedURL: hostCachedURL
+            avatarURL: currentUser?.avatarURL,
+            thumbnailURL: hostThumbnailURL
         ))
 
-        // Get unique participant IDs from clips (excluding host)
-        let clipParticipantIds = Set(clips.map(\.participantId)).subtracting([card.hostId])
+        // Clip-driven approach: iterate through clips, use participantId (which IS the userId) for profiles
+        let participantClips = clips.filter { $0.participantId != card.hostId }
 
-        // If participants have loaded, use them; otherwise derive from clips
-        if !viewModel.participants.isEmpty {
-            for participant in viewModel.participants {
-                guard participant.id != card.hostId else { continue }
+        for clip in participantClips {
+            let userId = clip.participantId  // participantId IS the userId for logged-in users
+            let profile = viewModel.participantProfiles[userId]
+            let participant = viewModel.participants.first { $0.userId == userId }
 
-                let participantClip = clips.first { $0.participantId == participant.id }
-                let participantDuration = participantClip.flatMap { viewModel.effectiveDuration(for: $0) }
-                let participantCachedURL = participantClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
-                contributors.append(ContributorRow(
-                    id: participant.id,
-                    name: participant.email ?? "Invited Guest",
-                    clip: participantClip,
-                    isHost: false,
-                    participant: participant,
-                    effectiveDuration: participantDuration,
-                    cachedURL: participantCachedURL
-                ))
-            }
-        } else if !clipParticipantIds.isEmpty {
-            // Participants not loaded yet - show rows from clips with placeholder names
-            for participantId in clipParticipantIds.sorted(by: { $0.uuidString < $1.uuidString }) {
-                let participantClip = clips.first { $0.participantId == participantId }
-                let participantDuration = participantClip.flatMap { viewModel.effectiveDuration(for: $0) }
-                let participantCachedURL = participantClip.flatMap { viewModel.cachedSignedURLs[$0.id] }
-                contributors.append(ContributorRow(
-                    id: participantId,
-                    name: "Contributor",
-                    clip: participantClip,
-                    isHost: false,
-                    participant: nil,
-                    effectiveDuration: participantDuration,
-                    cachedURL: participantCachedURL
-                ))
-            }
+            contributors.append(ContributorRow(
+                id: userId,
+                name: profile?.displayName ?? "Contributor",
+                clip: clip,
+                isHost: false,
+                participant: participant,
+                effectiveDuration: viewModel.effectiveDuration(for: clip),
+                avatarURL: profile?.avatarURL,
+                thumbnailURL: initialThumbnailURLs[clip.id]
+            ))
         }
 
         return contributors
@@ -179,10 +165,15 @@ struct CardDetailView: View {
             }
         }
         .refreshable {
-            await viewModel.loadData(for: card.id)
+            await viewModel.loadData(for: card.id, hostId: card.hostId)
         }
         .task {
-            await viewModel.loadData(for: card.id, initialClips: initialClips.isEmpty ? nil : initialClips)
+            await viewModel.loadData(
+                for: card.id,
+                hostId: card.hostId,
+                initialClips: initialClips.isEmpty ? nil : initialClips,
+                initialProfiles: initialProfiles.isEmpty ? nil : initialProfiles
+            )
         }
         .sheet(item: $selectedClip) { clip in
             ClipPreviewSheet(
@@ -200,7 +191,7 @@ struct CardDetailView: View {
                     cachedSignedURLs: viewModel.cachedSignedURLs
                 ) {
                     showMontagePreview = false
-                    Task { await viewModel.loadData(for: card.id) }
+                    Task { await viewModel.loadData(for: card.id, hostId: card.hostId) }
                 }
             }
         }
@@ -421,7 +412,8 @@ private struct ContributorRow: Identifiable {
     let isHost: Bool
     var participant: Participant?
     var effectiveDuration: Double?
-    var cachedURL: URL?
+    var avatarURL: URL?
+    var thumbnailURL: URL?  // Pre-fetched signed URL for instant display
 }
 
 // MARK: - Contributor Clip Row
@@ -438,20 +430,32 @@ private struct ContributorClipRow: View {
         } label: {
             HStack(spacing: TOYSpacing.md) {
                 // Avatar
-                Circle()
-                    .stroke(Color.toyDivider, lineWidth: 1)
-                    .frame(width: 40, height: 40)
-                    .overlay {
-                        if contributor.isHost {
-                            Text("H")
-                                .font(.toySubheadline())
-                                .foregroundColor(.toyText)
-                        } else {
-                            Text(String(contributor.name.prefix(1)).uppercased())
-                                .font(.toySubheadline())
-                                .foregroundColor(.toyTextSecondary)
+                if let avatarURL = contributor.avatarURL {
+                    KFImage(avatarURL)
+                        .placeholder {
+                            Circle()
+                                .fill(Color.toyDivider)
                         }
-                    }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                } else {
+                    Circle()
+                        .stroke(Color.toyDivider, lineWidth: 1)
+                        .frame(width: 40, height: 40)
+                        .overlay {
+                            if contributor.isHost {
+                                Text("H")
+                                    .font(.toySubheadline())
+                                    .foregroundColor(.toyText)
+                            } else {
+                                Text(String(contributor.name.prefix(1)).uppercased())
+                                    .font(.toySubheadline())
+                                    .foregroundColor(.toyTextSecondary)
+                            }
+                        }
+                }
 
                 // Name and status
                 VStack(alignment: .leading, spacing: TOYSpacing.xs) {
@@ -478,7 +482,7 @@ private struct ContributorClipRow: View {
 
                 // Clip thumbnail
                 if let clip = contributor.clip {
-                    ClipThumbnailView(clip: clip, effectiveDuration: contributor.effectiveDuration, cachedURL: contributor.cachedURL)
+                    ClipThumbnailView(clip: clip, effectiveDuration: contributor.effectiveDuration, signedURL: contributor.thumbnailURL)
                 } else {
                     Rectangle()
                         .strokeBorder(Color.toyDivider, style: StrokeStyle(lineWidth: 1, dash: [4]))
@@ -544,12 +548,17 @@ private struct ContributorSkeletonRow: View {
 private struct ClipThumbnailView: View {
     let clip: Clip
     let effectiveDuration: Double?
-    let cachedURL: URL?
+    var signedURL: URL?  // Pre-fetched from HomeView for instant display
 
-    @State private var thumbnail: UIImage?
-    @State private var isLoading = true
+    @State private var fetchedURL: URL?  // Fallback if not pre-fetched
+    @State private var isLoading = false
 
     private let storageService = StorageService()
+
+    // Use pre-fetched URL if available, otherwise fallback to fetched
+    private var effectiveURL: URL? {
+        signedURL ?? fetchedURL
+    }
 
     var body: some View {
         ZStack {
@@ -557,16 +566,22 @@ private struct ClipThumbnailView: View {
                 .fill(Color.toyVideoContainer)
                 .frame(width: 50, height: 66)
 
-            if isLoading {
-                ProgressView()
-                    .tint(.warmCream)
-                    .scaleEffect(0.6)
-            } else if let thumbnail {
-                Image(uiImage: thumbnail)
+            if let url = effectiveURL, let cacheKey = clip.thumbnailUrl {
+                // KFImage handles all caching automatically
+                KFImage(source: .network(KF.ImageResource(downloadURL: url, cacheKey: cacheKey)))
+                    .placeholder {
+                        ProgressView()
+                            .tint(.warmCream)
+                            .scaleEffect(0.6)
+                    }
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 50, height: 66)
                     .clipped()
+            } else if isLoading {
+                ProgressView()
+                    .tint(.warmCream)
+                    .scaleEffect(0.6)
             } else {
                 Image(systemName: "play.fill")
                     .font(.system(size: 16))
@@ -574,10 +589,10 @@ private struct ClipThumbnailView: View {
             }
 
             // Duration label
-            if let duration = effectiveDuration, !isLoading {
+            if let duration = effectiveDuration, effectiveURL != nil {
                 VStack {
                     Spacer()
-                    Text(formatDuration(duration))
+                    Text(String(format: "%.1fs", duration))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.white)
                         .padding(.horizontal, 4)
@@ -589,56 +604,25 @@ private struct ClipThumbnailView: View {
             }
         }
         .task {
-            await loadThumbnail()
+            // Only fetch if not pre-fetched
+            if signedURL == nil {
+                await loadSignedURL()
+            }
         }
     }
 
-    private func loadThumbnail() async {
+    private func loadSignedURL() async {
         isLoading = true
         defer { isLoading = false }
+        guard let thumbnailPath = clip.thumbnailUrl else { return }
 
-        // Fast path: load from pre-generated thumbnail URL if available
-        if let thumbnailUrl = clip.thumbnailUrl {
-            do {
-                let signedURL = try await storageService.createSignedURL(path: thumbnailUrl)
-                let (data, _) = try await URLSession.shared.data(from: signedURL)
-                if let image = UIImage(data: data) {
-                    thumbnail = image
-                    return
-                }
-            } catch {
-                #if DEBUG
-                print("Failed to load thumbnail from URL, falling back to video: \(error)")
-                #endif
-            }
-        }
-
-        // Fallback: generate from video (for old clips without thumbnails)
         do {
-            let signedURL: URL
-            if let cachedURL {
-                signedURL = cachedURL
-            } else {
-                signedURL = try await storageService.createSignedURL(path: clip.videoUrl)
-            }
-
-            let asset = AVAsset(url: signedURL)
-            let imageGenerator = AVAssetImageGenerator(asset: asset)
-            imageGenerator.appliesPreferredTrackTransform = true
-            imageGenerator.maximumSize = CGSize(width: 150, height: 200)
-
-            let time = CMTime(seconds: 0.5, preferredTimescale: 600)
-            let cgImage = try await imageGenerator.image(at: time).image
-            thumbnail = UIImage(cgImage: cgImage)
+            fetchedURL = try await storageService.createSignedURL(path: thumbnailPath)
         } catch {
             #if DEBUG
-            print("Failed to load thumbnail: \(error)")
+            print("Failed to get signed URL: \(error)")
             #endif
         }
-    }
-
-    private func formatDuration(_ seconds: Double) -> String {
-        String(format: "%.1fs", seconds)
     }
 }
 

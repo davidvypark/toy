@@ -19,6 +19,10 @@ final class CardDetailViewModel {
     /// Key is clip ID, value is signed URL
     var cachedSignedURLs: [UUID: URL] = [:]
 
+    /// Cached profiles for participants
+    /// Key is user ID, value is profile data (displayName, avatarURL)
+    var participantProfiles: [UUID: (displayName: String?, avatarURL: URL?)] = [:]
+
     // MARK: - Dependencies
 
     private let cardService = CardService()
@@ -26,13 +30,31 @@ final class CardDetailViewModel {
 
     // MARK: - Data Loading
 
+    /// The host's user ID (needed for profile fetching)
+    private var hostId: UUID?
+
     /// Loads participants and clips for a card.
     /// - Parameters:
     ///   - cardId: The ID of the card to load data for
+    ///   - hostId: The host's user ID (for profile fetching)
     ///   - initialClips: Optional pre-fetched clips from HomeView to avoid re-fetching
-    func loadData(for cardId: UUID, initialClips: [Clip]? = nil) async {
+    ///   - initialProfiles: Optional pre-fetched profiles from HomeView for instant display
+    func loadData(
+        for cardId: UUID,
+        hostId: UUID? = nil,
+        initialClips: [Clip]? = nil,
+        initialProfiles: [UUID: (displayName: String?, avatarURL: URL?)]? = nil
+    ) async {
+        self.hostId = hostId
         isLoading = true
         errorMessage = nil
+
+        // Use initial profiles immediately if provided (eliminates "Contributor" flash)
+        if let initialProfiles {
+            for (userId, profile) in initialProfiles {
+                participantProfiles[userId] = profile
+            }
+        }
 
         do {
             #if DEBUG
@@ -66,9 +88,39 @@ final class CardDetailViewModel {
 
         isLoading = false
 
-        // Pre-fetch signed URLs in background AFTER showing data
+        // Pre-fetch signed URLs in background
         Task {
             await prefetchSignedURLs()
+        }
+        // Only fetch profiles if we don't have initial profiles
+        if initialProfiles == nil {
+            Task {
+                await fetchParticipantProfiles()
+            }
+        }
+    }
+
+    /// Fetches profile data for all users who have clips (using clip.participantId which IS the user ID)
+    private func fetchParticipantProfiles() async {
+        // Get unique user IDs from clips (participantId = userId for logged-in users)
+        var userIds = Set(clips.map(\.participantId)).filter { participantProfiles[$0] == nil }
+
+        // Also include host if not already covered
+        if let hostId, participantProfiles[hostId] == nil {
+            userIds.insert(hostId)
+        }
+
+        guard !userIds.isEmpty else { return }
+
+        do {
+            let profiles = try await cardService.fetchProfiles(userIds: Array(userIds))
+            for (userId, profile) in profiles {
+                participantProfiles[userId] = profile
+            }
+        } catch {
+            #if DEBUG
+            print("[PROFILES] Failed to fetch profiles: \(error)")
+            #endif
         }
     }
 

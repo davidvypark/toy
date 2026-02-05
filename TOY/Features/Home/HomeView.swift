@@ -25,10 +25,13 @@ struct HomeView: View {
     // Card list state
     @State private var hostedCards: [Card] = []
     @State private var cardClips: [UUID: [Clip]] = [:]
+    @State private var cardProfiles: [UUID: [UUID: (displayName: String?, avatarURL: URL?)]] = [:]
+    @State private var cardThumbnailURLs: [UUID: [UUID: URL]] = [:]  // cardId -> clipId -> signedURL
     @State private var participatingCardsData: [(card: Card, hasSubmitted: Bool)] = []
     @State private var isLoadingCards = false
 
     private let cardService = CardService()
+    private let storageService = StorageService()
 
     // Participant cards that need action (not submitted)
     private var participatingCardsNeedingAction: [Card] {
@@ -74,7 +77,13 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(for: Card.self) { card in
-                CardDetailView(card: card, initialClips: cardClips[card.id] ?? [])
+                CardDetailView(
+                    card: card,
+                    initialClips: cardClips[card.id] ?? [],
+                    initialProfiles: cardProfiles[card.id] ?? [:],
+                    initialThumbnailURLs: cardThumbnailURLs[card.id] ?? [:],
+                    currentUser: viewModel.authState.user
+                )
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView(authViewModel: viewModel)
@@ -304,18 +313,93 @@ struct HomeView: View {
             hostedCards = try await fetchedHostedCards
             participatingCardsData = try await fetchedParticipatingCards
 
-            // Fetch clips for hosted cards
+            // Fetch clips, profiles, and thumbnail URLs for hosted cards
             var clipsDict: [UUID: [Clip]] = [:]
+            var profilesDict: [UUID: [UUID: (displayName: String?, avatarURL: URL?)]] = [:]
+            var thumbnailURLsDict: [UUID: [UUID: URL]] = [:]
+
             for card in hostedCards {
                 let clips = try await cardService.fetchClipsForCard(cardId: card.id)
                 clipsDict[card.id] = clips
+
+                // Fetch profiles for all clip participants
+                let participantIds = clips.map(\.participantId)
+                if !participantIds.isEmpty {
+                    let profiles = try await cardService.fetchProfiles(userIds: participantIds)
+                    profilesDict[card.id] = profiles
+                }
+
+                // Generate signed URLs for thumbnails (for instant display)
+                var clipThumbnailURLs: [UUID: URL] = [:]
+                for clip in clips {
+                    if let thumbnailPath = clip.thumbnailUrl {
+                        if let signedURL = try? await storageService.createSignedURL(path: thumbnailPath) {
+                            clipThumbnailURLs[clip.id] = signedURL
+                        }
+                    }
+                }
+                thumbnailURLsDict[card.id] = clipThumbnailURLs
             }
+
             cardClips = clipsDict
+            cardProfiles = profilesDict
+            cardThumbnailURLs = thumbnailURLsDict
+
+            // Prefetch images in background so they're cached
+            Task {
+                await prefetchThumbnails(clips: clipsDict.values.flatMap { $0 })
+                prefetchAvatars(profiles: profilesDict.values.flatMap { $0.values })
+            }
         } catch {
             #if DEBUG
             print("Failed to load cards: \(error.localizedDescription)")
             #endif
         }
+    }
+
+    /// Prefetches thumbnail images into Kingfisher cache for instant display
+    private func prefetchThumbnails(clips: [Clip]) async {
+        // Get clips that have pre-generated thumbnails
+        let clipsWithThumbnails = clips.filter { $0.thumbnailUrl != nil }
+        guard !clipsWithThumbnails.isEmpty else { return }
+
+        // Build resources with signed URLs and stable cache keys
+        var resources: [KF.ImageResource] = []
+        for clip in clipsWithThumbnails {
+            guard let thumbnailPath = clip.thumbnailUrl else { continue }
+            do {
+                let signedURL = try await storageService.createSignedURL(path: thumbnailPath)
+                let resource = KF.ImageResource(downloadURL: signedURL, cacheKey: thumbnailPath)
+                resources.append(resource)
+            } catch {
+                #if DEBUG
+                print("Failed to create signed URL for thumbnail: \(error)")
+                #endif
+            }
+        }
+
+        // Prefetch into Kingfisher cache
+        guard !resources.isEmpty else { return }
+        let sources: [Source] = resources.map { .network($0) }
+        let prefetcher = ImagePrefetcher(sources: sources)
+        prefetcher.start()
+
+        #if DEBUG
+        print("🖼️ Prefetching \(resources.count) thumbnails")
+        #endif
+    }
+
+    /// Prefetches avatar images into Kingfisher cache
+    private func prefetchAvatars(profiles: [( displayName: String?, avatarURL: URL?)]) {
+        let avatarURLs = profiles.compactMap { $0.avatarURL }
+        guard !avatarURLs.isEmpty else { return }
+
+        let prefetcher = ImagePrefetcher(urls: avatarURLs)
+        prefetcher.start()
+
+        #if DEBUG
+        print("👤 Prefetching \(avatarURLs.count) avatars")
+        #endif
     }
 }
 

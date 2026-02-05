@@ -87,6 +87,7 @@ struct PendingInvite: Identifiable {
     let id = UUID()
     let shareToken: String
     let userId: UUID
+    let userEmail: String?
 }
 
 // MARK: - App
@@ -139,7 +140,8 @@ struct TOYApp: App {
                 .sheet(item: $pendingInvite) { invite in
                     InviteReceivedSheet(
                         shareToken: invite.shareToken,
-                        userId: invite.userId
+                        userId: invite.userId,
+                        userEmail: invite.userEmail
                     ) { action in
                         handleInviteAction(action)
                     }
@@ -194,7 +196,7 @@ struct TOYApp: App {
 
             // Only show invite sheet if user is signed in
             if case .signedIn(let user) = authViewModel.authState {
-                pendingInvite = PendingInvite(shareToken: shareToken, userId: user.id)
+                pendingInvite = PendingInvite(shareToken: shareToken, userId: user.id, userEmail: user.email)
             }
         case .unknown:
             // Ignore unrecognized deep links

@@ -352,13 +352,60 @@ public actor CardService {
         }
     }
 
+    /// Fetches profile data for multiple users.
+    /// - Parameter userIds: Array of user IDs to fetch profiles for
+    /// - Returns: Dictionary mapping user ID to profile data (displayName, avatarURL)
+    /// - Throws: `CardError.fetchFailed` if fetch fails
+    public func fetchProfiles(userIds: [UUID]) async throws -> [UUID: (displayName: String?, avatarURL: URL?)] {
+        guard !userIds.isEmpty else { return [:] }
+
+        struct ProfileRow: Decodable {
+            let id: UUID
+            let displayName: String?
+            let avatarUrl: String?
+
+            enum CodingKeys: String, CodingKey {
+                case id
+                case displayName = "display_name"
+                case avatarUrl = "avatar_url"
+            }
+        }
+
+        do {
+            let profiles: [ProfileRow] = try await supabase
+                .from("profiles")
+                .select("id, display_name, avatar_url")
+                .in("id", values: userIds.map(\.uuidString))
+                .execute()
+                .value
+
+            #if DEBUG
+            print("👤 Fetched \(profiles.count) profiles")
+            #endif
+
+            var result: [UUID: (displayName: String?, avatarURL: URL?)] = [:]
+            for profile in profiles {
+                result[profile.id] = (
+                    displayName: profile.displayName,
+                    avatarURL: profile.avatarUrl.flatMap { URL(string: $0) }
+                )
+            }
+
+            return result
+        } catch {
+            throw CardError.fetchFailed(error.localizedDescription)
+        }
+    }
+
     /// Joins a card as a participant without recording yet (for "Save for Later").
     /// - Parameters:
     ///   - userId: The ID of the user joining
     ///   - shareToken: The share token from the invite link
+    ///   - email: The user's email (optional, for display purposes)
+    ///   - displayName: The user's display name (optional, for display purposes)
     /// - Returns: The card that was joined
     /// - Throws: `CardError.fetchFailed` if card not found or join fails
-    public func joinCard(userId: UUID, shareToken: String) async throws -> Card {
+    public func joinCard(userId: UUID, shareToken: String, email: String? = nil, displayName: String? = nil) async throws -> Card {
         // Fetch the card
         let card = try await fetchCardByShareToken(shareToken: shareToken)
 
@@ -372,13 +419,16 @@ public actor CardService {
             .value
 
         if existing.isEmpty {
-            // Create participant record
-            let newParticipant: [String: String] = [
+            // Create participant record with user info for display
+            var newParticipant: [String: String] = [
                 "card_id": card.id.uuidString,
                 "user_id": userId.uuidString,
                 "invite_token": UUID().uuidString,
                 "status": "viewed"
             ]
+            if let email {
+                newParticipant["email"] = email
+            }
             try await supabase
                 .from("participants")
                 .insert(newParticipant)
