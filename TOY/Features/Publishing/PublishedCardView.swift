@@ -29,7 +29,7 @@ struct PublishedCardView: View {
                             .foregroundColor(.toyText)
                             .lineSpacing(-4)
 
-                        Text("Your montage for \(card.recipientName) is ready to share.")
+                        Text("Your video card for \(card.recipientName) is ready to share.")
                             .font(.toyBody())
                             .foregroundColor(.toyTextSecondary)
                     }

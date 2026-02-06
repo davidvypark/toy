@@ -496,6 +496,45 @@ public actor CardService {
         }
     }
 
+    /// Fetches published cards where the user was a participant (not host).
+    /// - Parameter userId: The ID of the user
+    /// - Returns: Array of published Cards the user participated in
+    /// - Throws: `CardError.fetchFailed` if fetch fails
+    public func fetchPublishedParticipatingCards(userId: UUID) async throws -> [Card] {
+        do {
+            // Get all participants for this user
+            let participants: [Participant] = try await supabase
+                .from("participants")
+                .select()
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+
+            guard !participants.isEmpty else { return [] }
+
+            let cardIds = participants.map(\.cardId)
+
+            // Fetch published cards (excluding where user is host)
+            let cards: [Card] = try await supabase
+                .from("cards")
+                .select()
+                .in("id", values: cardIds)
+                .neq("host_id", value: userId)
+                .eq("status", value: "published")
+                .order("published_at", ascending: false)
+                .execute()
+                .value
+
+            #if DEBUG
+            print("📋 Fetched \(cards.count) published participating cards for user \(userId)")
+            #endif
+
+            return cards
+        } catch {
+            throw CardError.fetchFailed(error.localizedDescription)
+        }
+    }
+
     /// Deletes a clip from storage and database.
     /// - Parameters:
     ///   - clipId: The ID of the clip to delete

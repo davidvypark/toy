@@ -5,6 +5,7 @@
 //  Created by David Park on 2/1/26.
 //
 
+import AVFoundation
 import Kingfisher
 import SwiftUI
 import TOYShared
@@ -28,7 +29,15 @@ struct HomeView: View {
     @State private var cardProfiles: [UUID: [UUID: (displayName: String?, avatarURL: URL?)]] = [:]
     @State private var cardThumbnailURLs: [UUID: [UUID: URL]] = [:]  // cardId -> clipId -> signedURL
     @State private var participatingCardsData: [(card: Card, hasSubmitted: Bool)] = []
+    @State private var publishedParticipatingCards: [Card] = []
     @State private var isLoadingCards = false
+    @State private var publishedVideoURLCache: [UUID: URL] = [:]
+    @State private var prefetchedVideoAssets: [UUID: AVURLAsset] = [:]
+    @State private var hostRecordingViewModel: RecordingViewModel?
+    @State private var participantRecordingViewModel: RecordingViewModel?
+    @State private var isPreparingHostCamera = false
+    @State private var isPreparingParticipantCamera = false
+    @State private var pendingParticipantCard: Card?
 
     private let cardService = CardService()
     private let storageService = StorageService()
@@ -50,11 +59,16 @@ struct HomeView: View {
     }
 
     private var publishedCards: [Card] {
-        hostedCards.filter { $0.status == "published" }
+        let hosted = hostedCards.filter { $0.status == "published" }
+        let participated = publishedParticipatingCards
+        // Combine and sort by published date (newest first)
+        return (hosted + participated).sorted {
+            ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast)
+        }
     }
 
     private var hasCards: Bool {
-        !hostedCards.isEmpty || !participatingCardsData.isEmpty
+        !hostedCards.isEmpty || !participatingCardsData.isEmpty || !publishedParticipatingCards.isEmpty
     }
 
     var body: some View {
@@ -90,7 +104,15 @@ struct HomeView: View {
             }
             .navigationBarHidden(true)
             .fullScreenCover(item: $publishedCardToPlay) { card in
-                PublishedCardPlayerView(card: card)
+                PublishedCardPlayerView(
+                    card: card,
+                    currentUserId: viewModel.authState.user?.id,
+                    cachedVideoURL: publishedVideoURLCache[card.id],
+                    cachedVideoAsset: prefetchedVideoAssets[card.id],
+                    onVideoURLLoaded: { url in
+                        publishedVideoURLCache[card.id] = url
+                    }
+                )
             }
             .sheet(isPresented: $showCreateCard) {
                 if let user = viewModel.authState.user {
@@ -121,15 +143,12 @@ struct HomeView: View {
                 }
             }
             .fullScreenCover(item: $participantRecordingCard) { card in
-                if let user = viewModel.authState.user {
-                    RecordingView(
-                        cardId: card.id,
-                        participantId: user.id,
-                        isHostClip: false
-                    )
-                    .onDisappear {
-                        Task { await loadCards() }
-                    }
+                if let vm = participantRecordingViewModel {
+                    RecordingView(viewModel: vm)
+                        .onDisappear {
+                            participantRecordingViewModel = nil
+                            Task { await loadCards() }
+                        }
                 }
             }
             .task {
@@ -253,8 +272,10 @@ struct HomeView: View {
                     if !participatingCardsNeedingAction.isEmpty {
                         ParticipantActionSectionView(
                             cards: participatingCardsNeedingAction,
+                            isPreparingCamera: isPreparingParticipantCamera,
+                            preparingCardId: pendingParticipantCard?.id,
                             onRecordTapped: { card in
-                                participantRecordingCard = card
+                                prepareAndShowParticipantRecording(card: card)
                             }
                         )
                     }
@@ -303,33 +324,47 @@ struct HomeView: View {
         guard let user = viewModel.authState.user else { return }
 
         isLoadingCards = true
-        defer { isLoadingCards = false }
 
         do {
-            // Fetch hosted cards and participating cards in parallel
+            // Phase 1: Fetch card lists in parallel — UI unblocks immediately after
             async let fetchedHostedCards = cardService.fetchCardsForHost(hostId: user.id)
             async let fetchedParticipatingCards = cardService.fetchParticipatingCards(userId: user.id)
+            async let fetchedPublishedParticipating = cardService.fetchPublishedParticipatingCards(userId: user.id)
 
             hostedCards = try await fetchedHostedCards
             participatingCardsData = try await fetchedParticipatingCards
+            publishedParticipatingCards = try await fetchedPublishedParticipating
 
-            // Fetch clips, profiles, and thumbnail URLs for hosted cards
-            var clipsDict: [UUID: [Clip]] = [:]
-            var profilesDict: [UUID: [UUID: (displayName: String?, avatarURL: URL?)]] = [:]
-            var thumbnailURLsDict: [UUID: [UUID: URL]] = [:]
+            // Home screen can render now — show card tiles immediately
+            isLoadingCards = false
 
-            for card in hostedCards {
+            // Phase 2: Background detail fetching (non-blocking)
+            await loadCardDetails()
+        } catch {
+            isLoadingCards = false
+            #if DEBUG
+            Swift.print("Failed to load cards: \(error.localizedDescription)")
+            #endif
+        }
+    }
+
+    private func loadCardDetails() async {
+        // Fetch clips, profiles, and thumbnail URLs for hosted cards
+        var clipsDict: [UUID: [Clip]] = [:]
+        var profilesDict: [UUID: [UUID: (displayName: String?, avatarURL: URL?)]] = [:]
+        var thumbnailURLsDict: [UUID: [UUID: URL]] = [:]
+
+        for card in hostedCards {
+            do {
                 let clips = try await cardService.fetchClipsForCard(cardId: card.id)
                 clipsDict[card.id] = clips
 
-                // Fetch profiles for all clip participants
                 let participantIds = clips.map(\.participantId)
                 if !participantIds.isEmpty {
                     let profiles = try await cardService.fetchProfiles(userIds: participantIds)
                     profilesDict[card.id] = profiles
                 }
 
-                // Generate signed URLs for thumbnails (for instant display)
                 var clipThumbnailURLs: [UUID: URL] = [:]
                 for clip in clips {
                     if let thumbnailPath = clip.thumbnailUrl {
@@ -339,21 +374,52 @@ struct HomeView: View {
                     }
                 }
                 thumbnailURLsDict[card.id] = clipThumbnailURLs
+            } catch {
+                #if DEBUG
+                Swift.print("Failed to load details for card \(card.id): \(error)")
+                #endif
             }
+        }
 
-            cardClips = clipsDict
-            cardProfiles = profilesDict
-            cardThumbnailURLs = thumbnailURLsDict
+        cardClips = clipsDict
+        cardProfiles = profilesDict
+        cardThumbnailURLs = thumbnailURLsDict
 
-            // Prefetch images in background so they're cached
-            Task {
-                await prefetchThumbnails(clips: clipsDict.values.flatMap { $0 })
-                prefetchAvatars(profiles: profilesDict.values.flatMap { $0.values })
+        // Prefetch images and video URLs in background
+        Task {
+            await prefetchThumbnails(clips: clipsDict.values.flatMap { $0 })
+            prefetchAvatars(profiles: profilesDict.values.flatMap { $0.values })
+        }
+        Task {
+            await prefetchVideoURLs()
+        }
+    }
+
+    private func prefetchVideoURLs() async {
+        let allPublished = publishedCards
+        guard !allPublished.isEmpty else { return }
+
+        for card in allPublished {
+            guard let videoPath = card.videoUrl,
+                  publishedVideoURLCache[card.id] == nil else { continue }
+
+            do {
+                let signedURL = try await storageService.createSignedVideoURL(path: videoPath)
+                publishedVideoURLCache[card.id] = signedURL
+
+                // Pre-create AVURLAsset and trigger metadata load to warm the connection
+                let asset = AVURLAsset(url: signedURL)
+                _ = try? await asset.load(.isPlayable)
+                prefetchedVideoAssets[card.id] = asset
+
+                #if DEBUG
+                Swift.print("🎬 Prefetched video URL + asset for card \(card.id)")
+                #endif
+            } catch {
+                #if DEBUG
+                Swift.print("Failed to prefetch video URL for card \(card.id): \(error)")
+                #endif
             }
-        } catch {
-            #if DEBUG
-            print("Failed to load cards: \(error.localizedDescription)")
-            #endif
         }
     }
 
@@ -373,7 +439,7 @@ struct HomeView: View {
                 resources.append(resource)
             } catch {
                 #if DEBUG
-                print("Failed to create signed URL for thumbnail: \(error)")
+                Swift.print("Failed to create signed URL for thumbnail: \(error)")
                 #endif
             }
         }
@@ -385,7 +451,7 @@ struct HomeView: View {
         prefetcher.start()
 
         #if DEBUG
-        print("🖼️ Prefetching \(resources.count) thumbnails")
+        Swift.print("🖼️ Prefetching \(resources.count) thumbnails")
         #endif
     }
 
@@ -398,8 +464,41 @@ struct HomeView: View {
         prefetcher.start()
 
         #if DEBUG
-        print("👤 Prefetching \(avatarURLs.count) avatars")
+        Swift.print("👤 Prefetching \(avatarURLs.count) avatars")
         #endif
+    }
+
+    // MARK: - Camera Pre-warming
+
+    private func prepareAndShowParticipantRecording(card: Card) {
+        guard let user = viewModel.authState.user else { return }
+        isPreparingParticipantCamera = true
+        pendingParticipantCard = card
+
+        let vm = RecordingViewModel(
+            cardId: card.id,
+            participantId: user.id,
+            isHostClip: false
+        )
+        participantRecordingViewModel = vm
+
+        Task {
+            await vm.onAppear()
+
+            // Wait for session to be ready (with timeout)
+            for _ in 0..<30 {  // 3 second timeout
+                if vm.recorder.isSessionReady {
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s
+            }
+
+            await MainActor.run {
+                isPreparingParticipantCamera = false
+                pendingParticipantCard = nil
+                participantRecordingCard = card
+            }
+        }
     }
 }
 
@@ -407,6 +506,8 @@ struct HomeView: View {
 
 private struct ParticipantActionSectionView: View {
     let cards: [Card]
+    var isPreparingCamera: Bool = false
+    var preparingCardId: UUID? = nil
     let onRecordTapped: (Card) -> Void
 
     var body: some View {
@@ -423,9 +524,13 @@ private struct ParticipantActionSectionView: View {
             .padding(.horizontal, TOYSpacing.lg)
 
             ForEach(cards) { card in
-                ParticipantActionTile(card: card) {
+                ParticipantActionTile(
+                    card: card,
+                    isPreparing: isPreparingCamera && preparingCardId == card.id
+                ) {
                     onRecordTapped(card)
                 }
+                .disabled(isPreparingCamera)
                 .padding(.horizontal, TOYSpacing.lg)
             }
         }
@@ -549,6 +654,7 @@ private struct PublishedSectionView: View {
 
 private struct ParticipantActionTile: View {
     let card: Card
+    var isPreparing: Bool = false
     let onRecordTapped: () -> Void
 
     var body: some View {
@@ -570,10 +676,18 @@ private struct ParticipantActionTile: View {
 
                 // Record CTA
                 HStack(spacing: TOYSpacing.xs) {
-                    Image(systemName: "video.fill")
-                        .font(.system(size: 14))
-                    Text("Record")
-                        .font(.toyBodyMedium())
+                    if isPreparing {
+                        ProgressView()
+                            .tint(.toyBackground)
+                            .scaleEffect(0.8)
+                        Text("Preparing...")
+                            .font(.toyBodyMedium())
+                    } else {
+                        Image(systemName: "video.fill")
+                            .font(.system(size: 14))
+                        Text("Record")
+                            .font(.toyBodyMedium())
+                    }
                 }
                 .foregroundColor(.toyBackground)
             }

@@ -14,10 +14,22 @@ public enum UploadError: LocalizedError, Sendable {
         switch self {
         case .fileNotFound:
             return "The video file could not be found."
+        case .uploadFailed:
+            return "Unable to upload video. Please check your connection and try again."
+        case .signedURLFailed:
+            return "Unable to load video. Please try again."
+        }
+    }
+
+    /// Detailed error for debugging (includes technical message)
+    public var debugDescription: String {
+        switch self {
+        case .fileNotFound:
+            return "File not found at specified path"
         case .uploadFailed(let message):
             return "Upload failed: \(message)"
         case .signedURLFailed(let message):
-            return "Could not generate signed URL: \(message)"
+            return "Signed URL failed: \(message)"
         }
     }
 }

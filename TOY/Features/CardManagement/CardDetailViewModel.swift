@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import SwiftUI
 import TOYShared
@@ -22,6 +23,13 @@ final class CardDetailViewModel {
     /// Cached profiles for participants
     /// Key is user ID, value is profile data (displayName, avatarURL)
     var participantProfiles: [UUID: (displayName: String?, avatarURL: URL?)] = [:]
+
+    // MARK: - Montage Player Cache
+
+    /// Cached montage player for instant re-opening
+    var montagePlayer: AVQueuePlayer?
+    var montageSignedURLs: [URL] = []
+    var isMontageReady = false
 
     // MARK: - Dependencies
 

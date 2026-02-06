@@ -15,6 +15,7 @@ struct PublishedCardPlayerView: View {
     let card: Card
     var currentUserId: UUID? = nil
     var cachedVideoURL: URL? = nil
+    var cachedVideoAsset: AVURLAsset? = nil
     var onVideoURLLoaded: ((URL) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
 
@@ -58,10 +59,9 @@ struct PublishedCardPlayerView: View {
                     }
                 }
 
-                // Loading overlay with thumbnail and progress
+                // Loading overlay — full-brightness thumbnail with subtle loading bar
                 if !isPlayerReady && error == nil {
-                    ZStack {
-                        // Thumbnail background
+                    ZStack(alignment: .bottom) {
                         if let thumbnailURL = firstClipThumbnailURL {
                             KFImage(thumbnailURL)
                                 .resizable()
@@ -72,12 +72,7 @@ struct PublishedCardPlayerView: View {
                             Color.black
                         }
 
-                        // Semi-transparent overlay
-                        Color.black.opacity(0.5)
-
-                        ProgressView()
-                            .tint(.warmCream)
-                            .scaleEffect(1.2)
+                        TOYLoadingBar()
                     }
                     .ignoresSafeArea()
                 }
@@ -201,9 +196,10 @@ struct PublishedCardPlayerView: View {
             .animation(.easeInOut(duration: 0.2), value: showCopiedToast)
         }
         .task {
-            // Load clips first to get thumbnail for loading screen
-            await loadClips()
-            await loadVideo()
+            // Load clips and video in parallel — they're independent
+            async let clipsTask: () = loadClips()
+            async let videoTask: () = loadVideo()
+            _ = await (clipsTask, videoTask)
         }
         .onDisappear {
             playerLooper?.disableLooping()
@@ -222,37 +218,39 @@ struct PublishedCardPlayerView: View {
             return
         }
 
-        // Start progress animation
         loadingProgress = 0.1
 
         do {
-            // Use cached URL if available (instant), otherwise fetch
-            let signedURL: URL
-            if let cachedVideoURL {
-                signedURL = cachedVideoURL
+            // Build playerItem from best available source:
+            // 1. Pre-fetched AVURLAsset (connection already warm, data partially downloaded)
+            // 2. Cached signed URL (skip API call)
+            // 3. Fresh signed URL fetch (slowest path)
+            let playerItem: AVPlayerItem
+            if let cachedVideoAsset {
+                playerItem = AVPlayerItem(asset: cachedVideoAsset)
+                loadingProgress = 0.5
+            } else if let cachedVideoURL {
+                playerItem = AVPlayerItem(url: cachedVideoURL)
                 loadingProgress = 0.3
             } else {
-                signedURL = try await storageService.createSignedVideoURL(path: videoPath)
+                let signedURL = try await storageService.createSignedVideoURL(path: videoPath)
                 loadingProgress = 0.3
-                // Report back to cache for next time
                 onVideoURLLoaded?(signedURL)
+                playerItem = AVPlayerItem(url: signedURL)
             }
 
             await MainActor.run {
-                let playerItem = AVPlayerItem(url: signedURL)
                 let queuePlayer = AVQueuePlayer()
                 queuePlayer.automaticallyWaitsToMinimizeStalling = false
 
-                // Observe buffering progress on template item
                 observeBuffering(item: playerItem)
 
-                // AVPlayerLooper handles seamless looping internally
                 let looper = AVPlayerLooper(player: queuePlayer, templateItem: playerItem)
 
                 queuePlayer.play()
 
-                self.player = queuePlayer  // AVQueuePlayer is a subclass of AVPlayer
-                self.playerLooper = looper  // Must retain -- looper stops if deallocated
+                self.player = queuePlayer
+                self.playerLooper = looper
             }
         } catch {
             await MainActor.run {

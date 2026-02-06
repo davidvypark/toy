@@ -19,6 +19,9 @@ struct CardDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showFinalDeleteConfirmation = false
     @State private var isDeleting = false
+    @State private var showRecordingView = false
+    @State private var recordingViewModel: RecordingViewModel?
+    @State private var isPreparingCamera = false
 
     @Environment(\.dismiss) private var dismiss
     private let cardService = CardService()
@@ -37,7 +40,7 @@ struct CardDetailView: View {
         let hostThumbnailURL = hostClip.flatMap { initialThumbnailURLs[$0.id] }
         contributors.append(ContributorRow(
             id: card.hostId,
-            name: "You (Host)",
+            name: "You (Director)",
             clip: hostClip,
             isHost: true,
             effectiveDuration: hostDuration,
@@ -95,6 +98,21 @@ struct CardDetailView: View {
         viewModel.participants.count >= card.maxParticipants && card.maxParticipants < 999
     }
 
+    /// Whether the director (host) has recorded their clip
+    private var hostHasRecorded: Bool {
+        let clips = viewModel.clips.isEmpty ? initialClips : viewModel.clips
+        return clips.contains { $0.participantId == card.hostId }
+    }
+
+    /// First clip's thumbnail URL for montage preview placeholder (host clip first)
+    private var firstClipThumbnailURL: URL? {
+        let clips = viewModel.clips.isEmpty ? initialClips : viewModel.clips
+        // Host clip is first in montage order
+        let firstClip = clips.first { $0.participantId == card.hostId } ?? clips.first
+        guard let clipId = firstClip?.id else { return nil }
+        return initialThumbnailURLs[clipId]
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -122,6 +140,11 @@ struct CardDetailView: View {
                     }
                     .padding(.top, TOYSpacing.sm)
 
+                    // Record prompt if director hasn't recorded yet
+                    if !hostHasRecorded {
+                        recordYourClipView
+                    }
+
                     // Invite link - prominent CTA
                     inviteLinkView
 
@@ -146,6 +169,7 @@ struct CardDetailView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 EmptyView()
@@ -188,7 +212,9 @@ struct CardDetailView: View {
                 MontagePreviewView(
                     card: card,
                     clips: viewModel.clips,
-                    cachedSignedURLs: viewModel.cachedSignedURLs
+                    cachedSignedURLs: viewModel.cachedSignedURLs,
+                    firstClipThumbnailURL: firstClipThumbnailURL,
+                    cardViewModel: viewModel
                 ) {
                     showMontagePreview = false
                     Task { await viewModel.loadData(for: card.id, hostId: card.hostId) }
@@ -200,6 +226,15 @@ struct CardDetailView: View {
                 card: card,
                 currentParticipantCount: viewModel.participants.count
             )
+        }
+        .fullScreenCover(isPresented: $showRecordingView) {
+            if let vm = recordingViewModel {
+                RecordingView(viewModel: vm)
+                    .onDisappear {
+                        recordingViewModel = nil
+                        Task { await viewModel.loadData(for: card.id, hostId: card.hostId) }
+                    }
+            }
         }
         .onChange(of: viewModel.errorMessage) { _, newValue in
             showError = newValue != nil
@@ -276,6 +311,78 @@ struct CardDetailView: View {
             }
         }
         .padding(.vertical, TOYSpacing.md)
+    }
+
+    // MARK: - Record Your Clip
+
+    private var recordYourClipView: some View {
+        Button {
+            prepareAndShowRecording()
+        } label: {
+            HStack(spacing: TOYSpacing.md) {
+                if isPreparingCamera {
+                    ProgressView()
+                        .tint(.toyBackground)
+                        .frame(width: 16, height: 16)
+                } else {
+                    Image(systemName: "video.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.toyBackground)
+                }
+
+                VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                    Text(isPreparingCamera ? "Preparing Camera..." : "Record Your Clip")
+                        .font(.toyBodyMedium())
+                        .foregroundColor(.toyBackground)
+                    Text("Start the card with your message")
+                        .font(.toyCaption())
+                        .foregroundColor(.toyBackground.opacity(0.7))
+                }
+
+                Spacer()
+
+                if !isPreparingCamera {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.toyBackground)
+                }
+            }
+            .padding(TOYSpacing.md)
+            .background(Color.toyText)
+        }
+        .buttonStyle(.plain)
+        .disabled(isPreparingCamera)
+    }
+
+    private func prepareAndShowRecording() {
+        guard let user = currentUser else { return }
+        isPreparingCamera = true
+
+        // Create and pre-warm the recording view model
+        let vm = RecordingViewModel(
+            cardId: card.id,
+            participantId: user.id,
+            isHostClip: true
+        )
+        recordingViewModel = vm
+
+        // Wait for camera to be ready, then present
+        Task {
+            await vm.onAppear()
+
+            // Wait for session to be ready (with timeout)
+            for _ in 0..<30 {  // 3 second timeout
+                if vm.recorder.isSessionReady {
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s
+            }
+
+            await MainActor.run {
+                isPreparingCamera = false
+                showRecordingView = true
+            }
+        }
     }
 
     // MARK: - Invite Link
@@ -379,7 +486,7 @@ struct CardDetailView: View {
         } label: {
             HStack(spacing: TOYSpacing.md) {
                 VStack(alignment: .leading, spacing: TOYSpacing.xs) {
-                    Text("Preview Montage")
+                    Text("Preview Full Video")
                         .font(.toyBodyMedium())
                         .foregroundColor(.toyBackground)
                     Text("\(viewModel.clips.count) clips - \(formattedDuration) total")
@@ -446,7 +553,7 @@ private struct ContributorClipRow: View {
                         .frame(width: 40, height: 40)
                         .overlay {
                             if contributor.isHost {
-                                Text("H")
+                                Text("D")
                                     .font(.toySubheadline())
                                     .foregroundColor(.toyText)
                             } else {
@@ -494,7 +601,7 @@ private struct ContributorClipRow: View {
                         }
                 }
             }
-            .padding(.vertical, TOYSpacing.sm)
+            .padding(.vertical, TOYSpacing.xs)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -539,7 +646,7 @@ private struct ContributorSkeletonRow: View {
                 .fill(Color.toyDivider)
                 .frame(width: 50, height: 66)
         }
-        .padding(.vertical, TOYSpacing.sm)
+        .padding(.vertical, TOYSpacing.xs)
     }
 }
 

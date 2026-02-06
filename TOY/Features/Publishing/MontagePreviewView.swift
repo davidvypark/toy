@@ -93,10 +93,9 @@ struct MontagePreviewView: View {
                         }
                     }
 
-                    // Loading overlay - thumbnail with progress text
+                    // Loading overlay — full-brightness thumbnail with subtle loading bar
                     if !isPlayerReady && !publishViewModel.state.isInProgress {
-                        ZStack {
-                            // First clip thumbnail as background
+                        ZStack(alignment: .bottom) {
                             if let thumbnailURL = firstClipThumbnailURL {
                                 KFImage(thumbnailURL)
                                     .resizable()
@@ -105,12 +104,7 @@ struct MontagePreviewView: View {
                                     .clipped()
                             }
 
-                            // Semi-transparent overlay
-                            Color.black.opacity(0.5)
-
-                            ProgressView()
-                                .tint(.warmCream)
-                                .scaleEffect(1.2)
+                            TOYLoadingBar()
                         }
                     }
 
