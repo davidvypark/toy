@@ -58,9 +58,21 @@ A group video greeting card app where a host creates a card, invites participant
 - Text overlays on videos — video-only for MVP
 - OAuth/social login — simple auth for MVP
 
+## Current Milestone: v1.1 Video Playback Quality
+
+**Goal:** Achieve Instagram/TikTok-level video playback smoothness across all video surfaces in the app
+
+**Target features:**
+- Unified video playback infrastructure (shared across all player views)
+- Disk-level video caching (videos don't re-download on revisit)
+- Preloading and buffer-before-display (no frozen frames)
+- Smooth loading UX with real progress (no jumps from 0% to 30%)
+- First-frame thumbnails (not 0.5s)
+- Instant replay on re-visit (cached videos play immediately)
+
 ## Context
 
-**Existing codebase:** Fresh SwiftUI project with boilerplate structure. No existing functionality beyond app shell.
+**Existing codebase:** Complete v1.0 MVP with full end-to-end flow. 4 separate video player implementations with no shared infrastructure. Video playback suffers from slow loading, progress jumps, frozen first frames, and non-functional caching on re-visit.
 
 **Target users:**
 - Hosts: People organizing group messages for occasions (birthdays, weddings, get well, congratulations, holidays)
@@ -92,4 +104,4 @@ A group video greeting card app where a host creates a card, invites participant
 | Free tier ~8 participants | Allows small groups to try before paying | — Pending |
 
 ---
-*Last updated: 2026-02-01 after initialization*
+*Last updated: 2026-02-06 after milestone v1.1 start*
