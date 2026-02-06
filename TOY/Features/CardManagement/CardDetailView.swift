@@ -364,6 +364,11 @@ struct CardDetailView: View {
             participantId: user.id,
             isHostClip: true
         )
+        vm.onClipCreated = { [viewModel] clip in
+            Task { @MainActor in
+                viewModel.clips.append(clip)
+            }
+        }
         recordingViewModel = vm
 
         // Wait for camera to be ready, then present

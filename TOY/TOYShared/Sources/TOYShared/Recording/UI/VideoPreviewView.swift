@@ -16,6 +16,8 @@ public struct VideoPreviewView: View {
 
     @State private var player: AVPlayer?
     @State private var playerLooper: AVPlayerLooper?
+    @State private var thumbnail: UIImage?
+    @State private var isPlayerReady = false
 
     public init(
         videoURL: URL,
@@ -32,25 +34,37 @@ public struct VideoPreviewView: View {
             // Video player - custom view without controls
             ZStack {
                 if let player {
-                    LoopingVideoPlayer(player: player)
-                        .aspectRatio(9/16, contentMode: .fit)
-                        .overlay(alignment: .bottom) {
+                    LoopingVideoPlayer(player: player) {
+                        isPlayerReady = true
+                    }
+                    .aspectRatio(9/16, contentMode: .fit)
+                    .opacity(isPlayerReady ? 1 : 0)
+                    .overlay(alignment: .bottom) {
+                        if isPlayerReady {
                             Text("Thinking Of You")
                                 .font(.custom("DMSerifDisplay-Regular", size: 24))
                                 .foregroundColor(.white)
                                 .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                                 .padding(.bottom, 16)
                         }
-                } else {
-                    Rectangle()
-                        .fill(Color.black)
-                        .aspectRatio(9/16, contentMode: .fit)
-                        .overlay {
-                            ProgressView()
-                                .tint(.white)
-                        }
+                    }
                 }
 
+                // Thumbnail placeholder — shown until player renders first frame
+                if !isPlayerReady {
+                    if let thumbnail {
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(maxWidth: .infinity)
+                            .aspectRatio(9/16, contentMode: .fit)
+                            .clipped()
+                    } else {
+                        Rectangle()
+                            .fill(Color.black)
+                            .aspectRatio(9/16, contentMode: .fit)
+                    }
+                }
             }
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .padding(.horizontal, 24)
@@ -80,6 +94,7 @@ public struct VideoPreviewView: View {
         }
         .background(Color.toyBackground)
         .onAppear {
+            generateThumbnail()
             setupPlayer()
         }
         .onDisappear {
@@ -88,6 +103,15 @@ public struct VideoPreviewView: View {
             player?.pause()
             player?.replaceCurrentItem(with: nil)
             player = nil
+        }
+    }
+
+    private func generateThumbnail() {
+        let asset = AVURLAsset(url: videoURL)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        if let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil) {
+            thumbnail = UIImage(cgImage: cgImage)
         }
     }
 
@@ -110,9 +134,11 @@ public struct VideoPreviewView: View {
 /// A simple looping video player without playback controls.
 private struct LoopingVideoPlayer: UIViewRepresentable {
     let player: AVPlayer
+    let onReadyToDisplay: () -> Void
 
     func makeUIView(context: Context) -> PlayerUIView {
         let view = PlayerUIView()
+        view.onReadyToDisplay = onReadyToDisplay
         view.player = player
         return view
     }
@@ -123,6 +149,9 @@ private struct LoopingVideoPlayer: UIViewRepresentable {
 }
 
 private class PlayerUIView: UIView {
+    private var layerObserver: NSKeyValueObservation?
+    var onReadyToDisplay: (() -> Void)?
+
     override class var layerClass: AnyClass {
         AVPlayerLayer.self
     }
@@ -136,7 +165,24 @@ private class PlayerUIView: UIView {
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
+
+            layerObserver?.invalidate()
+            layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in
+                if layer.isReadyForDisplay {
+                    DispatchQueue.main.async {
+                        self?.onReadyToDisplay?()
+                    }
+                }
+            }
+
+            if playerLayer.isReadyForDisplay {
+                onReadyToDisplay?()
+            }
         }
+    }
+
+    deinit {
+        layerObserver?.invalidate()
     }
 }
 

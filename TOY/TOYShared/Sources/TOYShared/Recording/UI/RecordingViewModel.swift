@@ -33,6 +33,10 @@ public final class RecordingViewModel: ObservableObject {
     /// Optional callback when a participant (non-host) clip is successfully uploaded.
     /// Used by the main app to send push notifications to the director.
     public var onParticipantClipUploaded: ((Card) async -> Void)?
+
+    /// Callback when a clip record is created on the server.
+    /// Used to optimistically update the parent view before dismiss.
+    public var onClipCreated: ((Clip) -> Void)?
     
     // MARK: - Dependencies
     
@@ -235,6 +239,7 @@ public final class RecordingViewModel: ObservableObject {
                         status: "uploaded"
                     )
                     createdClip = clip
+                    onClipCreated?(clip)
 #if DEBUG
                     print("[DURATION DEBUG] Created clip, returned duration: \(String(describing: clip.durationSeconds))")
 #endif
