@@ -127,11 +127,12 @@ Plans:
   3. Newly recorded clips generate thumbnails at a natural moment (~1.5s) where the person is composed, not mid-setup at 0.5s
   4. Videos loop seamlessly with no visible pause, stutter, or black flash at the loop point
   5. Video audio plays correctly even when the device ringer/silent switch is set to silent mode
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 09-01: TBD
-- [ ] 09-02: TBD
+- [ ] 09-01-PLAN.md -- Remove percentage text from loading overlays and enable immediate playback start
+- [ ] 09-02-PLAN.md -- Change thumbnail generation time to 1.5s and verify audio session
+- [ ] 09-03-PLAN.md -- Replace looping pattern with AVPlayerLooper for seamless video loops
 
 ### Phase 10: Unified Player & Loading UX
 **Goal**: All 4 separate video player implementations are replaced by a single TOYVideoPlayerView with a polished loading experience that transitions seamlessly from thumbnail to video
@@ -193,7 +194,7 @@ Phases execute in numeric order: 9 -> 10 -> 11 -> 12
 | 6. Video Stitching & Publishing | v1.0 | 4/4 | Complete | 2026-02-02 |
 | 7. App Clip Integration | v1.0 | 4/4 | Complete | 2026-02-02 |
 | 8. Recipient Flow & Monetization | v1.0 | 6/6 | Complete | 2026-02-02 |
-| 9. Quick Playback Wins | v1.1 | 0/TBD | Not started | - |
+| 9. Quick Playback Wins | v1.1 | 0/3 | Not started | - |
 | 10. Unified Player & Loading UX | v1.1 | 0/TBD | Not started | - |
 | 11. Cache Infrastructure | v1.1 | 0/TBD | Not started | - |
 | 12. Preloading Pipeline | v1.1 | 0/TBD | Not started | - |
