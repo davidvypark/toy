@@ -16,6 +16,7 @@ struct ClipPreviewSheet: View {
     @State private var player: AVPlayer?
     @State private var isDeleting = false
     @State private var playerStatusObserver: NSKeyValueObservation?
+    @State private var playerLooper: AVPlayerLooper?
 
     @Environment(\.dismiss) private var dismiss
 
@@ -177,11 +178,15 @@ struct ClipPreviewSheet: View {
     }
 
     private func setupPlayer(with url: URL) {
-        let newPlayer = AVPlayer(url: url)
-        newPlayer.automaticallyWaitsToMinimizeStalling = false
-        newPlayer.play()
+        let playerItem = AVPlayerItem(url: url)
+        let queuePlayer = AVQueuePlayer()
+        queuePlayer.automaticallyWaitsToMinimizeStalling = false
 
-        playerStatusObserver = newPlayer.currentItem?.observe(\.status, options: [.new]) { item, _ in
+        // AVPlayerLooper handles seamless looping internally
+        let looper = AVPlayerLooper(player: queuePlayer, templateItem: playerItem)
+
+        // Status observer on the template item
+        playerStatusObserver = playerItem.observe(\.status, options: [.new]) { item, _ in
             DispatchQueue.main.async {
                 if case .failed = item.status {
                     loadError = item.error?.localizedDescription ?? "Failed to load video"
@@ -189,22 +194,19 @@ struct ClipPreviewSheet: View {
             }
         }
 
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: newPlayer.currentItem,
-            queue: .main
-        ) { _ in
-            newPlayer.seek(to: .zero)
-            newPlayer.play()
-        }
+        queuePlayer.play()
 
-        player = newPlayer
+        player = queuePlayer
+        playerLooper = looper
     }
 
     private func cleanupPlayer() {
         playerStatusObserver?.invalidate()
         playerStatusObserver = nil
+        playerLooper?.disableLooping()
+        playerLooper = nil
         player?.pause()
+        player?.replaceCurrentItem(with: nil)
         player = nil
         isPlayerReady = false
     }

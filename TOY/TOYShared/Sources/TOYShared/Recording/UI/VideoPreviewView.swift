@@ -15,6 +15,7 @@ public struct VideoPreviewView: View {
     let onConfirm: () -> Void
 
     @State private var player: AVPlayer?
+    @State private var playerLooper: AVPlayerLooper?
 
     public init(
         videoURL: URL,
@@ -82,26 +83,25 @@ public struct VideoPreviewView: View {
             setupPlayer()
         }
         .onDisappear {
+            playerLooper?.disableLooping()
+            playerLooper = nil
             player?.pause()
+            player?.replaceCurrentItem(with: nil)
             player = nil
         }
     }
 
     private func setupPlayer() {
-        let newPlayer = AVPlayer(url: videoURL)
-        newPlayer.play()
+        let playerItem = AVPlayerItem(url: videoURL)
+        let queuePlayer = AVQueuePlayer()
 
-        // Loop playback
-        NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: newPlayer.currentItem,
-            queue: .main
-        ) { _ in
-            newPlayer.seek(to: .zero)
-            newPlayer.play()
-        }
+        // AVPlayerLooper handles seamless looping internally
+        let looper = AVPlayerLooper(player: queuePlayer, templateItem: playerItem)
 
-        player = newPlayer
+        queuePlayer.play()
+
+        player = queuePlayer
+        playerLooper = looper
     }
 }
 

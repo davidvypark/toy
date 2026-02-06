@@ -28,6 +28,7 @@ struct PublishedCardPlayerView: View {
     @State private var profiles: [UUID: (displayName: String?, avatarURL: URL?)] = [:]
     @State private var showCopiedToast = false
     @State private var bufferObserver: NSKeyValueObservation?
+    @State private var playerLooper: AVPlayerLooper?
     @State private var firstClipThumbnailURL: URL?
 
     private let storageService = StorageService()
@@ -205,6 +206,8 @@ struct PublishedCardPlayerView: View {
             await loadVideo()
         }
         .onDisappear {
+            playerLooper?.disableLooping()
+            playerLooper = nil
             player?.pause()
             player?.replaceCurrentItem(with: nil)
             player = nil
@@ -237,24 +240,19 @@ struct PublishedCardPlayerView: View {
 
             await MainActor.run {
                 let playerItem = AVPlayerItem(url: signedURL)
-                let avPlayer = AVPlayer(playerItem: playerItem)
-                avPlayer.automaticallyWaitsToMinimizeStalling = false
+                let queuePlayer = AVQueuePlayer()
+                queuePlayer.automaticallyWaitsToMinimizeStalling = false
 
-                // Observe buffering progress
+                // Observe buffering progress on template item
                 observeBuffering(item: playerItem)
 
-                avPlayer.play()
+                // AVPlayerLooper handles seamless looping internally
+                let looper = AVPlayerLooper(player: queuePlayer, templateItem: playerItem)
 
-                NotificationCenter.default.addObserver(
-                    forName: .AVPlayerItemDidPlayToEndTime,
-                    object: playerItem,
-                    queue: .main
-                ) { _ in
-                    avPlayer.seek(to: .zero)
-                    avPlayer.play()
-                }
+                queuePlayer.play()
 
-                self.player = avPlayer
+                self.player = queuePlayer  // AVQueuePlayer is a subclass of AVPlayer
+                self.playerLooper = looper  // Must retain -- looper stops if deallocated
             }
         } catch {
             await MainActor.run {
