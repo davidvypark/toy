@@ -45,18 +45,20 @@ public final class VideoMerger {
         var firstTransform: CGAffineTransform?
 
         for clipURL in clipURLs {
-            // Use options to reduce memory footprint for large montages
+            // Precise timing ensures frame-accurate duration — eliminates black flash at join points
             let asset = AVURLAsset(url: clipURL, options: [
-                AVURLAssetPreferPreciseDurationAndTimingKey: false
+                AVURLAssetPreferPreciseDurationAndTimingKey: true
             ])
 
-            // Load duration
-            let duration = try await asset.load(.duration)
-            let timeRange = CMTimeRange(start: .zero, duration: duration)
+            // Use source track's actual time range for frame-accurate insertion
+            let sourceVideoTrack = try await asset.loadTracks(withMediaType: .video).first
+            let sourceAudioTrack = try await asset.loadTracks(withMediaType: .audio).first
 
-            // Insert video track
-            if let sourceVideoTrack = try await asset.loadTracks(withMediaType: .video).first {
-                try videoTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: insertTime)
+            guard let referenceTrack = sourceVideoTrack ?? sourceAudioTrack else { continue }
+            let trackTimeRange = try await referenceTrack.load(.timeRange)
+
+            if let sourceVideoTrack {
+                try videoTrack.insertTimeRange(trackTimeRange, of: sourceVideoTrack, at: insertTime)
 
                 // Capture transform from first clip for consistent orientation
                 if firstTransform == nil {
@@ -64,12 +66,11 @@ public final class VideoMerger {
                 }
             }
 
-            // Insert audio track
-            if let sourceAudioTrack = try await asset.loadTracks(withMediaType: .audio).first {
-                try audioTrack.insertTimeRange(timeRange, of: sourceAudioTrack, at: insertTime)
+            if let sourceAudioTrack {
+                try audioTrack.insertTimeRange(trackTimeRange, of: sourceAudioTrack, at: insertTime)
             }
 
-            insertTime = CMTimeAdd(insertTime, duration)
+            insertTime = CMTimeAdd(insertTime, trackTimeRange.duration)
         }
 
         // Apply first clip's transform for consistent orientation
@@ -157,18 +158,20 @@ public final class VideoMerger {
         var firstTransform: CGAffineTransform?
 
         for clipURL in clipURLs {
-            // Use options to reduce memory footprint for large montages
+            // Precise timing ensures frame-accurate duration — eliminates black flash at join points
             let asset = AVURLAsset(url: clipURL, options: [
-                AVURLAssetPreferPreciseDurationAndTimingKey: false
+                AVURLAssetPreferPreciseDurationAndTimingKey: true
             ])
 
-            // Load duration
-            let duration = try await asset.load(.duration)
-            let timeRange = CMTimeRange(start: .zero, duration: duration)
+            // Use source track's actual time range for frame-accurate insertion
+            let sourceVideoTrack = try await asset.loadTracks(withMediaType: .video).first
+            let sourceAudioTrack = try await asset.loadTracks(withMediaType: .audio).first
 
-            // Insert video track
-            if let sourceVideoTrack = try await asset.loadTracks(withMediaType: .video).first {
-                try videoTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: insertTime)
+            guard let referenceTrack = sourceVideoTrack ?? sourceAudioTrack else { continue }
+            let trackTimeRange = try await referenceTrack.load(.timeRange)
+
+            if let sourceVideoTrack {
+                try videoTrack.insertTimeRange(trackTimeRange, of: sourceVideoTrack, at: insertTime)
 
                 // Capture transform from first clip for consistent orientation
                 if firstTransform == nil {
@@ -176,12 +179,11 @@ public final class VideoMerger {
                 }
             }
 
-            // Insert audio track
-            if let sourceAudioTrack = try await asset.loadTracks(withMediaType: .audio).first {
-                try audioTrack.insertTimeRange(timeRange, of: sourceAudioTrack, at: insertTime)
+            if let sourceAudioTrack {
+                try audioTrack.insertTimeRange(trackTimeRange, of: sourceAudioTrack, at: insertTime)
             }
 
-            insertTime = CMTimeAdd(insertTime, duration)
+            insertTime = CMTimeAdd(insertTime, trackTimeRange.duration)
         }
 
         // Apply first clip's transform for consistent orientation
