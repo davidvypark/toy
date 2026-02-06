@@ -1,195 +1,205 @@
 # Roadmap: TOY (Thinking Of You)
 
-## Overview
+## Milestones
 
-TOY enables anyone to create heartfelt group video messages in minutes. The roadmap progresses from foundational architecture through the recording pipeline, data layer, host flows, video stitching, App Clip integration, and finally recipient viewing with monetization. Each phase delivers a coherent, verifiable capability that builds toward the complete end-to-end experience of creating, contributing to, and viewing group video cards.
+- v1.0 MVP - Phases 1-8 (shipped 2026-02-02)
+- v1.1 Video Playback Quality - Phases 9-12 (in progress)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [x] **Phase 1: Foundation & Architecture** - Project structure, Supabase setup, theme system ✓
-- [x] **Phase 2: Recording Pipeline** - Vine-style video capture with preview and re-record ✓
-- [x] **Phase 3: Data Layer & Upload** - Storage, deep linking, video upload with progress ✓
-- [x] **Phase 4: Host Card Creation** - Create cards, record host clip, generate invites ✓
-- [x] **Phase 5: Host Card Management** - View participants, preview clips, manage submissions ✓
-- [x] **Phase 6: Video Stitching & Publishing** - Montage generation, preview, publish to recipient ✓
-- [x] **Phase 7: App Clip Integration** - Zero-friction participant recording without app install ✓
-- [x] **Phase 8: Recipient Flow & Monetization** - Video viewing, sharing, payments ✓
-
-## Phase Details
+<details>
+<summary>v1.0 MVP (Phases 1-8) - SHIPPED 2026-02-02</summary>
 
 ### Phase 1: Foundation & Architecture
 **Goal**: Establish the technical foundation with clean architecture, reusable components, and backend connectivity
-**Depends on**: Nothing (first phase)
 **Requirements**: ARCH-01, ARCH-02, ARCH-03, ARCH-04, TECH-01, TECH-02
-**Success Criteria** (what must be TRUE):
-  1. App launches with themed UI matching brand guidelines (DM Serif Display, modern aesthetic)
-  2. Supabase authentication flow works (sign up, sign in, sign out)
-  3. Database schema exists for cards, clips, and participants
-  4. Shared TOYShared Swift Package compiles for both app and App Clip targets
-  5. Reusable button, label, and input components render correctly
-**Plans**: 7 plans in 4 waves
+**Plans**: 7/7 complete
 
 Plans:
-- [x] 01-01-PLAN.md — Create TOYShared Swift Package (Wave 1)
-- [x] 01-02-PLAN.md — Database Schema Design (Wave 1)
-- [x] 01-03-PLAN.md — Theme System & Typography (Wave 2)
-- [x] 01-04-PLAN.md — Supabase Client & Configuration (Wave 2)
-- [x] 01-05-PLAN.md — Reusable UI Components (Wave 3)
-- [x] 01-06-PLAN.md — Auth Service Layer (Wave 3)
-- [x] 01-07-PLAN.md — Wire & Verify Foundation (Wave 4)
+- [x] 01-01: TOYShared Swift Package
+- [x] 01-02: Database Schema Design
+- [x] 01-03: Theme System & Typography
+- [x] 01-04: Supabase Client & Configuration
+- [x] 01-05: Reusable UI Components
+- [x] 01-06: Auth Service Layer
+- [x] 01-07: Wire & Verify Foundation
 
 ### Phase 2: Recording Pipeline
 **Goal**: Users can record 7-second Vine-style video clips with preview and re-record capability
-**Depends on**: Phase 1
 **Requirements**: PART-02, PART-03, PART-04, PART-05
-**Success Criteria** (what must be TRUE):
-  1. User can hold to record and release to pause (Vine-style)
-  2. Recording automatically stops at 7 seconds total
-  3. User can start over and re-record from scratch
-  4. User can preview their complete recording before any action
-  5. Video outputs as H.264, 720p, 30fps (consistent format)
-**Plans**: 6 plans in 4 waves
+**Plans**: 6/6 complete
 
 Plans:
-- [x] 02-01-PLAN.md — Core Capture Infrastructure (Wave 1)
-- [x] 02-02-PLAN.md — Video Merging & Preview Playback (Wave 1)
-- [x] 02-03-PLAN.md — Camera Preview & Permission Config (Wave 2)
-- [x] 02-04-PLAN.md — Recording Coordinator (Wave 2)
-- [x] 02-05-PLAN.md — Recording UI & ViewModel (Wave 3)
-- [x] 02-06-PLAN.md — Wire & Verify Recording Flow (Wave 4)
+- [x] 02-01: Core Capture Infrastructure
+- [x] 02-02: Video Merging & Preview Playback
+- [x] 02-03: Camera Preview & Permission Config
+- [x] 02-04: Recording Coordinator
+- [x] 02-05: Recording UI & ViewModel
+- [x] 02-06: Wire & Verify Recording Flow
 
 ### Phase 3: Data Layer & Upload
 **Goal**: Recorded clips can be uploaded to Supabase storage with progress tracking and deep link support
-**Depends on**: Phase 2
 **Requirements**: TECH-03, TECH-05, TECH-08, PART-06, PART-07
-**Success Criteria** (what must be TRUE):
-  1. User can submit their recorded clip and see upload progress indicator
-  2. Video files are stored in Supabase storage (clips bucket)
-  3. Deep links (Universal Links) open the app to the correct card context
-  4. Videos are accessible only via signed URLs (secure access)
-  5. Upload completes reliably with retry on failure
-**Plans**: 4 plans in 3 waves
+**Plans**: 4/4 complete
 
 Plans:
-- [x] 03-01-PLAN.md — Storage Service & Supabase Bucket Setup (Wave 1)
-- [x] 03-02-PLAN.md — Deep Link Infrastructure (Wave 1)
-- [x] 03-03-PLAN.md — Upload UI & Integration (Wave 2)
-- [x] 03-04-PLAN.md — Verify & Human Test (Wave 3)
+- [x] 03-01: Storage Service & Supabase Bucket Setup
+- [x] 03-02: Deep Link Infrastructure
+- [x] 03-03: Upload UI & Integration
+- [x] 03-04: Verify & Human Test
 
 ### Phase 4: Host Card Creation
 **Goal**: Hosts can create new cards, record their own clip, and invite participants
-**Depends on**: Phase 3
 **Requirements**: HOST-01, HOST-02, HOST-03
-**Success Criteria** (what must be TRUE):
-  1. Host can create a new card from the dashboard
-  2. Host can record their own video clip (using Phase 2 recording flow)
-  3. Host's clip is marked to appear first in the final montage
-  4. Host can generate a shareable invite link for participants
-  5. Invite link contains card context for participant routing
-**Plans**: 4 plans in 3 waves
+**Plans**: 4/4 complete
 
 Plans:
-- [x] 04-01-PLAN.md — Models & CardService (Wave 1)
-- [x] 04-02-PLAN.md — Card Creation Form (Wave 2)
-- [x] 04-03-PLAN.md — Recording with Card Context (Wave 2)
-- [x] 04-04-PLAN.md — Wire Flow & ShareLink (Wave 3)
+- [x] 04-01: Models & CardService
+- [x] 04-02: Card Creation Form
+- [x] 04-03: Recording with Card Context
+- [x] 04-04: Wire Flow & ShareLink
 
 ### Phase 5: Host Card Management
 **Goal**: Hosts can view all participants, preview submitted clips, and manage their card
-**Depends on**: Phase 4
 **Requirements**: HOST-04, HOST-05, HOST-06
-**Success Criteria** (what must be TRUE):
-  1. Host can view list of all invitees and their submission status
-  2. Host can preview each submitted clip individually
-  3. Host can delete unwanted clips from the card
-  4. Participant list updates to reflect current submissions
-**Plans**: 3 plans in 3 waves
+**Plans**: 3/3 complete
 
 Plans:
-- [x] 05-01-PLAN.md — CardService Extensions & ParticipantRow (Wave 1)
-- [x] 05-02-PLAN.md — CardDetailView & ClipPreviewSheet (Wave 2)
-- [x] 05-03-PLAN.md — Wire Navigation & Human Verify (Wave 3)
+- [x] 05-01: CardService Extensions & ParticipantRow
+- [x] 05-02: CardDetailView & ClipPreviewSheet
+- [x] 05-03: Wire Navigation & Human Verify
 
 ### Phase 6: Video Stitching & Publishing
 **Goal**: Hosts can preview the full stitched montage and publish the final card for recipients
-**Depends on**: Phase 5
 **Requirements**: HOST-07, HOST-08, HOST-09, TECH-04, TECH-07
-**Success Criteria** (what must be TRUE):
-  1. Host can preview the full stitched montage (host first, then chronological)
-  2. Video stitching produces seamless output with consistent quality
-  3. Host can finalize and publish the card
-  4. Host receives shareable link to send to the recipient
-  5. Final montage is stored in Supabase storage (videos bucket)
-**Plans**: 4 plans in 3 waves
+**Plans**: 4/4 complete
 
 Plans:
-- [x] 06-01-PLAN.md — Videos Bucket & Service Extensions (Wave 1)
-- [x] 06-02-PLAN.md — MontageService & VideoMerger Progress (Wave 1)
-- [x] 06-03-PLAN.md — Publishing UI (Wave 2)
-- [x] 06-04-PLAN.md — Wire Navigation & Human Verify (Wave 3)
+- [x] 06-01: Videos Bucket & Service Extensions
+- [x] 06-02: MontageService & VideoMerger Progress
+- [x] 06-03: Publishing UI
+- [x] 06-04: Wire Navigation & Human Verify
 
 ### Phase 7: App Clip Integration
 **Goal**: Participants can open invite links and record clips without installing the full app
-**Depends on**: Phase 3 (recording + upload must work)
 **Requirements**: TECH-06, PART-01
-**Success Criteria** (what must be TRUE):
-  1. Participant can open invite link via App Clip (no app install required)
-  2. App Clip binary is under 15MB (iOS 16+)
-  3. Recording flow works identically in App Clip as in main app
-  4. Uploaded clips from App Clip appear in host's card management view
-  5. App Clip prompts user to get full app after submission
-**Plans**: 4 plans in 3 waves
+**Plans**: 4/4 complete
 
 Plans:
-- [x] 07-01-PLAN.md — Backend support for unauthenticated card lookup (Wave 1)
-- [x] 07-02-PLAN.md — App Clip target setup (Wave 1)
-- [x] 07-03-PLAN.md — App Clip entry point and recording flow (Wave 2)
-- [x] 07-04-PLAN.md — Upload success view and human verification (Wave 3)
+- [x] 07-01: Backend support for unauthenticated card lookup
+- [x] 07-02: App Clip target setup
+- [x] 07-03: App Clip entry point and recording flow
+- [x] 07-04: Upload success view and human verification
 
 ### Phase 8: Recipient Flow & Monetization
 **Goal**: Recipients can view final videos and hosts can purchase card upgrades
-**Depends on**: Phase 6
 **Requirements**: RCPT-01, RCPT-02, RCPT-03, RCPT-04, MNTZ-01, MNTZ-02, TECH-09
-**Success Criteria** (what must be TRUE):
-  1. Recipient can open link and view the final montage
-  2. Video auto-plays when recipient opens the link
-  3. Video displays with subtle TOY branding
-  4. Recipient can reshare video to social media
-  5. Host can purchase per-card upgrades via RevenueCat
-  6. Free tier works for cards with 8 or fewer participants
-**Plans**: 6 plans in 3 waves
+**Plans**: 6/6 complete
 
 Plans:
-- [x] 08-01-PLAN.md — Next.js web project setup with Supabase (Wave 1)
-- [x] 08-02-PLAN.md — Video viewer page with branding and social sharing (Wave 2)
-- [x] 08-03-PLAN.md — RevenueCat SDK setup and PurchaseService (Wave 1)
-- [x] 08-04-PLAN.md — Upgrade UI and free tier enforcement (Wave 2)
-- [x] 08-05-PLAN.md — PostHog analytics integration (Wave 1) — removed, using DB timestamps
-- [x] 08-06-PLAN.md — Human verification of recipient flow and monetization (Wave 3)
+- [x] 08-01: Next.js web project setup with Supabase
+- [x] 08-02: Video viewer page with branding and social sharing
+- [x] 08-03: RevenueCat SDK setup and PurchaseService
+- [x] 08-04: Upgrade UI and free tier enforcement
+- [x] 08-05: PostHog analytics integration
+- [x] 08-06: Human verification of recipient flow and monetization
+
+</details>
+
+### v1.1 Video Playback Quality (In Progress)
+
+**Milestone Goal:** Achieve Instagram/TikTok-level video playback smoothness across all video surfaces -- instant replay on re-visit, seamless loading transitions, no frozen frames or progress jumps
+
+- [ ] **Phase 9: Quick Playback Wins** - Eliminate visible playback annoyances with targeted fixes
+- [ ] **Phase 10: Unified Player & Loading UX** - Single player component with polished thumbnail-to-video transitions
+- [ ] **Phase 11: Cache Infrastructure** - Disk video cache and signed URL management for instant replay
+- [ ] **Phase 12: Preloading Pipeline** - Background video downloads so playback starts instantly on navigation
+
+## Phase Details
+
+### Phase 9: Quick Playback Wins
+**Goal**: Users experience noticeably faster, smoother video playback through targeted behavioral fixes across all existing player views
+**Depends on**: Phase 8 (v1.0 complete)
+**Requirements**: LOAD-02, LOAD-04, QUAL-01, QUAL-02, QUAL-03
+**Success Criteria** (what must be TRUE):
+  1. No percentage text appears anywhere during video loading -- loading state is communicated visually through thumbnails and transitions only
+  2. Video playback begins within ~500ms of player appearing, without waiting for full buffer to fill
+  3. Newly recorded clips generate thumbnails at a natural moment (~1.5s) where the person is composed, not mid-setup at 0.5s
+  4. Videos loop seamlessly with no visible pause, stutter, or black flash at the loop point
+  5. Video audio plays correctly even when the device ringer/silent switch is set to silent mode
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: TBD
+- [ ] 09-02: TBD
+
+### Phase 10: Unified Player & Loading UX
+**Goal**: All 4 separate video player implementations are replaced by a single TOYVideoPlayerView with a polished loading experience that transitions seamlessly from thumbnail to video
+**Depends on**: Phase 9
+**Requirements**: PLAY-01, LOAD-01, LOAD-03, LOAD-05
+**Success Criteria** (what must be TRUE):
+  1. A single TOYVideoPlayerView component is used across PublishedCardPlayerView, MontagePreviewView, ClipPreviewSheet, and VideoPreviewView -- no duplicate UIViewRepresentable wrappers remain
+  2. When a video is loading, the thumbnail fills the entire frame as a placeholder (no small thumbnail with dark overlay or "Loading video..." text)
+  3. The transition from thumbnail to live video is a smooth crossfade with zero black frames visible at any point
+  4. A subtle shimmer animation plays over the thumbnail while the video is loading, replacing any static loading indicators
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: TBD
+- [ ] 10-02: TBD
+- [ ] 10-03: TBD
+
+### Phase 11: Cache Infrastructure
+**Goal**: Videos play instantly from disk on re-visit and signed URLs are managed transparently so playback never fails due to URL expiry
+**Depends on**: Phase 10
+**Requirements**: PLAY-02, PLAY-03
+**Success Criteria** (what must be TRUE):
+  1. Re-visiting a previously watched published card plays the video instantly from disk cache (~100ms) with no loading indicator or network activity
+  2. Videos remain cached across app launches -- closing and reopening the app does not require re-downloading previously watched videos
+  3. Signed URLs refresh transparently when they approach expiry -- the user never sees a playback error caused by an expired URL, even if the app has been open for hours
+  4. Cache respects a size limit (LRU eviction) so disk usage stays bounded even after watching many videos
+**Plans**: TBD
+
+Plans:
+- [ ] 11-01: TBD
+- [ ] 11-02: TBD
+
+### Phase 12: Preloading Pipeline
+**Goal**: Videos are downloaded in the background before the user navigates to them, so playback starts instantly on every tap
+**Depends on**: Phase 11
+**Requirements**: PLAY-04, PLAY-05
+**Success Criteria** (what must be TRUE):
+  1. When the home screen card list loads, published card videos begin downloading in the background -- by the time the user taps a card, playback starts instantly from cache
+  2. When the montage preview opens, all clip videos have been downloaded to disk and the AVQueuePlayer plays from local files with no inter-clip buffering gaps
+  3. Preloading respects network conditions and does not visibly degrade app responsiveness or consume excessive bandwidth
+**Plans**: TBD
+
+Plans:
+- [ ] 12-01: TBD
+- [ ] 12-02: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
+Phases execute in numeric order: 9 -> 10 -> 11 -> 12
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Foundation & Architecture | 7/7 | Complete | 2026-02-01 |
-| 2. Recording Pipeline | 6/6 | Complete | 2026-02-02 |
-| 3. Data Layer & Upload | 4/4 | Complete | 2026-02-02 |
-| 4. Host Card Creation | 4/4 | Complete | 2026-02-02 |
-| 5. Host Card Management | 3/3 | Complete | 2026-02-02 |
-| 6. Video Stitching & Publishing | 4/4 | Complete | 2026-02-02 |
-| 7. App Clip Integration | 4/4 | Complete | 2026-02-02 |
-| 8. Recipient Flow & Monetization | 6/6 | Complete | 2026-02-02 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundation & Architecture | v1.0 | 7/7 | Complete | 2026-02-01 |
+| 2. Recording Pipeline | v1.0 | 6/6 | Complete | 2026-02-02 |
+| 3. Data Layer & Upload | v1.0 | 4/4 | Complete | 2026-02-02 |
+| 4. Host Card Creation | v1.0 | 4/4 | Complete | 2026-02-02 |
+| 5. Host Card Management | v1.0 | 3/3 | Complete | 2026-02-02 |
+| 6. Video Stitching & Publishing | v1.0 | 4/4 | Complete | 2026-02-02 |
+| 7. App Clip Integration | v1.0 | 4/4 | Complete | 2026-02-02 |
+| 8. Recipient Flow & Monetization | v1.0 | 6/6 | Complete | 2026-02-02 |
+| 9. Quick Playback Wins | v1.1 | 0/TBD | Not started | - |
+| 10. Unified Player & Loading UX | v1.1 | 0/TBD | Not started | - |
+| 11. Cache Infrastructure | v1.1 | 0/TBD | Not started | - |
+| 12. Preloading Pipeline | v1.1 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-01*
-*Depth: comprehensive (8 phases)*
-*Coverage: 35/35 v1 requirements mapped*
+*v1.1 roadmap added: 2026-02-06*
+*Depth: comprehensive (4 phases for v1.1, 12 total)*
+*Coverage: 35/35 v1.0 + 13/13 v1.1 requirements mapped*

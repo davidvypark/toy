@@ -179,30 +179,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MNTZ-02 | Phase 8 | Complete |
 | TECH-09 | Phase 8 | Complete |
 
-### v1.1 (Pending — updated during roadmap creation)
+### v1.1 (In Progress)
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLAY-01 | — | Pending |
-| PLAY-02 | — | Pending |
-| PLAY-03 | — | Pending |
-| PLAY-04 | — | Pending |
-| PLAY-05 | — | Pending |
-| LOAD-01 | — | Pending |
-| LOAD-02 | — | Pending |
-| LOAD-03 | — | Pending |
-| LOAD-04 | — | Pending |
-| LOAD-05 | — | Pending |
-| QUAL-01 | — | Pending |
-| QUAL-02 | — | Pending |
-| QUAL-03 | — | Pending |
+| LOAD-02 | Phase 9 | Pending |
+| LOAD-04 | Phase 9 | Pending |
+| QUAL-01 | Phase 9 | Pending |
+| QUAL-02 | Phase 9 | Pending |
+| QUAL-03 | Phase 9 | Pending |
+| PLAY-01 | Phase 10 | Pending |
+| LOAD-01 | Phase 10 | Pending |
+| LOAD-03 | Phase 10 | Pending |
+| LOAD-05 | Phase 10 | Pending |
+| PLAY-02 | Phase 11 | Pending |
+| PLAY-03 | Phase 11 | Pending |
+| PLAY-04 | Phase 12 | Pending |
+| PLAY-05 | Phase 12 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total (all complete)
+- v1.0 requirements: 35 total (all complete)
 - v1.1 requirements: 13 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 13
+- Mapped to phases: 13/13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-06 after v1.1 milestone requirements definition*
+*Last updated: 2026-02-06 after v1.1 roadmap creation*
