@@ -5,60 +5,86 @@
 
 ## v1 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Requirements for initial release (v1.0). All delivered.
 
 ### Host Flow
 
-- [ ] **HOST-01**: Host can create a new card
-- [ ] **HOST-02**: Host can record their own video clip (appears first in montage)
-- [ ] **HOST-03**: Host can generate shareable invite link
-- [ ] **HOST-04**: Host can view all invitees and their submission status
-- [ ] **HOST-05**: Host can preview each submitted clip
-- [ ] **HOST-06**: Host can delete unwanted clips
-- [ ] **HOST-07**: Host can preview the full stitched montage
-- [ ] **HOST-08**: Host can finalize and publish the card
-- [ ] **HOST-09**: Host receives shareable link to send to recipient
+- [x] **HOST-01**: Host can create a new card
+- [x] **HOST-02**: Host can record their own video clip (appears first in montage)
+- [x] **HOST-03**: Host can generate shareable invite link
+- [x] **HOST-04**: Host can view all invitees and their submission status
+- [x] **HOST-05**: Host can preview each submitted clip
+- [x] **HOST-06**: Host can delete unwanted clips
+- [x] **HOST-07**: Host can preview the full stitched montage
+- [x] **HOST-08**: Host can finalize and publish the card
+- [x] **HOST-09**: Host receives shareable link to send to recipient
 
 ### Participant Flow
 
-- [ ] **PART-01**: Participant can open invite link via App Clip (no app install required)
-- [ ] **PART-02**: Participant can record video Vine-style (hold to record, release to pause)
-- [ ] **PART-03**: Participant recording limited to 7 seconds total
-- [ ] **PART-04**: Participant can start over (delete all and re-record)
-- [ ] **PART-05**: Participant can preview their recording before submitting
-- [ ] **PART-06**: Participant can submit their clip
-- [ ] **PART-07**: Participant sees upload progress indicator during submission
+- [x] **PART-01**: Participant can open invite link via App Clip (no app install required)
+- [x] **PART-02**: Participant can record video Vine-style (hold to record, release to pause)
+- [x] **PART-03**: Participant recording limited to 7 seconds total
+- [x] **PART-04**: Participant can start over (delete all and re-record)
+- [x] **PART-05**: Participant can preview their recording before submitting
+- [x] **PART-06**: Participant can submit their clip
+- [x] **PART-07**: Participant sees upload progress indicator during submission
 
 ### Recipient Flow
 
-- [ ] **RCPT-01**: Recipient can open link and view final montage
-- [ ] **RCPT-02**: Video auto-plays when recipient opens link
-- [ ] **RCPT-03**: Video displays with subtle TOY branding
-- [ ] **RCPT-04**: Recipient can reshare video to social media
+- [x] **RCPT-01**: Recipient can open link and view final montage
+- [x] **RCPT-02**: Video auto-plays when recipient opens link
+- [x] **RCPT-03**: Video displays with subtle TOY branding
+- [x] **RCPT-04**: Recipient can reshare video to social media
 
 ### Technical
 
-- [ ] **TECH-01**: Supabase backend for authentication
-- [ ] **TECH-02**: Supabase database for cards, clips, invites data
-- [ ] **TECH-03**: Supabase storage for video clips (clips bucket)
-- [ ] **TECH-04**: Supabase storage for final videos (videos bucket)
-- [ ] **TECH-05**: Deep linking for invite flow (Universal Links)
-- [ ] **TECH-06**: App Clip target for participant recording flow
-- [ ] **TECH-07**: Server-side video stitching (host first, then chronological)
-- [ ] **TECH-08**: Signed URLs for secure video access
-- [ ] **TECH-09**: Analytics/tracking for user behavior
+- [x] **TECH-01**: Supabase backend for authentication
+- [x] **TECH-02**: Supabase database for cards, clips, invites data
+- [x] **TECH-03**: Supabase storage for video clips (clips bucket)
+- [x] **TECH-04**: Supabase storage for final videos (videos bucket)
+- [x] **TECH-05**: Deep linking for invite flow (Universal Links)
+- [x] **TECH-06**: App Clip target for participant recording flow
+- [x] **TECH-07**: Server-side video stitching (host first, then chronological)
+- [x] **TECH-08**: Signed URLs for secure video access
+- [x] **TECH-09**: Analytics/tracking for user behavior
 
 ### Monetization
 
-- [ ] **MNTZ-01**: One-time purchase per card via RevenueCat
-- [ ] **MNTZ-02**: Free tier for small groups (8 or fewer participants)
+- [x] **MNTZ-01**: One-time purchase per card via RevenueCat
+- [x] **MNTZ-02**: Free tier for small groups (8 or fewer participants)
 
 ### Architecture
 
-- [ ] **ARCH-01**: Clean architecture with MVVM pattern
-- [ ] **ARCH-02**: Reusable UI component library (buttons, labels, inputs)
-- [ ] **ARCH-03**: Theme system supporting future dark/light mode
-- [ ] **ARCH-04**: Shared Swift package for code reuse between app and App Clip
+- [x] **ARCH-01**: Clean architecture with MVVM pattern
+- [x] **ARCH-02**: Reusable UI component library (buttons, labels, inputs)
+- [x] **ARCH-03**: Theme system supporting future dark/light mode
+- [x] **ARCH-04**: Shared Swift package for code reuse between app and App Clip
+
+## v1.1 Requirements
+
+Requirements for Video Playback Quality milestone. Each maps to roadmap phases.
+
+### Playback Infrastructure
+
+- [ ] **PLAY-01**: Unified video player component replaces all 4 separate player implementations
+- [ ] **PLAY-02**: Videos cached to disk with LRU eviction for instant replay on re-visit
+- [ ] **PLAY-03**: Signed URLs managed with TTL tracking and auto-refresh before expiry
+- [ ] **PLAY-04**: Published card videos preloaded in background when card list loads
+- [ ] **PLAY-05**: Montage clips downloaded to disk before queue playback begins
+
+### Loading UX
+
+- [ ] **LOAD-01**: Thumbnail displays as full-bleed placeholder with seamless crossfade to video
+- [ ] **LOAD-02**: No percentage text shown during video loading
+- [ ] **LOAD-03**: Zero black frames between thumbnail and video playback
+- [ ] **LOAD-04**: Video playback starts immediately without waiting for full buffer
+- [ ] **LOAD-05**: Shimmer animation shown over thumbnail during video loading
+
+### Playback Quality
+
+- [ ] **QUAL-01**: Thumbnails generated at 1.5s into clip instead of 0.5s
+- [ ] **QUAL-02**: Video loops seamlessly with no visible gap at loop point
+- [ ] **QUAL-03**: Video audio plays correctly when device is in silent mode
 
 ## v2 Requirements
 
@@ -81,6 +107,10 @@ Deferred to future release. Tracked but not in current roadmap.
 - **VIS-V2-02**: Text overlays on videos
 - **VIS-V2-03**: Transition effects between clips
 
+### Video Quality
+
+- **VID-V2-01**: Adaptive thumbnail generation (multiple candidates with face detection scoring)
+
 ### Platform
 
 - **PLAT-V2-01**: Android version
@@ -91,63 +121,88 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Android version | iOS-first for MVP, evaluate after v1 launch |
-| Clip reordering by host | Auto-order (host first, chronological) is sufficient for MVP |
+| Android version | iOS-first, evaluate after v1 launch |
+| Clip reordering by host | Auto-order (host first, chronological) is sufficient |
 | Trimming/editing clips | Keep recording simple, Vine-style constraints work |
 | Video filters/effects | Post-MVP feature, adds complexity to recording flow |
-| Text overlays | Video-only for MVP, keeps focus on the message |
-| OAuth/social login | Simple email auth for MVP |
+| Text overlays | Video-only, keeps focus on the message |
+| OAuth/social login | Simple auth is sufficient |
 | Subscription model | One-time purchase aligns with event-based usage |
 | Real-time collaboration | Adds significant complexity, async flow works |
-| Multi-recipient cards | One recipient per card for MVP |
+| Multi-recipient cards | One recipient per card |
+| HLS / adaptive bitrate streaming | Videos are 2-5MB; download-first is better than streaming optimization |
+| Custom video player controls | 7-second auto-play clips don't need scrub bars |
+| CDN / video transcoding service | TOY's scale doesn't justify Mux/Cloudflare Stream complexity |
+| Third-party video caching libraries | Custom URL scheme requirement and signed URL rotation make them actively harmful |
 
 ## Traceability
 
 Which phases cover which requirements. Updated during roadmap creation.
 
+### v1.0 (Complete)
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | Phase 1 | Pending |
-| ARCH-02 | Phase 1 | Pending |
-| ARCH-03 | Phase 1 | Pending |
-| ARCH-04 | Phase 1 | Pending |
-| TECH-01 | Phase 1 | Pending |
-| TECH-02 | Phase 1 | Pending |
-| PART-02 | Phase 2 | Pending |
-| PART-03 | Phase 2 | Pending |
-| PART-04 | Phase 2 | Pending |
-| PART-05 | Phase 2 | Pending |
-| TECH-03 | Phase 3 | Pending |
-| TECH-05 | Phase 3 | Pending |
-| TECH-08 | Phase 3 | Pending |
-| PART-06 | Phase 3 | Pending |
-| PART-07 | Phase 3 | Pending |
-| HOST-01 | Phase 4 | Pending |
-| HOST-02 | Phase 4 | Pending |
-| HOST-03 | Phase 4 | Pending |
-| HOST-04 | Phase 5 | Pending |
-| HOST-05 | Phase 5 | Pending |
-| HOST-06 | Phase 5 | Pending |
-| HOST-07 | Phase 6 | Pending |
-| HOST-08 | Phase 6 | Pending |
-| HOST-09 | Phase 6 | Pending |
-| TECH-04 | Phase 6 | Pending |
-| TECH-07 | Phase 6 | Pending |
-| TECH-06 | Phase 7 | Pending |
-| PART-01 | Phase 7 | Pending |
-| RCPT-01 | Phase 8 | Pending |
-| RCPT-02 | Phase 8 | Pending |
-| RCPT-03 | Phase 8 | Pending |
-| RCPT-04 | Phase 8 | Pending |
-| MNTZ-01 | Phase 8 | Pending |
-| MNTZ-02 | Phase 8 | Pending |
-| TECH-09 | Phase 8 | Pending |
+| ARCH-01 | Phase 1 | Complete |
+| ARCH-02 | Phase 1 | Complete |
+| ARCH-03 | Phase 1 | Complete |
+| ARCH-04 | Phase 1 | Complete |
+| TECH-01 | Phase 1 | Complete |
+| TECH-02 | Phase 1 | Complete |
+| PART-02 | Phase 2 | Complete |
+| PART-03 | Phase 2 | Complete |
+| PART-04 | Phase 2 | Complete |
+| PART-05 | Phase 2 | Complete |
+| TECH-03 | Phase 3 | Complete |
+| TECH-05 | Phase 3 | Complete |
+| TECH-08 | Phase 3 | Complete |
+| PART-06 | Phase 3 | Complete |
+| PART-07 | Phase 3 | Complete |
+| HOST-01 | Phase 4 | Complete |
+| HOST-02 | Phase 4 | Complete |
+| HOST-03 | Phase 4 | Complete |
+| HOST-04 | Phase 5 | Complete |
+| HOST-05 | Phase 5 | Complete |
+| HOST-06 | Phase 5 | Complete |
+| HOST-07 | Phase 6 | Complete |
+| HOST-08 | Phase 6 | Complete |
+| HOST-09 | Phase 6 | Complete |
+| TECH-04 | Phase 6 | Complete |
+| TECH-07 | Phase 6 | Complete |
+| TECH-06 | Phase 7 | Complete |
+| PART-01 | Phase 7 | Complete |
+| RCPT-01 | Phase 8 | Complete |
+| RCPT-02 | Phase 8 | Complete |
+| RCPT-03 | Phase 8 | Complete |
+| RCPT-04 | Phase 8 | Complete |
+| MNTZ-01 | Phase 8 | Complete |
+| MNTZ-02 | Phase 8 | Complete |
+| TECH-09 | Phase 8 | Complete |
+
+### v1.1 (Pending — updated during roadmap creation)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| PLAY-01 | — | Pending |
+| PLAY-02 | — | Pending |
+| PLAY-03 | — | Pending |
+| PLAY-04 | — | Pending |
+| PLAY-05 | — | Pending |
+| LOAD-01 | — | Pending |
+| LOAD-02 | — | Pending |
+| LOAD-03 | — | Pending |
+| LOAD-04 | — | Pending |
+| LOAD-05 | — | Pending |
+| QUAL-01 | — | Pending |
+| QUAL-02 | — | Pending |
+| QUAL-03 | — | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 35
-- Unmapped: 0
+- v1 requirements: 35 total (all complete)
+- v1.1 requirements: 13 total
+- Mapped to phases: 0 (pending roadmap)
+- Unmapped: 13
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after roadmap creation*
+*Last updated: 2026-02-06 after v1.1 milestone requirements definition*
