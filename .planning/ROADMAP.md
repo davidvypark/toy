@@ -130,7 +130,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md -- Remove percentage text from loading overlays and enable immediate playback start
+- [x] 09-01-PLAN.md -- Remove percentage text from loading overlays and enable immediate playback start
 - [x] 09-02-PLAN.md -- Change thumbnail generation time to 1.5s and verify audio session
 - [ ] 09-03-PLAN.md -- Replace looping pattern with AVPlayerLooper for seamless video loops
 
