@@ -306,7 +306,7 @@ public final class RecordingViewModel: ObservableObject {
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 150, height: 200)
 
-        let time = CMTime(seconds: 0.5, preferredTimescale: 600)
+        let time = CMTime(seconds: 1.5, preferredTimescale: 600)
 
         do {
             let cgImage = try await generator.image(at: time).image
