@@ -1,441 +1,419 @@
-# TOY - Technology Stack Research
+# Technology Stack: Video Playback Quality
 
-> **Research Type:** Project Research - Stack Dimension
-> **Milestone:** Greenfield iOS App
-> **Last Updated:** 2026-02-01
-> **Confidence Levels:** HIGH (90%+) | MEDIUM (70-89%) | LOW (<70%)
+**Project:** TOY - Group Video Greeting Card App
+**Milestone:** Professional-grade video playback (Instagram/TikTok-level smoothness)
+**Researched:** 2026-02-06
+**Research Type:** Subsequent Milestone (Stack dimension only)
 
 ---
 
 ## Executive Summary
 
-This document defines the recommended 2025/2026 technology stack for TOY, a group video greeting card iOS app. The stack prioritizes native SwiftUI, Apple's first-party frameworks for video handling, and Supabase for backend services.
+TOY's current video playback infrastructure has four separate AVPlayer+AVPlayerLayer implementations with no shared code, no disk caching, and no preloading. Videos stream directly from Supabase signed URLs every time, causing visible loading spinners and progress jumps. For 7-second clips and short montages (under 60 seconds), the optimal strategy is **download-first-then-play-from-disk** rather than streaming optimization. This is a fundamentally different approach from what TikTok/Instagram do (HLS streaming with segment caching) because TOY's videos are small enough to download entirely in under a second on any reasonable connection.
 
-**Core Architecture:** Native iOS (SwiftUI) + Supabase BaaS + Server-side video processing
-
----
-
-## 1. iOS Application Layer
-
-### 1.1 UI Framework
-
-| Component | Recommendation | Version | Confidence |
-|-----------|---------------|---------|------------|
-| **UI Framework** | SwiftUI | iOS 17+ (target iOS 17.0 minimum) | HIGH |
-| **Swift Version** | Swift 5.10+ | Xcode 15.3+ | HIGH |
-| **Minimum iOS** | iOS 17.0 | - | HIGH |
-
-**Rationale:**
-- SwiftUI is Apple's declarative UI framework and has reached production maturity as of iOS 17
-- iOS 17+ provides stable SwiftUI lifecycle, improved animations, and better camera/video APIs
-- iOS 17 adoption is ~85%+ by early 2026, making it a safe minimum target
-- Swift 5.10 includes improved concurrency and type safety features
-
-**What NOT to use:**
-- UIKit as primary framework: SwiftUI handles all TOY's UI requirements; UIKit wrappers only where SwiftUI lacks capability (camera preview)
-- Storyboards/XIBs: Entirely deprecated for new projects; SwiftUI is declarative and more maintainable
-- iOS 16 or lower: Missing critical SwiftUI improvements and camera APIs
-
-### 1.2 Architecture Pattern
-
-| Component | Recommendation | Confidence |
-|-----------|---------------|------------|
-| **Architecture** | MVVM with SwiftUI | HIGH |
-| **State Management** | @Observable (Observation framework) | HIGH |
-| **Dependency Injection** | Swift native (Environment/EnvironmentObject) | HIGH |
-| **Navigation** | NavigationStack (iOS 16+) | HIGH |
-
-**Rationale:**
-- @Observable (iOS 17+) replaces @ObservableObject with better performance and simpler syntax
-- MVVM maps naturally to SwiftUI's declarative model
-- NavigationStack provides type-safe, programmatic navigation superior to NavigationView
-
-**What NOT to use:**
-- @ObservableObject/@StateObject: Deprecated pattern; @Observable is the modern replacement
-- Combine for simple state: @Observable handles most cases; Combine only for complex async streams
-- Third-party DI frameworks (Swinject, etc.): Unnecessary complexity for this app size
-- NavigationView: Deprecated; use NavigationStack
+**Core recommendation:** Build a custom `VideoCacheService` using native `URLSession` + `FileManager` (no third-party caching library needed), unify the four player implementations into a single reusable `TOYVideoPlayerView`, and add a preloading pipeline that downloads upcoming videos to disk before the user navigates to them. This approach avoids new dependencies, works cleanly with Supabase signed URLs, and makes playback instant from local files.
 
 ---
 
-## 2. Video Recording & Processing
+## 1. What to Build (No New Dependencies)
 
-### 2.1 Video Capture (Vine-style hold-to-record)
+### 1.1 Video Cache Layer (Custom, Native)
 
-| Component | Recommendation | Version | Confidence |
-|-----------|---------------|---------|------------|
-| **Camera Framework** | AVFoundation | Native (iOS 17+) | HIGH |
-| **Video Format** | H.264/HEVC | - | HIGH |
-| **Resolution** | 1080p (1920x1080) | - | HIGH |
-| **Max Duration** | 7 seconds | - | HIGH |
-| **Frame Rate** | 30 fps | - | HIGH |
+| Component | Technology | Why |
+|-----------|-----------|-----|
+| **Download engine** | URLSession (native) | Already available, handles background downloads, no dependency needed |
+| **Disk storage** | FileManager + Caches directory | OS-managed cleanup, sandboxed, no dependency needed |
+| **Memory index** | Dictionary<String, URL> (in-memory lookup) | Fast cache-hit checks without disk I/O |
+| **Cache key strategy** | Storage path (e.g., `clips/{clipId}.mov`) | Stable identifier that survives signed URL rotation |
+| **Eviction** | LRU by access date + size cap (500MB) | Prevents unbounded disk growth |
 
-**Implementation Approach:**
+**Rationale -- Why NOT use a third-party video caching library:**
+
+The third-party options (CachingPlayerItem, SZAVPlayer, KTVHTTPCache, ZPlayerCacher) all solve a different problem: streaming large videos while simultaneously caching byte ranges via `AVAssetResourceLoaderDelegate`. This is the right approach for long-form content (Netflix, YouTube) but **wrong for TOY** because:
+
+1. **TOY's videos are tiny.** A 7-second clip at 1080p/30fps is ~2-5MB. A 5-clip montage is ~10-25MB. These download in 0.5-2 seconds on LTE. Download-first eliminates buffering entirely.
+2. **AVAssetResourceLoaderDelegate requires custom URL schemes.** You must replace `https://` with a fake scheme like `cachingplayeritem://` so the delegate gets invoked. This adds complexity and breaks standard AVPlayer behavior.
+3. **Signed URL expiry complicates streaming caches.** These libraries cache by URL, but Supabase signed URLs change every hour. A streaming cache would treat the same video as a cache miss every time the URL rotates. A download cache keyed by storage path avoids this entirely.
+4. **Small libraries, low maintenance.** CachingPlayerItem (sukov) has ~78 GitHub stars. SZAVPlayer has similar scale. For a critical path like video playback, a 200-line custom solution you fully control is lower risk than a small third-party dependency.
+
+**Confidence: HIGH** -- This is a well-established pattern (URLSession download + FileManager) using only Apple frameworks. No novel technology involved.
+
+### 1.2 Unified Player Component (Refactor, No New Deps)
+
+| Component | Technology | Why |
+|-----------|-----------|-----|
+| **Player view** | Single `TOYVideoPlayerView` (UIViewRepresentable) | Eliminates 4 duplicate implementations |
+| **Player management** | AVPlayer with `replaceCurrentItem(with:)` | Reuses render pipeline, lower memory |
+| **Looping** | AVPlayerLooper + AVQueuePlayer (for loops) | Apple's built-in looping, no manual seek-to-zero |
+| **Ready-to-display** | AVPlayerLayer.isReadyForDisplay KVO | Already used in current code, reliable |
+| **Queue playback** | AVQueuePlayer (montage preview) | Already used in MontagePreviewView, proven |
+
+**Rationale -- Why unify players:**
+
+The codebase currently has four nearly identical `UIViewRepresentable` wrappers:
+- `PlayerLayerView` in PublishedCardPlayerView.swift
+- `QueuePlayerUIView` in MontagePreviewView.swift
+- `ClipPlayerUIView` in ClipPreviewSheet.swift
+- `PlayerUIView` in VideoPreviewView.swift (TOYShared)
+
+All four do the same thing: wrap AVPlayerLayer in a UIView with `.resizeAspectFill` gravity and optional `isReadyForDisplay` observation. This duplication means bug fixes and performance optimizations must be applied four times. A single component with configuration options (looping, queue mode, ready callback) replaces all four.
+
+**Confidence: HIGH** -- Pure refactoring of existing code. No new technology.
+
+### 1.3 Preloading Pipeline (Custom, Native)
+
+| Component | Technology | Why |
+|-----------|-----------|-----|
+| **Signed URL prefetch** | Existing `StorageService.createSignedURL()` | Already exists, just needs earlier invocation |
+| **Video download** | URLSession.shared.download(from:) | Native async/await API, returns temp file URL |
+| **Trigger points** | HomeView card list load, CardDetail open | Download videos user is likely to view next |
+| **Concurrency control** | TaskGroup with max 3 concurrent downloads | Prevents bandwidth saturation |
+
+**Rationale -- Where Instagram/TikTok lessons apply:**
+
+The key insight from Instagram/TikTok architecture is **prefetching in the scroll direction**. For TOY, this translates to:
+
+1. When HomeView loads, prefetch signed URLs for all cards with clips (already partially done in CardDetailViewModel).
+2. When a card is tapped (CardDetailView opens), immediately begin downloading all clip videos to disk cache.
+3. When montage preview opens, videos are already cached -- instant playback.
+4. When published card is viewed, check cache first. If cached, play from disk. If not, download then play.
+
+The existing `cachedSignedURLs` dictionary in `CardDetailViewModel` is a good start but only caches URLs (not video data). The new pipeline caches the actual video files.
+
+**Confidence: HIGH** -- Standard URLSession download pattern. The challenge is orchestration, not technology.
+
+### 1.4 Thumbnail Optimization (Leverage Existing Kingfisher)
+
+| Component | Technology | Why |
+|-----------|-----------|-----|
+| **Remote thumbnails** | Kingfisher (already in project, v8.x) | Disk + memory cache built-in, already integrated |
+| **Local thumbnails** | AVAssetImageGenerator (native) | Generate from cached video files, no network needed |
+| **Placeholder** | Kingfisher's `.placeholder` modifier | Already used in codebase |
+
+**Rationale:**
+
+Kingfisher already handles thumbnail caching well. The only addition is generating thumbnails locally from cached video files using `AVAssetImageGenerator`, which avoids a network round-trip for thumbnail signed URLs when the video is already on disk. Use `generator.maximumSize = CGSize(width: 400, height: 710)` to avoid generating full-resolution thumbnails.
+
+**Confidence: HIGH** -- Kingfisher is mature (8.x, 10 years, 23k+ stars). AVAssetImageGenerator is stable native API.
+
+---
+
+## 2. Recommended Stack Additions Summary
+
+### New Components (Zero New Dependencies)
+
+| Component | What It Is | Where It Lives |
+|-----------|-----------|---------------|
+| `VideoCacheService` | Actor-based disk cache for video files | `TOYShared/Sources/TOYShared/Services/` |
+| `TOYVideoPlayerView` | Unified UIViewRepresentable player | `TOYShared/Sources/TOYShared/Recording/UI/` |
+| `VideoPreloadManager` | Coordinates prefetch and download | `TOYShared/Sources/TOYShared/Services/` |
+| `SignedURLManager` | Caches and refreshes signed URLs | `TOYShared/Sources/TOYShared/Services/` |
+
+### Existing Dependencies (No Changes)
+
+| Package | Version | Role in This Milestone |
+|---------|---------|----------------------|
+| Kingfisher | 8.x (already installed) | Thumbnail caching (already works) |
+| supabase-swift | 2.x (already installed) | Signed URL generation (already works) |
+| AVFoundation | Native (iOS 18.2+) | Player, thumbnail generation |
+
+### Explicitly NOT Adding
+
+| Library | Why Not |
+|---------|---------|
+| **CachingPlayerItem** (sukov, ~78 stars) | Solves streaming-while-caching for large videos. TOY's videos are small enough to download-first. Custom URL scheme requirement adds complexity. Signed URL rotation breaks URL-based cache keys. |
+| **SZAVPlayer** (~similar scale) | Same streaming-cache approach. CocoaPods-primary distribution. Unnecessary complexity for short videos. |
+| **KTVHTTPCache** | Objective-C, designed for HLS segment caching. Wrong level of abstraction for TOY's simple .mov files. |
+| **VIMediaCache** | Objective-C, similar streaming-cache approach. Not actively maintained. |
+| **Nuke** (for video frames) | Image loading library. Kingfisher already handles thumbnails. Adding a second image library creates confusion. |
+| **Any HLS infrastructure** | TOY serves .mov files via signed URLs, not HLS streams. Converting to HLS would add server-side complexity for marginal benefit on sub-60-second videos. |
+
+---
+
+## 3. Architecture of Key New Components
+
+### 3.1 VideoCacheService
+
+```
+Role: Download, store, and retrieve video files from disk
+Pattern: Actor (thread-safe, matches existing StorageService pattern)
+Cache location: FileManager.default.urls(for: .cachesDirectory)/"VideoCache"
+Cache key: SHA256 hash of storage path (e.g., "clips/{uuid}.mov")
+Max size: 500MB with LRU eviction
+File format: .mov (same as uploaded, no transcoding)
+```
+
+**Integration with Supabase signed URLs:**
+
+The critical insight is separating the **cache key** (stable storage path like `clips/abc123.mov`) from the **download URL** (ephemeral signed URL that expires in 1 hour). When checking the cache, use the storage path. When downloading, use the current signed URL. This means a video cached from yesterday's signed URL is still a valid cache hit today.
+
+```
+Lookup flow:
+1. videoCacheService.cachedFileURL(for: "clips/abc123.mov")
+2. If hit: return local file URL -> AVPlayer plays instantly from disk
+3. If miss: download from signed URL -> save to cache -> return local file URL
+```
+
+### 3.2 TOYVideoPlayerView
+
+```
+Role: Single reusable SwiftUI video player component
+Replaces: PlayerLayerView, QueuePlayerUIView, ClipPlayerUIView, PlayerUIView
+Configuration options:
+  - videoSource: .localFile(URL) | .remoteURL(URL) | .playerItem(AVPlayerItem)
+  - playbackMode: .once | .loop | .queue([URL])
+  - gravity: .resizeAspectFill (default) | .resizeAspect
+  - onReadyToDisplay: (() -> Void)?
+  - onPlaybackFinished: (() -> Void)?
+```
+
+### 3.3 VideoPreloadManager
+
+```
+Role: Coordinate background downloads for videos user will likely view
+Pattern: Actor with priority queue
+Trigger points:
+  1. HomeView appears -> preload first clip thumbnail + signed URLs
+  2. Card tapped -> preload all clip videos for that card
+  3. Published card appears in list -> preload montage video
+Concurrency: max 3 concurrent downloads via TaskGroup
+Cancellation: cancel preloads when user navigates away
+```
+
+### 3.4 SignedURLManager
+
+```
+Role: Cache signed URLs with TTL awareness, batch refresh
+Pattern: Actor
+TTL tracking: Store (signedURL, createdAt) tuples
+Refresh threshold: Refresh if URL is > 45 minutes old (15-min buffer before 1-hour expiry)
+Batch operations: Refresh all URLs for a card's clips in one call
+```
+
+---
+
+## 4. AVPlayer Configuration Recommendations
+
+These are settings to apply in the unified player component based on research.
+
+### For Cached (Local File) Playback
+
 ```swift
-// Core components needed:
-- AVCaptureSession for camera pipeline
-- AVCaptureMovieFileOutput for recording
-- Custom SwiftUI wrapper using UIViewControllerRepresentable
-- Long-press gesture recognizer for hold-to-record
+// Playing from disk -- no network buffering needed
+player.automaticallyWaitsToMinimizeStalling = false
+playerItem.preferredForwardBufferDuration = 0  // Not relevant for local files
 ```
 
-**Rationale:**
-- AVFoundation is Apple's mature, full-featured video framework
-- Native framework ensures best performance and battery efficiency
-- H.264 for compatibility, HEVC for smaller file sizes (device-dependent)
-- 1080p balances quality with file size for mobile upload
-- 7 seconds at 1080p/30fps = ~15-25MB depending on content
+### For Network Playback (Fallback When Not Cached)
 
-**What NOT to use:**
-- PhotosUI/ImagePicker for video: Limited control over recording experience
-- Third-party camera SDKs (e.g., CameraKit): Unnecessary dependency for basic capture
-- 4K video: Overkill for greeting cards; increases storage costs significantly
-- ReplayKit: Designed for screen recording, not camera capture
-
-### 2.2 Video Stitching/Concatenation
-
-| Component | Recommendation | Location | Confidence |
-|-----------|---------------|----------|------------|
-| **Primary Processing** | Server-side (FFmpeg) | Supabase Edge Functions / External Service | HIGH |
-| **Fallback/Preview** | AVFoundation (on-device) | iOS Client | MEDIUM |
-
-**Server-side Approach (Recommended):**
-```
-Pipeline:
-1. Upload individual clips to Supabase Storage
-2. Trigger Edge Function on "finalize" action
-3. FFmpeg processes clips server-side
-4. Store final video in Supabase Storage
-5. Return CDN URL to client
-```
-
-**Rationale - Server-side preferred:**
-- Consistent output quality across all device types
-- Reduces client battery and processing load
-- Enables transitions, overlays, watermarks without app updates
-- Better error handling and retry logic
-- Device-independent (older iPhones won't struggle)
-
-**On-device (secondary use case):**
-- Use AVMutableComposition for preview/draft rendering only
-- Useful for showing host a rough preview before final server render
-
-**What NOT to use:**
-- On-device as primary stitching: Battery drain, inconsistent quality across devices, long processing times
-- GPUImage/Metal for stitching: Over-engineered for simple concatenation
-- Third-party video editing SDKs (VideoEditor SDK, etc.): Expensive licensing, unnecessary features
-
-### 2.3 Video Processing Service Options
-
-| Option | Recommendation | Confidence |
-|--------|---------------|------------|
-| **Option A** | Supabase Edge Functions + FFmpeg WASM | MEDIUM |
-| **Option B** | Dedicated video processing service (Mux, Cloudflare Stream) | HIGH |
-| **Option C** | Self-hosted FFmpeg on Railway/Fly.io | MEDIUM |
-
-**Detailed Analysis:**
-
-**Option B - Mux (Recommended for MVP):**
-- Pricing: ~$0.015/min stored + $0.0015/min delivered
-- Handles transcoding, stitching via Assembly API, CDN delivery
-- Eliminates video infrastructure complexity
-- Confidence: HIGH
-
-**Option A - FFmpeg in Edge Functions:**
-- Supabase Edge Functions have 150s timeout, 150MB memory
-- FFmpeg WASM works but has limitations for longer videos
-- Better for post-MVP when optimizing costs
-- Confidence: MEDIUM
-
----
-
-## 3. Backend Services (Supabase)
-
-### 3.1 Supabase Core
-
-| Component | Recommendation | Version | Confidence |
-|-----------|---------------|---------|------------|
-| **Supabase Swift SDK** | supabase-swift | 2.x (latest: ~2.5.x) | HIGH |
-| **Database** | PostgreSQL (via Supabase) | 15+ | HIGH |
-| **Auth** | Supabase Auth | - | HIGH |
-| **Storage** | Supabase Storage | - | HIGH |
-| **Realtime** | Supabase Realtime (optional) | - | MEDIUM |
-| **Edge Functions** | Deno-based | - | HIGH |
-
-**Package Manager:**
 ```swift
-// Package.swift or SPM in Xcode
-.package(url: "https://github.com/supabase-community/supabase-swift", from: "2.0.0")
+// Streaming from signed URL -- optimize for fast start
+player.automaticallyWaitsToMinimizeStalling = false  // Start immediately, don't wait for buffer
+playerItem.preferredForwardBufferDuration = 3  // Buffer 3 seconds ahead (half a clip)
+playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = false
 ```
 
-**Rationale:**
-- supabase-swift 2.x has full Swift Concurrency (async/await) support
-- Single SDK provides Auth, Database, Storage, Realtime
-- PostgreSQL offers robust relational data model for cards/participants
-- Edge Functions enable server-side logic without managing servers
+### Player Instance Management
 
-**What NOT to use:**
-- Firebase: Google ecosystem lock-in, less developer-friendly than Supabase
-- AWS Amplify: Complex setup, overkill for this app scale
-- Custom backend: Unnecessary development time for MVP
-- Parse Server: Aging technology, smaller community
-
-### 3.2 Database Schema (High-level)
-
-```sql
--- Core tables
-cards (
-  id, host_user_id, recipient_name, occasion, status,
-  invite_code, final_video_url, created_at, published_at
-)
-
-participants (
-  id, card_id, user_id, display_name, status, invited_at
-)
-
-clips (
-  id, card_id, participant_id, video_url, duration_ms,
-  order_index, status, uploaded_at
-)
-
-users (
-  id, auth_id, display_name, email, created_at
-)
-
-purchases (
-  id, user_id, card_id, product_id, transaction_id,
-  purchased_at, status
-)
-```
-
-### 3.3 Storage Configuration
-
-| Bucket | Purpose | Access | Confidence |
-|--------|---------|--------|------------|
-| `clips` | Individual participant videos | Private (signed URLs) | HIGH |
-| `final-videos` | Stitched final videos | Private or Public | HIGH |
-| `thumbnails` | Video thumbnails | Public | HIGH |
-
-**Rationale:**
-- Separate buckets for access control and lifecycle policies
-- Signed URLs for clips prevent unauthorized access
-- Final videos can be public for easy sharing or private with auth
-
----
-
-## 4. App Clips
-
-### 4.1 App Clip Configuration
-
-| Component | Recommendation | Confidence |
-|-----------|---------------|------------|
-| **Size Limit** | <15MB (Apple requirement) | HIGH |
-| **Minimum iOS** | iOS 17.0 | HIGH |
-| **Shared Code** | Swift Package for shared models/logic | HIGH |
-| **Invocation** | QR Code, NFC, Safari Smart Banner, Deep Link | HIGH |
-
-**App Clip Scope (Participant Flow Only):**
-1. Open via invite link/QR
-2. Display card info and recording UI
-3. Record 7-sec clip (hold-to-record)
-4. Upload to Supabase
-5. Prompt to download full app (optional)
-
-**Rationale:**
-- App Clips remove friction for participants (no App Store download)
-- 15MB limit is tight; exclude host features, complex animations
-- Shared Swift Package prevents code duplication
-- iOS 17+ ensures modern SwiftUI and camera APIs work
-
-**What NOT to use:**
-- Web-based recording: iOS Safari has limited camera API access, inconsistent quality
-- Full app features in App Clip: Violates size limit and purpose
-- Third-party frameworks in App Clip: Bloats binary size
-
-### 4.2 Code Sharing Strategy
-
-```
-TOY/
-  TOYApp/           # Full iOS app target
-  TOYAppClip/       # App Clip target
-  TOYShared/        # Swift Package (shared code)
-    - Models/
-    - Services/
-    - VideoCapture/
-    - SupabaseClient/
-```
-
----
-
-## 5. Deep Linking & Invites
-
-### 5.1 Deep Link Strategy
-
-| Component | Recommendation | Confidence |
-|-----------|---------------|------------|
-| **Primary** | Universal Links | HIGH |
-| **Fallback** | Custom URL Scheme | HIGH |
-| **Format** | `https://toy.app/card/{inviteCode}` | HIGH |
-
-**Universal Links Setup:**
-- Host `apple-app-site-association` file on domain
-- Configure Associated Domains entitlement
-- Handle in `onOpenURL` modifier (SwiftUI)
-
-**Rationale:**
-- Universal Links work with App Clips out of the box
-- Provide seamless web-to-app handoff
-- Custom scheme as fallback for older integrations
-
-**What NOT to use:**
-- Firebase Dynamic Links: Deprecated by Google (sunsetting 2025)
-- Branch.io for MVP: Adds complexity; consider post-MVP for analytics
-- Custom URL scheme only: Doesn't trigger App Clip invocation
-
----
-
-## 6. In-App Purchases
-
-### 6.1 StoreKit Configuration
-
-| Component | Recommendation | Version | Confidence |
-|-----------|---------------|---------|------------|
-| **Framework** | StoreKit 2 | iOS 15+ | HIGH |
-| **Product Type** | Non-consumable | - | HIGH |
-| **Pricing Model** | Per-card purchase | - | HIGH |
-
-**Implementation Approach:**
 ```swift
-// StoreKit 2 async API
-let products = try await Product.products(for: ["toy.card.single"])
-let result = try await product.purchase()
-// Handle result, verify transaction, unlock card finalization
+// Reuse players -- do NOT create new AVPlayer per video
+// The system has a limited number of "render pipelines"
+// (player + playerItem associations). Creating too many causes:
+// - Memory pressure
+// - GPU/CPU overhead
+// - Potential system-level throttling
+
+// GOOD: Reuse player
+existingPlayer.replaceCurrentItem(with: newItem)
+
+// BAD: Create new player per video
+let newPlayer = AVPlayer(playerItem: newItem)  // Avoid in repeated contexts
 ```
 
-**Rationale:**
-- StoreKit 2 has modern async/await API, simpler than StoreKit 1
-- Non-consumable fits "one purchase per card" model
-- Native verification reduces server-side receipt validation complexity
+### Looping (Replace Manual NotificationCenter Pattern)
 
-**Server-side Verification (Recommended):**
-- Use App Store Server API for transaction verification
-- Store purchase records in Supabase for access control
-- Supabase Edge Function can validate with Apple servers
+```swift
+// Current codebase uses NotificationCenter .AVPlayerItemDidPlayToEndTime + seek(.zero)
+// Better: Use AVPlayerLooper for seamless looping without seek gap
+let templateItem = AVPlayerItem(url: localFileURL)
+let queuePlayer = AVQueuePlayer()
+let looper = AVPlayerLooper(player: queuePlayer, templateItem: templateItem)
+// looper must be retained as a stored property
+```
 
-**What NOT to use:**
-- StoreKit 1 (original): Legacy API, callback-based, harder to maintain
-- RevenueCat for MVP: Adds dependency and cost; consider post-MVP for analytics
-- Consumables: Doesn't match "unlock card" use case
+**Confidence: HIGH** -- All settings are from Apple's official AVPlayer documentation.
 
 ---
 
-## 7. Additional Dependencies
+## 5. Signed URL Strategy
 
-### 7.1 Recommended Swift Packages
+The 1-hour signed URL expiry creates a unique caching challenge. Here is the recommended approach:
 
-| Package | Purpose | Version | Confidence |
-|---------|---------|---------|------------|
-| supabase-swift | Backend SDK | 2.x | HIGH |
-| swift-collections | Ordered collections (OrderedDictionary) | 1.x | MEDIUM |
-| swift-algorithms | Sequence algorithms | 1.x | LOW |
+### Cache Key Design
 
-**Minimal dependency philosophy:**
-- Apple first-party frameworks cover 95% of needs
-- Only add third-party packages when significant time savings
+| What | Cache Key | Why |
+|------|-----------|-----|
+| **Video files on disk** | Storage path hash (e.g., SHA256 of `clips/{uuid}.mov`) | Stable across URL rotations. Same video = same key regardless of signed URL. |
+| **Signed URLs in memory** | Storage path string | Fast lookup. TTL-tracked so we know when to refresh. |
+| **Thumbnails** | Storage path (Kingfisher custom key) | Already handled by Kingfisher with custom cache key support. |
 
-### 7.2 Development Tools
+### URL Lifecycle
 
-| Tool | Purpose | Confidence |
-|------|---------|------------|
-| Xcode 15.3+ | IDE | HIGH |
-| Swift Package Manager | Dependency management | HIGH |
-| Supabase CLI | Local development, migrations | HIGH |
-| Xcode Cloud / Fastlane | CI/CD | MEDIUM |
+```
+1. Card loads -> SignedURLManager generates/caches signed URLs (1-hour TTL)
+2. User views video -> VideoCacheService checks disk cache by storage path
+3a. CACHE HIT: Play from local file. No signed URL needed at all.
+3b. CACHE MISS: Use signed URL to download -> save to disk cache -> play from disk
+4. After 45 minutes -> SignedURLManager proactively refreshes URLs for visible cards
+5. Video file stays in disk cache indefinitely (until LRU eviction at 500MB cap)
+```
 
----
-
-## 8. What NOT to Use (Summary)
-
-| Category | Avoid | Reason |
-|----------|-------|--------|
-| **UI** | UIKit (as primary), Storyboards | SwiftUI is mature, declarative, less code |
-| **State** | Combine (for simple state), RxSwift | @Observable handles most cases |
-| **DI** | Swinject, Resolver | Swift Environment is sufficient |
-| **Backend** | Firebase, AWS Amplify, Parse | Supabase is simpler, more cost-effective |
-| **Video** | Third-party camera SDKs | AVFoundation is capable and performant |
-| **Video Processing** | On-device as primary | Inconsistent, battery-draining |
-| **Links** | Firebase Dynamic Links | Deprecated; use Universal Links |
-| **IAP** | StoreKit 1, RevenueCat (MVP) | StoreKit 2 is simpler; add analytics later |
-| **Navigation** | NavigationView | Deprecated; use NavigationStack |
+**Key insight:** Once a video is downloaded to disk, the signed URL is irrelevant. The file lives in the cache keyed by storage path. This means frequently viewed videos load instantly regardless of URL expiry.
 
 ---
 
-## 9. Risk Assessment
+## 6. What This Stack Enables (Playback Timeline)
 
-| Risk | Mitigation | Confidence |
-|------|------------|------------|
-| App Clip size limit (15MB) | Aggressive code splitting, minimal deps | MEDIUM |
-| Video upload on poor networks | Chunked uploads, background URLSession | HIGH |
-| Supabase Swift SDK maturity | Active community, falling back to REST if needed | HIGH |
-| Video stitching latency | Async processing, webhook notifications | HIGH |
-| StoreKit 2 edge cases | Comprehensive testing, transaction observer | MEDIUM |
+### Current State (No Cache)
 
----
+```
+User taps "View Card" ->
+  [200-500ms] Fetch signed URL from Supabase
+  [0ms] Create AVPlayerItem with remote URL
+  [500-3000ms] AVPlayer buffers from network (progress jumps: 10%...30%...80%...100%)
+  [100-300ms] AVPlayerLayer renders first frame
+  Total: 800ms - 3.8 seconds of loading spinner
+```
 
-## 10. Version Matrix
+### Target State (With Cache)
 
-| Component | Minimum | Recommended | Latest Verified |
-|-----------|---------|-------------|-----------------|
-| iOS | 17.0 | 17.4+ | 18.x |
-| Swift | 5.9 | 5.10 | 5.10 |
-| Xcode | 15.0 | 15.3+ | 16.x |
-| supabase-swift | 2.0.0 | 2.5.x | 2.5.x |
-| PostgreSQL (Supabase) | 15 | 15 | 15 |
+```
+WARM CACHE (video previously viewed or preloaded):
+User taps "View Card" ->
+  [0ms] VideoCacheService returns local file URL (in-memory lookup)
+  [0ms] Create AVPlayerItem with file:// URL
+  [50-100ms] AVPlayerLayer renders first frame (disk I/O only)
+  Total: 50-100ms -- appears instant
 
----
+COLD CACHE (first view, not preloaded):
+User taps "View Card" ->
+  [200-500ms] Fetch signed URL (or use cached signed URL: 0ms)
+  [500-2000ms] Download video to disk cache
+  [50-100ms] AVPlayerLayer renders first frame from disk
+  Total: 750ms - 2.6 seconds
+  Note: Still faster because playing from disk eliminates streaming stalls
 
-## 11. Decision Log
-
-| Decision | Date | Rationale |
-|----------|------|-----------|
-| iOS 17.0 minimum | 2026-02-01 | @Observable, stable SwiftUI, ~85% adoption |
-| Supabase over Firebase | 2026-02-01 | Open-source, simpler DX, PostgreSQL flexibility |
-| Server-side video stitching | 2026-02-01 | Consistency, performance, device-independence |
-| StoreKit 2 only | 2026-02-01 | Modern API, no legacy support needed for new app |
-| Universal Links primary | 2026-02-01 | App Clip compatibility, no third-party dependency |
-
----
-
-## Appendix A: Quick Start Commands
-
-```bash
-# Create new Xcode project with App Clip target
-# Xcode > File > New > Project > App > Include App Clip
-
-# Add Supabase Swift SDK
-# In Xcode: File > Add Package Dependencies
-# URL: https://github.com/supabase-community/supabase-swift
-# Version: 2.0.0 - Next Major
-
-# Install Supabase CLI (for local dev)
-brew install supabase/tap/supabase
-
-# Initialize Supabase project
-supabase init
-supabase start
+PRELOADED (video downloaded in background while user was on HomeView):
+User taps "View Card" ->
+  Same as warm cache: 50-100ms
 ```
 
 ---
 
-## Appendix B: Estimated Costs (Monthly)
+## 7. Integration Points with Existing Code
 
-| Service | Usage Assumption | Estimated Cost |
-|---------|------------------|----------------|
-| Supabase (Pro) | 100GB storage, 10GB bandwidth | $25-50/mo |
-| Mux (if used) | 100 hrs stored, 1000 hrs streamed | $30-50/mo |
-| Apple Developer | Annual | $8.25/mo ($99/yr) |
-| **Total MVP** | - | **~$65-110/mo** |
+### StorageService (Existing -- Minor Extension)
+
+Current: `createSignedURL(path:)` and `createSignedVideoURL(path:)`
+Change: These remain as-is. The new `SignedURLManager` wraps them with TTL caching.
+
+### CardDetailViewModel (Existing -- Replace URL Cache)
+
+Current: `cachedSignedURLs: [UUID: URL]` caches signed URLs only.
+Change: Replace with `VideoCacheService` integration. Instead of caching URLs, cache actual video files. The ViewModel calls `videoCacheService.getVideo(storagePath:signedURL:)` which returns a local file URL.
+
+### HomeView (Existing -- Add Preload Triggers)
+
+Current: Fetches cards and thumbnails on appear.
+Change: After fetching card data, trigger `VideoPreloadManager.preloadThumbnails(for: cards)` and `VideoPreloadManager.preloadSignedURLs(for: cards)`. When user taps a card, trigger `VideoPreloadManager.preloadClipVideos(for: card)`.
+
+### MontagePreviewView (Existing -- Simplify)
+
+Current: Complex `setupQueuePlayer()` that fetches signed URLs, creates AVPlayerItems, observes buffering.
+Change: Simplify to: get local file URLs from cache -> create AVQueuePlayer with local file items -> play immediately. The buffering observation and progress tracking become unnecessary for cached files.
+
+### PublishedCardPlayerView (Existing -- Simplify)
+
+Current: Fetches signed URL, streams with progress tracking, KVO buffer observation.
+Change: Check cache first. If cached, play from disk (no progress UI needed). If not cached, download with progress -> play from disk.
 
 ---
 
-*This document serves as the canonical stack reference for TOY development. Update version numbers as dependencies are updated.*
+## 8. Risk Assessment
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| **Disk space pressure** | Medium | 500MB cap with LRU eviction. iOS purges Caches directory when disk is low (only when app is not running). |
+| **Stale cache after video re-upload** | Low | Videos in TOY are immutable once uploaded. Re-publishing creates a new storage path. Old cache entries naturally evict via LRU. |
+| **Concurrent access to cache** | Low | Actor isolation on VideoCacheService prevents data races. Same pattern as existing StorageService. |
+| **Background download interruption** | Low | URLSession download tasks can resume. For 2-5MB files, interruption is unlikely. Fallback: stream from signed URL if download fails. |
+| **Memory pressure from preloading** | Low | Preloading writes to disk, not memory. Only the currently-playing video's AVPlayerItem is in memory. |
+
+---
+
+## 9. Estimated Implementation Effort
+
+| Component | Complexity | Estimated Effort | Dependencies |
+|-----------|-----------|-----------------|--------------|
+| `VideoCacheService` | Medium | 1-2 days | None (native APIs) |
+| `TOYVideoPlayerView` (unified) | Medium | 1-2 days | None (refactor existing code) |
+| `SignedURLManager` | Low | 0.5-1 day | Existing StorageService |
+| `VideoPreloadManager` | Medium | 1-2 days | VideoCacheService, SignedURLManager |
+| Migrate 4 player views | Medium | 1-2 days | TOYVideoPlayerView |
+| Integration + testing | Medium | 1-2 days | All above |
+| **Total** | | **5-10 days** | |
+
+---
+
+## 10. Decision Log
+
+| Decision | Rationale |
+|----------|-----------|
+| **Custom video cache over third-party library** | TOY's 7-second clips (2-5MB) are small enough to download-first. Third-party streaming caches solve the wrong problem. Custom URL scheme requirement and signed URL rotation make them actively harmful for this use case. |
+| **Download-first over streaming optimization** | Sub-5MB files download faster than they buffer. Playing from disk eliminates all buffering jank. This is the single highest-impact change. |
+| **Unified player component** | Four duplicated UIViewRepresentable implementations mean 4x the maintenance and 4x the bug surface. One component with configuration options is strictly better. |
+| **Actor-based services** | Matches existing `StorageService` pattern. Thread safety guaranteed by Swift concurrency. No manual locking. |
+| **500MB cache cap** | 7-second clip = ~3MB. 500MB holds ~160 clips or ~20 full montages. Generous enough for active use, small enough to not anger users about storage. |
+| **Storage path as cache key** | Signed URLs expire and change. Storage paths are stable identifiers. This decouples cache validity from URL lifetime. |
+| **No HLS conversion** | Adding HLS would require server-side transcoding infrastructure (Mux, FFmpeg). For sub-60-second videos, the complexity-to-benefit ratio is terrible. Direct .mov files with disk caching achieve the same result. |
+| **AVPlayerLooper over manual seek** | Current code uses NotificationCenter + seek(.zero) for looping, which causes a brief visual stutter at the loop point. AVPlayerLooper provides seamless looping. |
+
+---
+
+## Sources
+
+**Apple Documentation:**
+- [AVPlayer](https://developer.apple.com/documentation/avfoundation/avplayer) -- preferredForwardBufferDuration, automaticallyWaitsToMinimizeStalling
+- [AVPlayerItem](https://developer.apple.com/documentation/avfoundation/avplayeritem/preferredforwardbufferduration) -- buffer configuration
+- [AVAssetImageGenerator](https://developer.apple.com/documentation/avfoundation/avassetimagegenerator) -- thumbnail generation
+- [AVPlayerLooper](https://developer.apple.com/documentation/avfoundation/avplayerlooper) -- seamless looping
+
+**Architecture Research:**
+- [AVPlayer Video Optimization (Medium)](https://medium.com/@sojik/avplayer-video-optimization-part-1-2a45ea002ea2) -- buffer settings, player reuse
+- [iOS Performance: AVPlayer edition (Medium)](https://medium.com/tech-romance/ios-performance-avplayer-edition-257c9575e3ea) -- render pipeline limits
+- [Building TikTok: Smooth scrolling on iOS (Mux)](https://www.mux.com/blog/building-tiktok-smooth-scrolling-on-ios) -- prefetch architecture
+- [How TikTok Optimizes Video Streaming](https://hw.glich.co/p/how-tiktok-optimizes-video-streaming) -- player reuse, preloading
+
+**Caching Research:**
+- [Caching in Swift (Swift by Sundell)](https://www.swiftbysundell.com/articles/caching-in-swift/) -- LRU patterns, FileManager cache
+- [Multilayer Caching in Swift (Medium)](https://medium.com/@khachatur.hakobyan2023/mastering-multilayer-caching-in-ios-nscache-urlcache-filemanager-cdn-beyond-6b5e70d9fb3e) -- disk + memory strategy
+- [Supabase Smart CDN](https://supabase.com/docs/guides/storage/cdn/smart-cdn) -- signed URL caching behavior
+
+**Libraries Evaluated (Not Recommended):**
+- [CachingPlayerItem (sukov)](https://github.com/sukov/CachingPlayerItem) -- ~78 stars, streaming cache via AVAssetResourceLoaderDelegate
+- [SZAVPlayer](https://github.com/eroscai/SZAVPlayer) -- lightweight but streaming-focused
+- [KTVHTTPCache](https://github.com/ChangbaDevs/KTVHTTPCache) -- Objective-C, HLS-focused
+- [ZPlayerCacher](https://github.com/ZhgChgLi/ZPlayerCacher) -- lightweight AVAssetResourceLoaderDelegate wrapper
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Reason |
+|------|------------|--------|
+| Custom cache vs third-party | HIGH | Clear mismatch between library capabilities (streaming cache) and TOY's needs (download-first for short videos). Verified by examining library source and architecture. |
+| Download-first strategy | HIGH | Well-established pattern for short-form content. Math checks out: 3MB / 10Mbps LTE = 0.3 seconds download time. |
+| Unified player component | HIGH | Pure refactoring. All four implementations already read, differences are cosmetic. |
+| AVPlayer configuration | HIGH | Settings from Apple's official documentation. Standard recommendations confirmed by multiple sources. |
+| Preloading pipeline | MEDIUM | Architecture is sound but orchestration details (when exactly to trigger, priority ordering, cancellation) need phase-specific design work. |
+| Cache size / eviction | MEDIUM | 500MB cap is a reasonable starting point based on video file sizes, but may need tuning based on real usage patterns. |

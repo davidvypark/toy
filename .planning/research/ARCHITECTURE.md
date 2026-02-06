@@ -1,976 +1,573 @@
-# Architecture Research: TOY Group Video Greeting Card App
+# Architecture Patterns: Unified Video Playback Infrastructure
 
-**Research Date:** 2026-02-01
-**Dimension:** Architecture
-**Milestone:** Greenfield - System Structure Analysis
+**Domain:** iOS video playback unification for Supabase-backed short-form video app
+**Researched:** 2026-02-06
+**Confidence:** HIGH (based on direct codebase analysis + established AVFoundation patterns)
 
----
+## Current State Analysis
 
-## Executive Summary
+The app has **4 independent player implementations**, each with its own AVPlayer lifecycle, signed URL resolution, buffering logic, and UIViewRepresentable wrapper. They share zero infrastructure.
 
-TOY requires a modular architecture that supports three distinct user journeys (Host, Participant, Recipient) across two deployment targets (main app, App Clip). The recommended approach is **MVVM with a shared Core module**, prioritizing simplicity over framework overhead while enabling the critical App Clip code-sharing requirement.
+### Existing Player Inventory
 
-**Key Architectural Decisions:**
-1. MVVM over TCA (simpler, sufficient for scope, faster iteration)
-2. Shared Swift Package for App Clip code reuse
-3. Hybrid video stitching (client-side with server fallback)
-4. Deep link-driven navigation architecture
-5. Repository pattern for Supabase integration
+| View | Player Type | URL Source | Looping | Caching | UIViewRepresentable |
+|------|------------|-----------|---------|---------|---------------------|
+| `PublishedCardPlayerView` | `AVPlayer` | StorageService.createSignedVideoURL (videos bucket) | Yes (NotificationCenter) | Optional cachedVideoURL from HomeView memory dict | `PlayerLayerView` / `PlayerUIView` |
+| `MontagePreviewView` | `AVQueuePlayer` | StorageService.createSignedURL (clips bucket) | No (play once, replay button) | Caches player instance in CardDetailViewModel | `QueueVideoPlayer` / `QueuePlayerUIView` |
+| `ClipPreviewSheet` | `AVPlayer` | StorageService.createSignedURL (clips bucket) | Yes (NotificationCenter) | Optional cachedURL from CardDetailViewModel | `ClipVideoPlayer` / `ClipPlayerUIView` |
+| `VideoPreviewView` | `AVPlayer` | Local file URL | Yes (NotificationCenter) | N/A (local file) | `LoopingVideoPlayer` / `PlayerUIView` |
 
----
+### Duplicated Code Across Players
 
-## 1. SwiftUI App Structure
+1. **UIViewRepresentable wrappers** -- 4 separate implementations of nearly identical `UIView` subclasses that set `layerClass = AVPlayerLayer.self`. The `PlayerUIView`, `QueuePlayerUIView`, `ClipPlayerUIView`, and `PlayerUIView` (in TOYShared) are functionally identical except `PublishedCardPlayerView`'s version adds `isReadyForDisplay` KVO observation.
 
-### Recommendation: MVVM with Coordinator Pattern
+2. **Looping logic** -- 3 of 4 players use the same `NotificationCenter.addObserver(forName: .AVPlayerItemDidPlayToEndTime)` pattern with seek-to-zero-and-play, copy-pasted each time.
 
-**Why MVVM over TCA:**
-- **Complexity match:** TCA adds ceremony (reducers, effects, stores) that benefits apps with complex state interactions. TOY has relatively isolated flows (Host creates, Participant records, Recipient views).
-- **Learning curve:** MVVM is native to SwiftUI ecosystem; TCA requires team buy-in and additional dependencies.
-- **App Clip size:** TCA dependency adds ~2-3MB to binary; App Clips have 15MB limit including assets.
-- **Iteration speed:** MVVM allows faster prototyping for MVP; can migrate to TCA post-launch if needed.
+3. **Loading/buffering progress** -- `PublishedCardPlayerView` and `MontagePreviewView` both implement `observeBuffering(item:)` with identical KVO on `loadedTimeRanges`, identical duration-checking, identical progress-mapping math.
 
-**Why Not Pure MVC or Simpler:**
-- Video recording state management is complex (recording segments, permissions, camera state).
-- Need clear separation for testability of business logic.
-- Coordinator pattern needed for deep link handling across flows.
+4. **Signed URL resolution** -- Each view independently creates `StorageService()` instances and calls `createSignedURL` / `createSignedVideoURL`. There is no centralized URL resolution with caching.
 
-### Proposed Layer Structure
+5. **Player lifecycle** -- Every view creates players in `.task`/`.onAppear` and tears them down in `.onDisappear`, with no reuse.
 
-```
-TOY/
-├── App/
-│   ├── TOYApp.swift              # Main app entry
-│   ├── TOYAppClipApp.swift       # App Clip entry (separate target)
-│   └── AppCoordinator.swift      # Navigation + deep link handling
-├── Core/                         # Shared Swift Package
-│   ├── Models/
-│   ├── Services/
-│   ├── ViewModels/
-│   └── Utilities/
-├── Features/
-│   ├── Host/
-│   │   ├── Views/
-│   │   ├── ViewModels/
-│   │   └── Coordinator/
-│   ├── Participant/
-│   │   ├── Views/
-│   │   ├── ViewModels/
-│   │   └── Coordinator/
-│   └── Recipient/
-│       ├── Views/
-│       └── ViewModels/
-├── Recording/                    # Shared recording infrastructure
-│   ├── CameraService.swift
-│   ├── RecordingViewModel.swift
-│   └── Views/
-└── Shared/
-    ├── Components/              # Reusable UI components
-    ├── Extensions/
-    └── Resources/
-```
+### Current Caching (Ad Hoc)
 
-### State Management Strategy
-
-| State Type | Pattern | Location |
-|------------|---------|----------|
-| View-local UI state | `@State` | View |
-| Feature-level state | `@StateObject` + ViewModel | ViewModel |
-| App-wide state (auth, user) | `@EnvironmentObject` | AppState |
-| Recording segments | Observable class | RecordingViewModel |
-| Navigation state | Coordinator | AppCoordinator |
+- `HomeView` maintains `publishedVideoURLCache: [UUID: URL]` -- in-memory dict of card ID to signed video URL, passed to `PublishedCardPlayerView` as `cachedVideoURL`
+- `CardDetailViewModel` maintains `cachedSignedURLs: [UUID: URL]` -- in-memory dict of clip ID to signed URL, passed to `ClipPreviewSheet` and `MontagePreviewView`
+- `CardDetailViewModel` caches the `montagePlayer: AVQueuePlayer?` instance itself for re-opening MontagePreviewView without re-fetching
+- **No disk caching** of video data anywhere
+- **No signed URL expiry tracking** -- URLs are cached indefinitely in memory (valid for 1 hour per StorageService default)
 
 ---
 
-## 2. App Clip Integration Architecture
+## Recommended Architecture
 
-### Code Sharing Strategy: Swift Package
+### Overview: Three-Layer Video Infrastructure
 
-**Structure:**
 ```
-TOYCore/                          # Swift Package
-├── Package.swift
-├── Sources/
-│   └── TOYCore/
-│       ├── Models/
-│       │   ├── Card.swift
-│       │   ├── Clip.swift
-│       │   └── Participant.swift
-│       ├── Services/
-│       │   ├── SupabaseService.swift
-│       │   ├── CameraService.swift
-│       │   └── VideoExportService.swift
-│       ├── ViewModels/
-│       │   └── RecordingViewModel.swift
-│       └── Utilities/
-│           ├── DeepLinkParser.swift
-│           └── VideoUtilities.swift
-└── Tests/
-```
-
-**Target Configuration:**
-
-| Component | Main App | App Clip |
-|-----------|----------|----------|
-| TOYCore package | Yes | Yes |
-| Host flow | Yes | No |
-| Participant flow | Yes | Yes |
-| Recipient flow | Yes | Yes (view-only) |
-| Video stitching | Yes | No |
-| Full settings | Yes | No |
-
-### App Clip Constraints
-
-**15MB Binary Limit Strategies:**
-1. **Asset optimization:** Use SF Symbols over custom icons
-2. **Conditional compilation:** `#if !APPCLIP` for main-app-only features
-3. **On-demand resources:** Keep non-critical assets out of App Clip
-4. **Video quality:** Lower resolution in App Clip (720p vs 1080p)
-
-**Shared Configuration:**
-```swift
-// TOYCore/Configuration.swift
-public struct AppConfiguration {
-    public static var isAppClip: Bool {
-        #if APPCLIP
-        return true
-        #else
-        return false
-        #endif
-    }
-
-    public static var maxVideoResolution: CGSize {
-        isAppClip ? CGSize(width: 720, height: 1280) : CGSize(width: 1080, height: 1920)
-    }
-}
++-----------------------------------------------------------------+
+|                        VIEWS (Consumers)                        |
+|  PublishedCardPlayerView | MontagePreviewView | ClipPreviewSheet|
+|  VideoPreviewView                                               |
+|  (All use TOYVideoPlayerView for rendering)                     |
++-----------------------------------------------------------------+
+          |                    |                    |
+          v                    v                    v
++-----------------------------------------------------------------+
+|                    VideoPlaybackService                          |
+|  @Observable, @MainActor                                        |
+|  - Player lifecycle (create, configure, teardown)               |
+|  - Playback state (loading, ready, error, progress)             |
+|  - Looping configuration                                        |
+|  - Buffer progress tracking                                     |
++-----------------------------------------------------------------+
+          |
+          v
++-----------------------------------------------------------------+
+|                     VideoURLResolver                             |
+|  actor (thread-safe)                                            |
+|  - Signed URL resolution with TTL-aware cache                   |
+|  - Disk cache management for video data                         |
+|  - Integrates with existing StorageService                      |
++-----------------------------------------------------------------+
+          |
+          v
++-----------------------------------------------------------------+
+|                     StorageService (existing)                    |
+|  actor                                                          |
+|  - createSignedURL(path:) -> URL                                |
+|  - createSignedVideoURL(path:) -> URL                           |
++-----------------------------------------------------------------+
 ```
 
-### App Clip Entry Points
+### Component 1: TOYVideoPlayerView (Unified UIViewRepresentable)
 
-```swift
-// App Clip URL handling
-// toy://card/{cardId}/record
-// toy://card/{cardId}/view
+**Purpose:** Single reusable SwiftUI view that wraps AVPlayerLayer. Replaces all 4 existing UIViewRepresentable implementations.
 
-@main
-struct TOYAppClipApp: App {
-    @StateObject private var coordinator = AppClipCoordinator()
+**What it replaces:** `PlayerLayerView`/`PlayerUIView`, `QueueVideoPlayer`/`QueuePlayerUIView`, `ClipVideoPlayer`/`ClipPlayerUIView`, `LoopingVideoPlayer`/`PlayerUIView`
 
-    var body: some Scene {
-        WindowGroup {
-            AppClipRootView()
-                .environmentObject(coordinator)
-                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-                    coordinator.handleDeepLink(activity.webpageURL)
-                }
-        }
-    }
-}
+**Type:** NEW component
+
+```
+TOYVideoPlayerView
+  Input: AVPlayer (or AVQueuePlayer -- AVQueuePlayer is a subclass of AVPlayer)
+  Input: videoGravity (default .resizeAspectFill)
+  Output: onReadyForDisplay callback
+  Output: onPlaybackFinished callback (optional)
+
+  Internal:
+    - UIView subclass with layerClass = AVPlayerLayer
+    - KVO on playerLayer.isReadyForDisplay
+    - Handles both AVPlayer and AVQueuePlayer uniformly
 ```
 
----
+**Key design decision:** This view takes an `AVPlayer` instance, not a URL. The view is purely a rendering surface. All player creation, configuration, and URL resolution happens in the service layer. This separation means the view can be used for both remote (signed URL) and local file playback without modification.
 
-## 3. Video Recording Pipeline
+### Component 2: VideoURLResolver (New Actor)
 
-### AVFoundation Architecture
+**Purpose:** Centralized signed URL resolution with two-tier caching (URL cache + optional disk cache for video data). Replaces the ad hoc signed URL caching in `HomeView`, `CardDetailViewModel`, and individual views.
 
-**Component Hierarchy:**
+**Type:** NEW component in `TOYShared/Sources/TOYShared/Services/`
+
 ```
-CameraService (singleton)
-├── AVCaptureSession
-│   ├── AVCaptureDeviceInput (camera)
-│   ├── AVCaptureDeviceInput (microphone)
-│   ├── AVCaptureVideoPreviewLayer
-│   └── AVCaptureMovieFileOutput
-└── RecordingSessionManager
-    ├── Segment tracking
-    ├── File management
-    └── Duration enforcement
+actor VideoURLResolver
+
+  Dependencies:
+    - StorageService (existing, injected or created internally)
+
+  URL Cache Layer:
+    - Dictionary: [String: CachedURL]  // storage path -> (url, fetchedAt)
+    - struct CachedURL { url: URL, fetchedAt: Date }
+    - TTL: 50 minutes (conservative vs 60-min Supabase expiry)
+    - resolveURL(path:, bucket:) async throws -> URL
+      1. Check URL cache -- if present and not expired, return
+      2. Call StorageService to get fresh signed URL
+      3. Cache and return
+
+  Disk Cache Layer (Phase 2):
+    - Directory: FileManager.cachesDirectory/video-cache/
+    - Key: SHA256 hash of storage path (stable across URL rotations)
+    - resolveLocalURL(path:, bucket:) async throws -> URL
+      1. Check disk cache -- if file exists, return local file URL
+      2. Resolve signed URL via URL cache
+      3. Download to disk cache
+      4. Return local file URL
+    - Cache eviction: LRU, max 500MB (configurable)
+    - Files in cachesDirectory can be purged by OS under storage pressure
+
+  Bucket Routing:
+    - "clips" bucket -> StorageService.createSignedURL()
+    - "videos" bucket -> StorageService.createSignedVideoURL()
+    - Matches existing StorageService two-bucket design
 ```
 
-### Recording ViewModel Design
+**Why actor, not class:** Matches the existing `StorageService` and `CardService` pattern in the codebase. Multiple views may request URLs concurrently (e.g., MontagePreviewView resolving 5 clip URLs in parallel). Actor isolation prevents data races on the cache dictionary without manual locking.
 
-```swift
+**Why 50-minute TTL, not 60:** Supabase signed URLs expire after 3600 seconds (1 hour). A 50-minute TTL provides a 10-minute buffer so a URL fetched from cache is never served with less than 10 minutes of validity remaining. This matters because AVPlayer may not start downloading immediately -- the user could get a URL, background the app, return 8 minutes later, and the URL still needs to work.
+
+### Component 3: VideoPlaybackService (New @Observable Service)
+
+**Purpose:** Manages AVPlayer lifecycle, configuration, and observable state for any video playback scenario. Each view creates its own instance (not a singleton) because playback state is per-view.
+
+**Type:** NEW component
+
+```
 @MainActor
-class RecordingViewModel: ObservableObject {
-    // State
-    @Published var recordingState: RecordingState = .idle
-    @Published var segments: [RecordingSegment] = []
-    @Published var totalDuration: TimeInterval = 0
-    @Published var cameraPermission: PermissionStatus = .undetermined
-    @Published var microphonePermission: PermissionStatus = .undetermined
+@Observable
+final class VideoPlaybackService
 
-    // Constants
-    let maxDuration: TimeInterval = 7.0
+  Dependencies:
+    - VideoURLResolver (shared singleton instance)
 
-    // Dependencies
-    private let cameraService: CameraServiceProtocol
-    private let exportService: VideoExportServiceProtocol
+  Published State:
+    - player: AVPlayer?
+    - playbackState: PlaybackState
+        // .idle, .loading(progress), .ready, .playing, .paused, .error(String)
+    - loadingProgress: Double  // 0.0 to 1.0
+    - isReadyForDisplay: Bool
 
-    enum RecordingState {
-        case idle
-        case previewing
-        case recording
-        case paused
-        case reviewing
-        case exporting
-        case complete
-    }
-}
+  Configuration:
+    - loopMode: LoopMode  // .none, .loop, .loopQueue
+    - autoPlay: Bool
+    - preferredForwardBufferDuration: TimeInterval
+
+  Core Methods:
+    - loadRemoteVideo(storagePath: String, bucket: Bucket) async
+        1. Set state to .loading(0)
+        2. Resolve URL via VideoURLResolver
+        3. Create AVPlayerItem
+        4. Create or reuse AVPlayer
+        5. Observe buffering progress
+        6. Play if autoPlay
+
+    - loadLocalVideo(fileURL: URL)
+        1. Create AVPlayerItem from local URL
+        2. Create AVPlayer
+        3. Play if autoPlay
+
+    - loadQueue(storagePaths: [String], bucket: Bucket) async
+        1. Resolve all URLs via VideoURLResolver (concurrent)
+        2. Create AVPlayerItems with preferredForwardBufferDuration
+        3. Create AVQueuePlayer
+        4. Configure actionAtItemEnd
+
+    - cleanup()
+        1. Pause player
+        2. Remove all observers
+        3. Set player to nil
+
+  Internal:
+    - KVO observers for loadedTimeRanges (buffer progress)
+    - NotificationCenter observer for AVPlayerItemDidPlayToEndTime
+    - Handles looping logic internally based on loopMode
 ```
 
-### Vine-Style Recording State Machine
+**Why per-view instances, not a singleton:** Each player view needs independent state (its own AVPlayer, its own loading progress, its own error state). A singleton would conflate state across screens. The shared resource is `VideoURLResolver` (the cache), not the playback service.
 
-```
-                    ┌─────────────┐
-                    │    IDLE     │
-                    └──────┬──────┘
-                           │ camera ready
-                           ▼
-                    ┌─────────────┐
-          ┌────────│  PREVIEWING │◄────────┐
-          │        └──────┬──────┘         │
-          │               │ touch down     │ delete segment
-          │               ▼                │
-          │        ┌─────────────┐         │
-          │        │  RECORDING  │─────────┤
-          │        └──────┬──────┘         │
-          │               │ touch up       │
-          │               ▼                │
-          │        ┌─────────────┐         │
-          │        │   PAUSED    │─────────┘
-          │        └──────┬──────┘
-          │               │ tap done (or max reached)
-          │               ▼
-          │        ┌─────────────┐
-          │        │  REVIEWING  │
-          │        └──────┬──────┘
-          │               │ confirm
-          │               ▼
-          │        ┌─────────────┐
-          │        │  EXPORTING  │
-          │        └──────┬──────┘
-          │               │ success
-          │               ▼
-          └───────►┌─────────────┐
-     (re-record)   │  COMPLETE   │
-                   └─────────────┘
-```
-
-### Segment Management
-
-```swift
-struct RecordingSegment: Identifiable {
-    let id: UUID
-    let localURL: URL
-    let duration: TimeInterval
-    let timestamp: Date
-}
-
-// File naming: {sessionId}_{segmentIndex}.mov
-// Temp directory: FileManager.default.temporaryDirectory/toy_recording/
-```
+**Why @Observable, not ObservableObject:** The existing codebase uses `@Observable` (Swift 5.9 Observation framework) throughout -- `CardDetailViewModel`, `AuthViewModel`, `PublishViewModel` all use this pattern. `@Observable` provides finer-grained updates than `ObservableObject`'s `objectWillChange`.
 
 ---
 
-## 4. Video Stitching Architecture
+## Integration Points with Existing Components
 
-### Recommendation: Hybrid Approach (Client-First)
+### Integration Map
 
-**Decision Matrix:**
+```
+EXISTING                          NEW                         HOW
+-------                          ---                         ---
+StorageService (actor)      -->  VideoURLResolver            Wraps, adds caching
+CardDetailViewModel         -->  VideoURLResolver            Remove cachedSignedURLs dict,
+                                                             remove montagePlayer cache
+HomeView                    -->  VideoURLResolver            Remove publishedVideoURLCache dict
+PublishedCardPlayerView     -->  VideoPlaybackService        Replace manual AVPlayer + observer code
+                            -->  TOYVideoPlayerView          Replace PlayerLayerView
+MontagePreviewView          -->  VideoPlaybackService        Replace manual AVQueuePlayer + observer code
+                            -->  TOYVideoPlayerView          Replace QueueVideoPlayer
+ClipPreviewSheet            -->  VideoPlaybackService        Replace manual AVPlayer + observer code
+                            -->  TOYVideoPlayerView          Replace ClipVideoPlayer
+VideoPreviewView            -->  VideoPlaybackService        Replace manual AVPlayer code
+                            -->  TOYVideoPlayerView          Replace LoopingVideoPlayer
+```
 
-| Factor | On-Device | Server-Side |
-|--------|-----------|-------------|
-| Latency | Immediate | 30s-5min |
-| Cost | Free | Compute costs |
-| Quality control | Limited | Full |
-| Offline capability | Yes | No |
-| Complex transitions | Limited | Full |
-| Battery impact | High | Low |
+### What Gets Removed from Existing Files
 
-**Recommended Strategy:**
-1. **Primary:** Client-side stitching using AVFoundation for simple concatenation
-2. **Fallback:** Server-side for failures or premium features (future)
+**CardDetailViewModel** (MODIFY):
+- Remove `cachedSignedURLs: [UUID: URL]` property
+- Remove `montagePlayer: AVQueuePlayer?` property
+- Remove `montageSignedURLs: [URL]` property
+- Remove `isMontageReady: Bool` property
+- Remove `getSignedURL(for:)` method
+- Remove `prefetchSignedURLs()` method
+- Keep all non-video state (participants, clips, profiles, loading, errors)
 
-### Client-Side Stitching Pipeline
+**HomeView** (MODIFY):
+- Remove `publishedVideoURLCache: [UUID: URL]` state
+- Remove `onVideoURLLoaded` callback passing
+- Remove `cachedVideoURL` parameter passing to PublishedCardPlayerView
 
-```swift
-class VideoStitchingService {
-    func stitchClips(_ clips: [VideoClip]) async throws -> URL {
-        // 1. Create composition
-        let composition = AVMutableComposition()
+**StorageService** (NO CHANGE):
+- Remains as-is. VideoURLResolver wraps it; does not modify it.
 
-        // 2. Add video tracks
-        guard let videoTrack = composition.addMutableTrack(
-            withMediaType: .video,
-            preferredTrackID: kCMPersistentTrackID_Invalid
-        ) else { throw StitchingError.trackCreationFailed }
+**CardService** (NO CHANGE):
+- No video playback concerns.
 
-        // 3. Add audio tracks
-        guard let audioTrack = composition.addMutableTrack(
-            withMediaType: .audio,
-            preferredTrackID: kCMPersistentTrackID_Invalid
-        ) else { throw StitchingError.trackCreationFailed }
+### Data Flow: Loading a Published Card Video
 
-        // 4. Insert clips sequentially
-        var currentTime = CMTime.zero
-        for clip in clips {
-            let asset = AVURLAsset(url: clip.localURL)
-            // ... insert at currentTime
-            currentTime = CMTimeAdd(currentTime, asset.duration)
-        }
+```
+User taps published card in HomeView
+  |
+  v
+HomeView presents PublishedCardPlayerView(card: card)
+  |  (no more cachedVideoURL parameter needed)
+  |
+  v
+PublishedCardPlayerView.task:
+  let service = VideoPlaybackService()
+  service.loopMode = .loop
+  service.autoPlay = true
+  await service.loadRemoteVideo(
+    storagePath: card.videoUrl!,
+    bucket: .videos
+  )
+  |
+  v
+VideoPlaybackService.loadRemoteVideo():
+  playbackState = .loading(0)
+  let url = try await VideoURLResolver.shared.resolveURL(
+    path: storagePath,
+    bucket: .videos
+  )
+  |
+  v
+VideoURLResolver.resolveURL():
+  // Check cache: is there a CachedURL for this path with fetchedAt < 50min ago?
+  if let cached = urlCache[path], !cached.isExpired { return cached.url }
+  // Cache miss: call StorageService
+  let url = try await storageService.createSignedVideoURL(path: path)
+  urlCache[path] = CachedURL(url: url, fetchedAt: Date())
+  return url
+  |
+  v
+VideoPlaybackService (continued):
+  let item = AVPlayerItem(url: url)
+  // Set up KVO on loadedTimeRanges -> update loadingProgress
+  let player = AVPlayer(playerItem: item)
+  self.player = player
+  player.play()
+  // KVO on playerLayer.isReadyForDisplay -> set isReadyForDisplay = true
+  // NotificationCenter on .AVPlayerItemDidPlayToEndTime -> seek to zero, replay
+```
 
-        // 5. Apply video composition (orientation fixes)
-        let videoComposition = AVMutableVideoComposition()
-        // ... configure transforms
+### Data Flow: Loading a Montage Preview (Multi-Clip Queue)
 
-        // 6. Export
-        let exporter = AVAssetExportSession(
-            asset: composition,
-            presetName: AVAssetExportPresetHighestQuality
-        )
-        // ... configure and export
-
-        return outputURL
+```
+User taps "Preview Full Video" in CardDetailView
+  |
+  v
+MontagePreviewView.task:
+  let service = VideoPlaybackService()
+  service.loopMode = .none  // plays once, shows replay button
+  service.autoPlay = true
+  let paths = sortedClips.map(\.videoUrl)
+  await service.loadQueue(storagePaths: paths, bucket: .clips)
+  |
+  v
+VideoPlaybackService.loadQueue():
+  playbackState = .loading(0)
+  // Resolve all URLs concurrently
+  let urls = try await withTaskGroup { group in
+    for (i, path) in paths.enumerated() {
+      group.addTask {
+        (i, try await VideoURLResolver.shared.resolveURL(path: path, bucket: .clips))
+      }
     }
-}
+    // Collect, sort by index, update progress
+  }
+  // Create AVPlayerItems with preferredForwardBufferDuration = 5
+  // Create AVQueuePlayer(items:)
+  // actionAtItemEnd = .advance
+  // Observe last item for playback end
 ```
 
-### Stitching Order Logic
-
-```swift
-func orderedClips(for card: Card) -> [VideoClip] {
-    // Host clip always first
-    let hostClip = card.clips.first { $0.participantId == card.hostId }
-
-    // Remaining clips sorted by submission time
-    let participantClips = card.clips
-        .filter { $0.participantId != card.hostId }
-        .sorted { $0.submittedAt < $1.submittedAt }
-
-    return [hostClip].compactMap { $0 } + participantClips
-}
-```
-
----
-
-## 5. Supabase Integration Architecture
-
-### Service Layer Design
+### Data Flow: Loading a Clip Preview
 
 ```
-SupabaseManager (singleton)
-├── AuthService
-│   ├── signInAnonymously()
-│   ├── signUp(email:password:)
-│   └── currentUser
-├── DatabaseService
-│   ├── CardRepository
-│   ├── ClipRepository
-│   └── ParticipantRepository
-├── StorageService
-│   ├── uploadVideo(data:path:)
-│   ├── downloadVideo(path:)
-│   └── getSignedURL(path:)
-└── RealtimeService
-    └── subscribeToCard(cardId:)
+User taps clip thumbnail in CardDetailView
+  |
+  v
+ClipPreviewSheet.task:
+  let service = VideoPlaybackService()
+  service.loopMode = .loop
+  service.autoPlay = true
+  await service.loadRemoteVideo(
+    storagePath: clip.videoUrl,
+    bucket: .clips
+  )
+  // Same flow as published card, just different bucket
 ```
 
-### Repository Pattern
-
-```swift
-protocol CardRepositoryProtocol {
-    func create(_ card: Card) async throws -> Card
-    func fetch(id: String) async throws -> Card
-    func update(_ card: Card) async throws
-    func delete(id: String) async throws
-    func observeCard(id: String) -> AsyncStream<Card>
-}
-
-class SupabaseCardRepository: CardRepositoryProtocol {
-    private let client: SupabaseClient
-
-    func observeCard(id: String) -> AsyncStream<Card> {
-        AsyncStream { continuation in
-            let channel = client.realtime
-                .channel("card:\(id)")
-                .on("postgres_changes",
-                    filter: .eq("id", id)) { payload in
-                    // Parse and yield updated card
-                }
-            // ... setup and cleanup
-        }
-    }
-}
-```
-
-### Database Schema (Supabase Tables)
-
-```sql
--- Cards table
-CREATE TABLE cards (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    host_id UUID REFERENCES auth.users(id),
-    title TEXT,
-    recipient_name TEXT,
-    status TEXT CHECK (status IN ('draft', 'collecting', 'finalizing', 'published')),
-    created_at TIMESTAMPTZ DEFAULT now(),
-    published_at TIMESTAMPTZ,
-    final_video_url TEXT
-);
-
--- Clips table
-CREATE TABLE clips (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    card_id UUID REFERENCES cards(id) ON DELETE CASCADE,
-    participant_id UUID REFERENCES auth.users(id),
-    participant_name TEXT,
-    video_url TEXT,
-    duration_seconds DECIMAL(4,2),
-    order_index INTEGER,
-    status TEXT CHECK (status IN ('pending', 'uploaded', 'approved', 'rejected')),
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Storage buckets
--- videos/cards/{card_id}/clips/{clip_id}.mp4
--- videos/cards/{card_id}/final.mp4
-```
-
-### Realtime Subscriptions
-
-**Host Dashboard Updates:**
-```swift
-// Subscribe to new clip submissions
-func observeCardClips(cardId: String) -> AsyncStream<[Clip]> {
-    // Realtime subscription to clips table
-    // Fires when participant uploads new clip
-}
-```
-
-**Use Cases:**
-1. Host sees new participant submissions in real-time
-2. Participant sees confirmation when upload completes
-3. Recipient gets notified when video is ready (optional)
-
----
-
-## 6. Deep Linking Architecture
-
-### URL Schema
+### Data Flow: Local Video Preview After Recording
 
 ```
-# Universal Links (production)
-https://toy.app/card/{cardId}/record     # Participant recording
-https://toy.app/card/{cardId}/view       # Recipient viewing
-https://toy.app/card/{cardId}/manage     # Host management
-
-# Custom URL Scheme (development/fallback)
-toy://card/{cardId}/record
-toy://card/{cardId}/view
-```
-
-### Deep Link Coordinator
-
-```swift
-@MainActor
-class DeepLinkCoordinator: ObservableObject {
-    @Published var destination: Destination?
-
-    enum Destination: Hashable {
-        case participantRecording(cardId: String)
-        case recipientViewing(cardId: String)
-        case hostManagement(cardId: String)
-    }
-
-    func handle(url: URL) -> Bool {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
-              let pathComponents = parsePathComponents(components.path) else {
-            return false
-        }
-
-        switch (pathComponents.action, pathComponents.cardId) {
-        case ("record", let cardId?):
-            destination = .participantRecording(cardId: cardId)
-        case ("view", let cardId?):
-            destination = .recipientViewing(cardId: cardId)
-        case ("manage", let cardId?):
-            destination = .hostManagement(cardId: cardId)
-        default:
-            return false
-        }
-        return true
-    }
-}
-```
-
-### Navigation Architecture
-
-```swift
-struct ContentView: View {
-    @EnvironmentObject var deepLinkCoordinator: DeepLinkCoordinator
-    @EnvironmentObject var authState: AuthState
-
-    var body: some View {
-        Group {
-            if let destination = deepLinkCoordinator.destination {
-                destinationView(for: destination)
-            } else if authState.isAuthenticated {
-                HostDashboardView()
-            } else {
-                OnboardingView()
-            }
-        }
-    }
-
-    @ViewBuilder
-    func destinationView(for destination: DeepLinkCoordinator.Destination) -> some View {
-        switch destination {
-        case .participantRecording(let cardId):
-            ParticipantRecordingFlow(cardId: cardId)
-        case .recipientViewing(let cardId):
-            RecipientViewingFlow(cardId: cardId)
-        case .hostManagement(let cardId):
-            HostManagementFlow(cardId: cardId)
-        }
-    }
-}
-```
-
----
-
-## 7. State Management for Recording Flow
-
-### Recording Flow State Machine
-
-```swift
-enum RecordingFlowState: Equatable {
-    case loading                          // Fetching card info
-    case permissionRequired([Permission]) // Need camera/mic
-    case ready                            // Can start recording
-    case recording(RecordingState)        // Active recording
-    case reviewing(previewURL: URL)       // Watching playback
-    case uploading(progress: Double)      // Sending to Supabase
-    case success                          // Upload complete
-    case error(RecordingFlowError)        // Recoverable error
-
-    enum Permission {
-        case camera, microphone
-    }
-}
-```
-
-### Flow ViewModel
-
-```swift
-@MainActor
-class ParticipantRecordingFlowViewModel: ObservableObject {
-    // Flow state
-    @Published var flowState: RecordingFlowState = .loading
-
-    // Sub-states
-    @Published var card: Card?
-    @Published var recordingViewModel: RecordingViewModel?
-
-    // Dependencies
-    private let cardRepository: CardRepositoryProtocol
-    private let clipRepository: ClipRepositoryProtocol
-    private let storageService: StorageServiceProtocol
-
-    func loadCard(id: String) async {
-        flowState = .loading
-        do {
-            card = try await cardRepository.fetch(id: id)
-            await checkPermissions()
-        } catch {
-            flowState = .error(.cardNotFound)
-        }
-    }
-
-    func submitRecording() async {
-        guard let previewURL = recordingViewModel?.finalVideoURL else { return }
-
-        flowState = .uploading(progress: 0)
-
-        do {
-            // 1. Upload video
-            let videoData = try Data(contentsOf: previewURL)
-            let remotePath = try await storageService.uploadVideo(
-                data: videoData,
-                path: "cards/\(card!.id)/clips/\(UUID().uuidString).mp4"
-            ) { progress in
-                Task { @MainActor in
-                    self.flowState = .uploading(progress: progress)
-                }
-            }
-
-            // 2. Create clip record
-            let clip = Clip(
-                cardId: card!.id,
-                videoURL: remotePath,
-                duration: recordingViewModel!.totalDuration
-            )
-            try await clipRepository.create(clip)
-
-            flowState = .success
-        } catch {
-            flowState = .error(.uploadFailed(error))
-        }
-    }
-}
+Recording completes, VideoPreviewView appears
+  |
+  v
+VideoPreviewView.onAppear:
+  let service = VideoPlaybackService()
+  service.loopMode = .loop
+  service.autoPlay = true
+  service.loadLocalVideo(fileURL: videoURL)
+  // No network, no signed URL, just local file
 ```
 
 ---
 
 ## Component Boundaries
 
-### Boundary Diagram
+| Component | Location | Responsibility | Does NOT Do |
+|-----------|----------|---------------|-------------|
+| `TOYVideoPlayerView` | `TOYShared/Video/` | Render AVPlayer via AVPlayerLayer, report readyForDisplay | Create players, resolve URLs, manage state |
+| `VideoPlaybackService` | `TOYShared/Video/` | Create/configure AVPlayer, manage playback state, handle looping/buffering | Cache URLs, download videos, render UI |
+| `VideoURLResolver` | `TOYShared/Services/` | Cache signed URLs with TTL, resolve URLs via StorageService, (future) disk cache | Create players, manage playback state |
+| `StorageService` | `TOYShared/Services/` (existing) | Generate signed URLs from Supabase | Cache anything, create players |
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         iOS App / App Clip                       │
-├─────────────────────────────────────────────────────────────────┤
-│  Presentation Layer                                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │  Host Views  │  │ Participant  │  │  Recipient   │          │
-│  │              │  │    Views     │  │    Views     │          │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
-│         │                  │                  │                  │
-├─────────┴──────────────────┴──────────────────┴─────────────────┤
-│  ViewModel Layer (Feature-specific)                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │HostDashboard │  │  Recording   │  │   Viewing    │          │
-│  │  ViewModel   │  │  ViewModel   │  │  ViewModel   │          │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
-│         │                  │                  │                  │
-├─────────┴──────────────────┴──────────────────┴─────────────────┤
-│  Service Layer (Shared via TOYCore package)                      │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐   │
-│  │  Camera    │ │  Storage   │ │  Database  │ │  Realtime  │   │
-│  │  Service   │ │  Service   │ │  Repos     │ │  Service   │   │
-│  └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘   │
-│        │              │              │              │            │
-├────────┴──────────────┴──────────────┴──────────────┴───────────┤
-│  External Dependencies                                           │
-│  ┌────────────┐ ┌────────────────────────────────────────────┐  │
-│  │AVFoundation│ │              Supabase                       │  │
-│  │            │ │  ┌────────┐ ┌─────────┐ ┌─────────────┐    │  │
-│  │            │ │  │  Auth  │ │Database │ │   Storage   │    │  │
-│  │            │ │  │        │ │(Postgres)│ │   (S3)      │    │  │
-│  └────────────┘ │  └────────┘ └─────────┘ └─────────────┘    │  │
-│                 └────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-```
+### Module Placement Rationale
 
-### Component Communication Rules
-
-| From | To | Method | Data Format |
-|------|-----|--------|-------------|
-| View | ViewModel | Direct method calls | Swift types |
-| ViewModel | Service | Async/await | Domain models |
-| Service | Supabase | SDK calls | JSON/Binary |
-| ViewModel | ViewModel | NotificationCenter / Combine | Events |
-| App Clip | Main App | Shared Keychain | Tokens |
+- `VideoURLResolver` goes in `TOYShared` because it wraps `StorageService` which is already in `TOYShared`, and the App Clip (if it needs video playback) would need URL resolution.
+- `TOYVideoPlayerView` and `VideoPlaybackService` go in `TOYShared` -- the App Clip already uses `RecordingView` from TOYShared, so video playback there is a natural extension.
 
 ---
 
-## Data Flow
+## Anti-Patterns to Avoid
 
-### Host Creates Card Flow
+### Anti-Pattern 1: Singleton AVPlayer
 
-```
-User Action: Tap "Create Card"
-     │
-     ▼
-┌─────────────────┐
-│HostDashboardVM  │ createCard()
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ CardRepository  │ create(card)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  SupabaseDB     │ INSERT INTO cards
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Generate Link   │ "https://toy.app/card/{id}/record"
-└────────┬────────┘
-         │
-         ▼
-UI: Show share sheet with link
-```
+**What:** Creating a single shared AVPlayer instance for the entire app.
+**Why bad:** The app can have multiple video contexts alive simultaneously (e.g., CardDetailView has a cached montage player while ClipPreviewSheet is open as a sheet). A single player would conflict.
+**Instead:** Each view gets its own `VideoPlaybackService` instance (which creates its own AVPlayer). The shared resource is the URL cache (`VideoURLResolver.shared`), not the player.
 
-### Participant Records Clip Flow
+### Anti-Pattern 2: Creating New AVPlayers on Every Appear/Disappear
 
-```
-Deep Link: toy://card/{cardId}/record
-     │
-     ▼
-┌─────────────────┐
-│DeepLinkCoord    │ destination = .participantRecording
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ParticipantFlow  │ loadCard() -> checkPermissions()
-│    ViewModel    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ RecordingVM     │ Vine-style recording loop
-└────────┬────────┘
-         │ (touch to record segments)
-         ▼
-┌─────────────────┐
-│ CameraService   │ AVCaptureSession -> file segments
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│VideoExportSvc   │ Merge segments -> single file
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ StorageService  │ Upload to Supabase Storage
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ ClipRepository  │ Create clip record
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ RealtimeService │ Notify host of new submission
-└─────────────────┘
-```
+**What:** The current pattern -- every view creates `AVPlayer(url:)` on appear and sets `player = nil` on disappear.
+**Why bad:** AVPlayer creation allocates system playback pipeline resources. iOS limits the number of concurrent pipelines. Rapidly creating/destroying players (e.g., scrolling through a list) can exhaust pipelines and cause silent failures.
+**Instead:** `VideoPlaybackService` should use `player.replaceCurrentItem(with:)` when reloading the same view with different content, and only create new AVPlayer instances when a view first appears. The `cleanup()` method should properly tear down by calling `replaceCurrentItem(with: nil)` before setting player to nil, which releases the pipeline.
 
-### Host Finalizes Card Flow
+### Anti-Pattern 3: AVAssetResourceLoaderDelegate for Simple Signed URLs
 
-```
-User Action: Tap "Finalize Card"
-     │
-     ▼
-┌─────────────────┐
-│HostManagementVM │ finalizeCard()
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ ClipRepository  │ Fetch all approved clips
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ StorageService  │ Download all clip videos
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────┐
-│VideoStitchingService│ Concatenate clips (host first)
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────┐
-│ StorageService  │ Upload final video
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ CardRepository  │ Update card status = 'published'
-└────────┬────────┘
-         │
-         ▼
-UI: Show share link for recipient
-```
+**What:** Implementing `AVAssetResourceLoaderDelegate` with custom URL schemes to intercept and cache video downloads.
+**Why bad:** Extremely complex to implement correctly, requires custom URL scheme registration, handling partial byte-range requests, and managing a download state machine. Overkill for 7-second clips that are small enough to download entirely.
+**Instead:** For Phase 1, use the URL cache (signed URL TTL caching). For Phase 2, if disk caching is needed, download the file to disk first via URLSession, then play from the local file URL. This is dramatically simpler than resource loader interception.
+
+### Anti-Pattern 4: Caching AVPlayer/AVPlayerItem Instances
+
+**What:** The current `CardDetailViewModel.montagePlayer` pattern -- caching the entire AVQueuePlayer instance.
+**Why bad:** AVPlayer instances hold significant memory (video buffers, decoded frames). Caching them means those buffers persist even when the user is on a different screen. For a montage with 5 clips, this can be tens of MB of video buffer memory sitting idle.
+**Instead:** Cache the resolved URLs (cheap, just strings) and re-create the player quickly when needed. With URL caching, the "slow" part (network request for signed URL) is eliminated. AVPlayer creation from a cached/downloaded file is nearly instant.
+
+---
+
+## Scalability Considerations
+
+| Concern | Current (1-5 clips) | 10+ clips | 50+ clips |
+|---------|---------------------|-----------|-----------|
+| Signed URL fetching | Concurrent TaskGroup, works fine | Still fine, Supabase handles it | May want to batch or throttle |
+| Video memory | One player at a time, fine | Queue player buffers ahead, watch memory | Need aggressive buffer limits |
+| Disk cache size | N/A (no disk cache) | ~50-100MB for 7s clips | ~500MB+, need eviction |
+| URL cache entries | ~10-20 entries, trivial | ~50 entries, trivial | Still trivial, just strings |
+
+For the current app scale (cards with 1-10 clips of 7 seconds each), the architecture is deliberately straightforward. The main scalability lever is the disk cache (Phase 2), which can be added without changing the player views at all -- only `VideoURLResolver` needs to be extended.
 
 ---
 
 ## Suggested Build Order
 
-### Phase 1: Foundation (Week 1-2)
-**Dependencies: None**
+### Phase 1: Foundation (builds from bottom of stack up)
 
-1. **TOYCore Swift Package setup**
-   - Create package structure
-   - Define domain models (Card, Clip, Participant)
-   - No external dependencies yet
+Build order matters because of dependencies. Start from the bottom of the stack and work up.
 
-2. **Supabase integration skeleton**
-   - SupabaseManager singleton
-   - Basic auth (anonymous for App Clip)
-   - Configuration handling
+**Step 1: TOYVideoPlayerView**
+- Unified UIViewRepresentable
+- Supports both AVPlayer and AVQueuePlayer
+- `isReadyForDisplay` KVO callback
+- No dependencies on new code -- can be tested immediately
+- **Why first:** This is the simplest piece, can be verified visually, and unblocks refactoring individual views.
 
-3. **Deep link infrastructure**
-   - URL parsing
-   - DeepLinkCoordinator
-   - Basic navigation structure
+**Step 2: VideoURLResolver**
+- Actor wrapping StorageService
+- URL cache with 50-minute TTL
+- Bucket routing (clips vs videos)
+- **Why second:** Depends on nothing new. Can be unit tested with mock StorageService.
 
-### Phase 2: Recording Pipeline (Week 2-3)
-**Dependencies: Foundation complete**
+**Step 3: VideoPlaybackService**
+- @Observable service with player lifecycle management
+- Loading progress tracking
+- Looping modes
+- **Why third:** Depends on VideoURLResolver. Can be tested by wiring to one view at a time.
 
-1. **Camera service**
-   - AVCaptureSession setup
-   - Permission handling
-   - Preview layer integration
+### Phase 2: View Migration (one view at a time)
 
-2. **Recording ViewModel**
-   - State machine implementation
-   - Segment management
-   - Duration enforcement
+Migrate one view at a time, keeping old implementations working until each is replaced.
 
-3. **Recording UI**
-   - Camera preview view
-   - Record button (hold to record)
-   - Segment indicators
-   - Review playback
+**Step 4: Migrate VideoPreviewView first**
+- Simplest player (local file, no signed URLs)
+- Tests that TOYVideoPlayerView + VideoPlaybackService work for the basic case
+- Low risk -- this view is already the simplest and "works fine"
 
-### Phase 3: Data Layer (Week 3-4)
-**Dependencies: Recording pipeline for testing**
+**Step 5: Migrate ClipPreviewSheet**
+- Adds signed URL resolution (single remote video)
+- Tests VideoURLResolver integration
+- Medium complexity
 
-1. **Supabase repositories**
-   - CardRepository implementation
-   - ClipRepository implementation
-   - Error handling
+**Step 6: Migrate PublishedCardPlayerView**
+- Uses videos bucket (not clips bucket) -- tests bucket routing
+- Has the most complex loading overlay (thumbnail + progress)
+- Remove HomeView's `publishedVideoURLCache`
 
-2. **Storage service**
-   - Video upload with progress
-   - Signed URL generation
-   - Download for playback
+**Step 7: Migrate MontagePreviewView**
+- Most complex: AVQueuePlayer, multi-clip, replay logic
+- Remove CardDetailViewModel's montage player caching
+- Tests loadQueue() flow end-to-end
 
-3. **Realtime subscriptions**
-   - Card updates channel
-   - Clip submission notifications
+### Phase 3: Disk Cache (Optional, later milestone)
 
-### Phase 4: Host Flow (Week 4-5)
-**Dependencies: Data layer complete**
+**Step 8: Add disk caching to VideoURLResolver**
+- Download-to-cache-then-play flow
+- LRU eviction with configurable max size
+- Only needed if video load times are still too slow after URL caching
 
-1. **Host dashboard**
-   - Card list view
-   - Create card flow
-   - Share invite link
-
-2. **Card management**
-   - View submissions
-   - Preview clips
-   - Delete clips
-
-3. **Video stitching**
-   - AVFoundation composition
-   - Export pipeline
-   - Progress feedback
-
-### Phase 5: App Clip (Week 5-6)
-**Dependencies: Recording + Data layers**
-
-1. **App Clip target setup**
-   - Xcode configuration
-   - Shared code via TOYCore
-   - Size optimization
-
-2. **Participant flow**
-   - Deep link handling
-   - Streamlined recording
-   - Upload and confirmation
-
-3. **Testing & optimization**
-   - Binary size verification
-   - Performance testing
-   - Edge case handling
-
-### Phase 6: Recipient Flow + Polish (Week 6-7)
-**Dependencies: All flows complete**
-
-1. **Recipient viewing**
-   - Video player
-   - Branding overlay
-   - Share functionality
-
-2. **End-to-end testing**
-   - Full flow testing
-   - Error handling
-   - Edge cases
-
-3. **Performance optimization**
-   - Video compression tuning
-   - Memory management
-   - Battery impact
-
----
-
-## Build Order Dependency Graph
+### Dependency Graph
 
 ```
-                    ┌─────────────────┐
-                    │   Foundation    │
-                    │  (TOYCore pkg)  │
-                    └────────┬────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              │              │              │
-              ▼              ▼              ▼
-       ┌────────────┐ ┌────────────┐ ┌────────────┐
-       │  Recording │ │ Deep Link  │ │  Supabase  │
-       │  Pipeline  │ │ Navigation │ │   Setup    │
-       └──────┬─────┘ └──────┬─────┘ └──────┬─────┘
-              │              │              │
-              └──────────────┴──────────────┘
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │   Data Layer    │
-                    │  (Repositories) │
-                    └────────┬────────┘
-                             │
-              ┌──────────────┴──────────────┐
-              │                             │
-              ▼                             ▼
-       ┌────────────┐                ┌────────────┐
-       │  Host Flow │                │  App Clip  │
-       │            │                │ (Participant)│
-       └──────┬─────┘                └──────┬─────┘
-              │                             │
-              └──────────────┬──────────────┘
-                             │
-                             ▼
-                    ┌─────────────────┐
-                    │ Recipient Flow  │
-                    │    + Polish     │
-                    └─────────────────┘
+TOYVideoPlayerView (no dependencies)
+       |
+       v
+VideoURLResolver (depends on StorageService -- existing)
+       |
+       v
+VideoPlaybackService (depends on VideoURLResolver, uses TOYVideoPlayerView indirectly)
+       |
+       v
+View Migrations (depend on all three above)
+  VideoPreviewView -> ClipPreviewSheet -> PublishedCardPlayerView -> MontagePreviewView
 ```
 
 ---
 
-## Technical Risks & Mitigations
+## File Structure
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| App Clip exceeds 15MB | Cannot publish | Aggressive asset optimization; lower resolution; monitor size in CI |
-| Video stitching OOM on device | Crashes on large cards | Stream processing; limit participant count; server fallback |
-| Supabase storage costs | Budget overrun | Compress videos aggressively; set file size limits; monitor usage |
-| AVFoundation complexity | Development delays | Start with simple capture; iterate on quality |
-| Deep link fragility | Broken participant links | Comprehensive URL parsing tests; fallback handling |
+```
+TOYShared/Sources/TOYShared/
+  Services/
+    StorageService.swift          (existing, no changes)
+    VideoURLResolver.swift        (NEW)
+  Video/
+    TOYVideoPlayerView.swift      (NEW)
+    VideoPlaybackService.swift    (NEW)
+
+TOY/Features/
+  PublishedCard/
+    PublishedCardPlayerView.swift  (MODIFY - use new infrastructure)
+  Publishing/
+    MontagePreviewView.swift      (MODIFY - use new infrastructure)
+  CardManagement/
+    ClipPreviewSheet.swift        (MODIFY - use new infrastructure)
+    CardDetailViewModel.swift     (MODIFY - remove video caching state)
+  Home/
+    HomeView.swift                (MODIFY - remove publishedVideoURLCache)
+
+TOYShared/Sources/TOYShared/Recording/UI/
+    VideoPreviewView.swift        (MODIFY - use new infrastructure)
+```
+
+**Total new files:** 3
+**Total modified files:** 6
+**Total deleted files:** 0 (old UIViewRepresentable types are private to their files, removed as part of modification)
 
 ---
 
-## Open Questions for Implementation
+## Cache Invalidation Strategy for Signed URL Expiry
 
-1. **Anonymous vs registered participants?** Can participants record without creating an account? (Likely yes for App Clip friction reduction)
+This is the trickiest aspect of the architecture and deserves explicit treatment.
 
-2. **Offline recording?** Should participant be able to record offline and upload later? (Adds complexity but improves UX)
+### The Problem
 
-3. **Video quality presets?** Should we offer quality options or auto-detect based on network/device?
+Supabase signed URLs expire after 1 hour. The app caches these URLs to avoid redundant network requests. If a cached URL is served to AVPlayer after it has expired, playback will fail with an HTTP 400/403 error.
 
-4. **Retry logic?** How aggressively should we retry failed uploads? Background upload support?
+### The Strategy: Conservative TTL + Refresh-on-Error
 
-5. **Clip approval workflow?** Does host explicitly approve each clip or are all auto-approved?
+**Layer 1: Conservative TTL (primary defense)**
+- Cache entries expire after 50 minutes (not 60)
+- 10-minute buffer accounts for: time between URL fetch and playback start, user backgrounding the app, slow network conditions
+- When `VideoURLResolver.resolveURL()` finds a cached entry older than 50 minutes, it treats it as a cache miss and fetches fresh
+
+**Layer 2: Refresh-on-Error (fallback defense)**
+- `VideoPlaybackService` observes `AVPlayerItem.status` via KVO
+- If status becomes `.failed` and the error indicates an HTTP auth/expiry error (status 400/403), it:
+  1. Evicts the cached URL from VideoURLResolver
+  2. Re-resolves the URL (getting a fresh signed URL)
+  3. Creates a new AVPlayerItem with the fresh URL
+  4. Replaces the current item on the player
+  5. Resumes playback
+- This handles edge cases where even the 50-minute TTL is not enough (e.g., app was suspended for 15 minutes)
+
+**Layer 3: Proactive refresh (future enhancement)**
+- If the app returns from background and the player is visible, proactively check if the current URL's cached entry is close to expiry (>45 minutes old) and refresh preemptively
+- Not needed for Phase 1 -- the refresh-on-error fallback handles this adequately
+
+### How This Replaces Current Ad Hoc Caching
+
+Currently, `HomeView.publishedVideoURLCache` and `CardDetailViewModel.cachedSignedURLs` cache URLs indefinitely with no expiry tracking. If the user keeps the app open for more than an hour, these cached URLs silently expire and playback fails. The new architecture fixes this systematically.
 
 ---
 
-*Architecture research complete: 2026-02-01*
+## Sources
+
+- [Apple AVPlayer Documentation](https://developer.apple.com/documentation/avfoundation/avplayer)
+- [Apple AVAssetResourceLoaderDelegate Documentation](https://developer.apple.com/documentation/avfoundation/avassetresourceloaderdelegate)
+- [Apple replaceCurrentItem(with:) Documentation](https://developer.apple.com/documentation/avfoundation/avplayer/1390806-replacecurrentitem)
+- [iOS Performance -- AVPlayer edition (Medium)](https://medium.com/tech-romance/ios-performance-avplayer-edition-257c9575e3ea)
+- [Mastering Multilayer Caching in Swift (Medium)](https://medium.com/@khachatur.hakobyan2023/mastering-multilayer-caching-in-ios-nscache-urlcache-filemanager-cdn-beyond-6b5e70d9fb3e)
+- [Caching in Swift (Swift by Sundell)](https://www.swiftbysundell.com/articles/caching-in-swift/)
+- [VIMVideoPlayer replaceCurrentItem performance discussion](https://github.com/vimeo/VIMVideoPlayer/issues/56)
+- [CachingPlayerItem (GitHub)](https://github.com/sukov/CachingPlayerItem)
+- [Too Many AVPlayers? (Becky Hansmeyer)](https://www.beckyhansmeyer.com/2017/08/30/too-many-avplayers/)
+- Direct codebase analysis of all 4 player implementations, StorageService, CardDetailViewModel, and HomeView
