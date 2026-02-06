@@ -238,6 +238,7 @@ struct PublishedCardPlayerView: View {
             await MainActor.run {
                 let playerItem = AVPlayerItem(url: signedURL)
                 let avPlayer = AVPlayer(playerItem: playerItem)
+                avPlayer.automaticallyWaitsToMinimizeStalling = false
 
                 // Observe buffering progress
                 observeBuffering(item: playerItem)
