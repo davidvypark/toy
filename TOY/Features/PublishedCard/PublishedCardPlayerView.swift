@@ -7,19 +7,28 @@
 //
 
 import AVKit
+import Kingfisher
 import SwiftUI
 import TOYShared
 
 struct PublishedCardPlayerView: View {
     let card: Card
+    var currentUserId: UUID? = nil
+    var cachedVideoURL: URL? = nil
+    var onVideoURLLoaded: ((URL) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
 
     @State private var player: AVPlayer?
     @State private var isLoading = true
+    @State private var isPlayerReady = false
+    @State private var loadingProgress: Double = 0
     @State private var error: String?
     @State private var showDetails = false
     @State private var clips: [Clip] = []
+    @State private var profiles: [UUID: (displayName: String?, avatarURL: URL?)] = [:]
     @State private var showCopiedToast = false
+    @State private var bufferObserver: NSKeyValueObservation?
+    @State private var firstClipThumbnailURL: URL?
 
     private let storageService = StorageService()
     private let cardService = CardService()
@@ -34,18 +43,45 @@ struct PublishedCardPlayerView: View {
 
                 // Video player
                 if let player = player {
-                    VideoPlayerView(player: player, showDetails: showDetails, geometry: geometry)
-                        .onTapGesture {
-                            if showDetails {
-                                withAnimation(.easeOut(duration: 0.2)) {
-                                    showDetails = false
-                                }
+                    VideoPlayerView(player: player, showDetails: showDetails, geometry: geometry, onReadyToDisplay: {
+                        isPlayerReady = true
+                        loadingProgress = 1.0
+                    })
+                    .opacity(isPlayerReady ? 1 : 0)
+                    .onTapGesture {
+                        if showDetails {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                showDetails = false
                             }
                         }
-                } else if isLoading {
-                    ProgressView()
-                        .tint(.warmCream)
-                } else if let error = error {
+                    }
+                }
+
+                // Loading overlay with thumbnail and progress
+                if !isPlayerReady && error == nil {
+                    ZStack {
+                        // Thumbnail background
+                        if let thumbnailURL = firstClipThumbnailURL {
+                            KFImage(thumbnailURL)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .clipped()
+                        } else {
+                            Color.black
+                        }
+
+                        // Semi-transparent overlay
+                        Color.black.opacity(0.5)
+
+                        ProgressView()
+                            .tint(.warmCream)
+                            .scaleEffect(1.2)
+                    }
+                    .ignoresSafeArea()
+                }
+
+                if let error = error {
                     VStack(spacing: TOYSpacing.md) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 40, weight: .light))
@@ -60,13 +96,13 @@ struct PublishedCardPlayerView: View {
 
                 // Overlay content
                 VStack {
-                    // Top bar - minimal close button
+                    // Top bar - back button
                     HStack {
                         Button {
                             dismiss()
                         } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 18, weight: .medium))
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .medium))
                                 .foregroundColor(.warmCream)
                                 .frame(width: 44, height: 44)
                                 .contentShape(Rectangle())
@@ -107,6 +143,8 @@ struct PublishedCardPlayerView: View {
                     DetailsPanel(
                         card: card,
                         clips: clips,
+                        profiles: profiles,
+                        currentUserId: currentUserId,
                         onDismiss: {
                             withAnimation(.easeOut(duration: 0.2)) {
                                 showDetails = false
@@ -121,11 +159,14 @@ struct PublishedCardPlayerView: View {
             .gesture(
                 DragGesture()
                     .onChanged { value in
+                        // Swipe up to show details
                         if !showDetails && value.translation.height < -20 {
                             withAnimation(.easeOut(duration: 0.2)) {
                                 showDetails = true
                             }
-                        } else if showDetails && value.translation.height > 20 {
+                        }
+                        // Swipe down to hide details
+                        else if showDetails && value.translation.height > 20 {
                             withAnimation(.easeOut(duration: 0.2)) {
                                 showDetails = false
                             }
@@ -139,11 +180,11 @@ struct PublishedCardPlayerView: View {
                         Spacer()
                         Text("Copied")
                             .font(.toyCaption())
-                            .foregroundColor(.warmCream)
+                            .foregroundColor(.black)
                             .toyLetterSpacing(1)
                             .padding(.horizontal, TOYSpacing.lg)
                             .padding(.vertical, TOYSpacing.sm)
-                            .background(Color.warmBlack)
+                            .background(Color.white)
                             .padding(.bottom, 100)
                     }
                     .transition(.opacity)
@@ -159,32 +200,53 @@ struct PublishedCardPlayerView: View {
             .animation(.easeInOut(duration: 0.2), value: showCopiedToast)
         }
         .task {
-            await loadVideo()
+            // Load clips first to get thumbnail for loading screen
             await loadClips()
+            await loadVideo()
         }
         .onDisappear {
             player?.pause()
             player?.replaceCurrentItem(with: nil)
             player = nil
+            bufferObserver?.invalidate()
+            bufferObserver = nil
         }
     }
 
     private func loadVideo() async {
         guard let videoPath = card.videoUrl else {
-            error = "No video available"
-            isLoading = false
+            error = "Video not available"
             return
         }
 
+        // Start progress animation
+        loadingProgress = 0.1
+
         do {
-            let signedURL = try await storageService.createSignedVideoURL(path: videoPath)
+            // Use cached URL if available (instant), otherwise fetch
+            let signedURL: URL
+            if let cachedVideoURL {
+                signedURL = cachedVideoURL
+                loadingProgress = 0.3
+            } else {
+                signedURL = try await storageService.createSignedVideoURL(path: videoPath)
+                loadingProgress = 0.3
+                // Report back to cache for next time
+                onVideoURLLoaded?(signedURL)
+            }
+
             await MainActor.run {
-                let avPlayer = AVPlayer(url: signedURL)
+                let playerItem = AVPlayerItem(url: signedURL)
+                let avPlayer = AVPlayer(playerItem: playerItem)
+
+                // Observe buffering progress
+                observeBuffering(item: playerItem)
+
                 avPlayer.play()
 
                 NotificationCenter.default.addObserver(
                     forName: .AVPlayerItemDidPlayToEndTime,
-                    object: avPlayer.currentItem,
+                    object: playerItem,
                     queue: .main
                 ) { _ in
                     avPlayer.seek(to: .zero)
@@ -192,12 +254,39 @@ struct PublishedCardPlayerView: View {
                 }
 
                 self.player = avPlayer
-                self.isLoading = false
             }
         } catch {
             await MainActor.run {
-                self.error = error.localizedDescription
-                self.isLoading = false
+                self.error = "Unable to load video. Please try again."
+            }
+        }
+    }
+
+    private func observeBuffering(item: AVPlayerItem) {
+        bufferObserver = item.observe(\.loadedTimeRanges, options: [.new]) { [self] observedItem, _ in
+            let duration = observedItem.duration.seconds
+            guard duration.isFinite && duration > 0 else {
+                // Duration not yet known - animate progress slowly
+                DispatchQueue.main.async {
+                    if loadingProgress < 0.8 {
+                        loadingProgress = min(loadingProgress + 0.05, 0.8)
+                    }
+                }
+                return
+            }
+
+            let bufferedTime = observedItem.loadedTimeRanges
+                .compactMap { $0.timeRangeValue }
+                .reduce(0) { $0 + $1.duration.seconds }
+
+            let bufferProgress = min(bufferedTime / duration, 1.0)
+            // Map to 30% → 100% range (30% was URL fetch)
+            let progress = 0.3 + (bufferProgress * 0.7)
+
+            DispatchQueue.main.async {
+                if progress > loadingProgress {
+                    loadingProgress = progress
+                }
             }
         }
     }
@@ -205,9 +294,30 @@ struct PublishedCardPlayerView: View {
     private func loadClips() async {
         do {
             clips = try await cardService.fetchClipsForCard(cardId: card.id)
+            #if DEBUG
+            print("[PUBLISHED] Loaded \(clips.count) clips for card \(card.id)")
+            #endif
+
+            // Fetch thumbnail URL for first clip (host clip first, or first clip)
+            let firstClip = clips.first { $0.participantId == card.hostId } ?? clips.first
+            #if DEBUG
+            print("[PUBLISHED] First clip thumbnail path: \(firstClip?.thumbnailUrl ?? "nil")")
+            #endif
+            if let thumbnailPath = firstClip?.thumbnailUrl {
+                firstClipThumbnailURL = try? await storageService.createSignedURL(path: thumbnailPath)
+                #if DEBUG
+                print("[PUBLISHED] Thumbnail URL: \(firstClipThumbnailURL?.absoluteString ?? "nil")")
+                #endif
+            }
+
+            // Fetch profiles for all participants
+            let participantIds = clips.map(\.participantId)
+            if !participantIds.isEmpty {
+                profiles = try await cardService.fetchProfiles(userIds: participantIds)
+            }
         } catch {
             #if DEBUG
-            print("Failed to load clips: \(error)")
+            print("[PUBLISHED] Failed to load clips: \(error)")
             #endif
         }
     }
@@ -219,13 +329,13 @@ private struct VideoPlayerView: View {
     let player: AVPlayer
     let showDetails: Bool
     let geometry: GeometryProxy
+    let onReadyToDisplay: () -> Void
 
     var body: some View {
         let videoHeight = showDetails ? geometry.size.height * 0.40 : geometry.size.height
         let videoWidth = showDetails ? geometry.size.width * 0.85 : geometry.size.width
 
-        VideoPlayer(player: player)
-            .disabled(true)
+        PlayerLayerView(player: player, onReadyToDisplay: onReadyToDisplay)
             .frame(width: videoWidth, height: videoHeight)
             .clipped()
             .background(Color.black)
@@ -235,11 +345,69 @@ private struct VideoPlayerView: View {
     }
 }
 
+// MARK: - Player Layer View (UIViewRepresentable for isReadyForDisplay)
+
+private struct PlayerLayerView: UIViewRepresentable {
+    let player: AVPlayer
+    let onReadyToDisplay: () -> Void
+
+    func makeUIView(context: Context) -> PlayerUIView {
+        let view = PlayerUIView()
+        view.player = player
+        view.onReadyToDisplay = onReadyToDisplay
+        return view
+    }
+
+    func updateUIView(_ uiView: PlayerUIView, context: Context) {
+        uiView.player = player
+    }
+}
+
+private class PlayerUIView: UIView {
+    private var layerObserver: NSKeyValueObservation?
+    var onReadyToDisplay: (() -> Void)?
+
+    override class var layerClass: AnyClass {
+        AVPlayerLayer.self
+    }
+
+    var playerLayer: AVPlayerLayer {
+        layer as! AVPlayerLayer
+    }
+
+    var player: AVPlayer? {
+        get { playerLayer.player }
+        set {
+            playerLayer.player = newValue
+            playerLayer.videoGravity = .resizeAspectFill
+
+            layerObserver?.invalidate()
+            layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in
+                if layer.isReadyForDisplay {
+                    DispatchQueue.main.async {
+                        self?.onReadyToDisplay?()
+                    }
+                }
+            }
+
+            if playerLayer.isReadyForDisplay {
+                onReadyToDisplay?()
+            }
+        }
+    }
+
+    deinit {
+        layerObserver?.invalidate()
+    }
+}
+
 // MARK: - Details Panel
 
 private struct DetailsPanel: View {
     let card: Card
     let clips: [Clip]
+    let profiles: [UUID: (displayName: String?, avatarURL: URL?)]
+    let currentUserId: UUID?
     let onDismiss: () -> Void
     @Binding var showCopiedToast: Bool
 
@@ -345,17 +513,16 @@ private struct DetailsPanel: View {
                 UIPasteboard.general.string = shareURL
                 showCopiedToast = true
             } label: {
-                VStack(alignment: .leading, spacing: TOYSpacing.sm) {
-                    Text(shareURL)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundColor(.warmCream)
-                        .lineLimit(1)
-
-                    // Bottom border
-                    Rectangle()
-                        .fill(Color.dividerDark)
-                        .frame(height: 1)
+                HStack(spacing: TOYSpacing.sm) {
+                    Image(systemName: "link")
+                        .font(.system(size: 14, weight: .medium))
+                    Text("Copy Link")
+                        .font(.toyBodyMedium())
                 }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, TOYSpacing.md)
+                .background(Color.warmCream)
             }
         }
     }
@@ -384,26 +551,36 @@ private struct DetailsPanel: View {
 
     @ViewBuilder
     private func contributorRow(index: Int, clip: Clip, isDirector: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: TOYSpacing.sm) {
-            // Simple number
-            Text("\(index).")
-                .font(.toyCaption())
-                .foregroundColor(.warmGrayDark)
-                .frame(width: 20, alignment: .trailing)
+        let profile = profiles[clip.participantId]
+        let isMe = clip.participantId == currentUserId
+        let displayName = profile?.displayName ?? (isDirector ? "Director" : "Contributor")
 
-            VStack(alignment: .leading, spacing: TOYSpacing.xs) {
-                HStack(spacing: TOYSpacing.sm) {
-                    Text(isDirector ? "Director" : "Contributor \(index)")
-                        .font(.toyBody())
-                        .foregroundColor(.warmCream)
-                }
-
-                if let duration = clip.durationSeconds {
-                    Text("\(NSDecimalNumber(decimal: duration).doubleValue, specifier: "%.1f")s")
-                        .font(.toyCaption())
-                        .foregroundColor(.warmGrayDark)
-                }
+        HStack(spacing: TOYSpacing.sm) {
+            // Profile photo
+            if let avatarURL = profile?.avatarURL {
+                KFImage(avatarURL)
+                    .placeholder {
+                        Circle()
+                            .fill(Color.warmGrayDark.opacity(0.3))
+                    }
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 32, height: 32)
+                    .clipShape(Circle())
+            } else {
+                Circle()
+                    .fill(Color.warmGrayDark.opacity(0.3))
+                    .frame(width: 32, height: 32)
+                    .overlay {
+                        Text(String(displayName.prefix(1)).uppercased())
+                            .font(.toyCaption())
+                            .foregroundColor(.warmCream)
+                    }
             }
+
+            Text(isMe ? "\(displayName) (me)" : displayName)
+                .font(.toyBody())
+                .foregroundColor(.warmCream)
 
             Spacer()
         }

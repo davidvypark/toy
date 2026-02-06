@@ -1,4 +1,5 @@
 import AVFoundation
+import Kingfisher
 import SwiftUI
 import TOYShared
 
@@ -7,23 +8,29 @@ struct MontagePreviewView: View {
     let card: Card
     let clips: [Clip]
     let cachedSignedURLs: [UUID: URL]
+    let firstClipThumbnailURL: URL?
+    var cardViewModel: CardDetailViewModel?
     let onPublished: () -> Void
 
-    @State private var viewModel = PublishViewModel()
+    @State private var publishViewModel = PublishViewModel()
     @State private var queuePlayer: AVQueuePlayer?
     @State private var signedURLs: [URL] = []
     @State private var isLoadingURLs = true
     @State private var isPlayerReady = false
     @State private var showPublishedView = false
-    @State private var looper: AVPlayerLooper?
+    @State private var loadingProgress: Double = 0
+    @State private var bufferObserver: NSKeyValueObservation?
+    @State private var isPlaybackFinished = false
 
     @Environment(\.dismiss) private var dismiss
     private let storageService = StorageService()
 
-    init(card: Card, clips: [Clip], cachedSignedURLs: [UUID: URL] = [:], onPublished: @escaping () -> Void) {
+    init(card: Card, clips: [Clip], cachedSignedURLs: [UUID: URL] = [:], firstClipThumbnailURL: URL? = nil, cardViewModel: CardDetailViewModel? = nil, onPublished: @escaping () -> Void) {
         self.card = card
         self.clips = clips
         self.cachedSignedURLs = cachedSignedURLs
+        self.firstClipThumbnailURL = firstClipThumbnailURL
+        self.cardViewModel = cardViewModel
         self.onPublished = onPublished
     }
 
@@ -53,6 +60,7 @@ struct MontagePreviewView: View {
                     // Video player with brand overlay
                     if let queuePlayer {
                         QueueVideoPlayer(player: queuePlayer) {
+                            loadingProgress = 1.0
                             isPlayerReady = true
                         }
                         .opacity(isPlayerReady ? 1 : 0)
@@ -65,22 +73,49 @@ struct MontagePreviewView: View {
                                     .padding(.bottom, 16)
                             }
                         }
+                        .overlay {
+                            // Play again button after playback finishes
+                            if isPlaybackFinished {
+                                Button {
+                                    replayVideo()
+                                } label: {
+                                    Circle()
+                                        .fill(Color.black.opacity(0.5))
+                                        .frame(width: 72, height: 72)
+                                        .overlay {
+                                            Image(systemName: "play.fill")
+                                                .font(.system(size: 28))
+                                                .foregroundColor(.white)
+                                                .offset(x: 2) // Visual centering for play icon
+                                        }
+                                }
+                            }
+                        }
                     }
 
-                    // Loading overlay - centered in video area
-                    if !isPlayerReady && !viewModel.state.isInProgress {
-                        VStack(spacing: TOYSpacing.md) {
+                    // Loading overlay - thumbnail with progress text
+                    if !isPlayerReady && !publishViewModel.state.isInProgress {
+                        ZStack {
+                            // First clip thumbnail as background
+                            if let thumbnailURL = firstClipThumbnailURL {
+                                KFImage(thumbnailURL)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .clipped()
+                            }
+
+                            // Semi-transparent overlay
+                            Color.black.opacity(0.5)
+
                             ProgressView()
-                                .scaleEffect(1.5)
                                 .tint(.warmCream)
-                            Text("Loading preview...")
-                                .font(.toyBody())
-                                .foregroundColor(.warmGrayDark)
+                                .scaleEffect(1.2)
                         }
                     }
 
                     // Progress overlay during publishing
-                    if viewModel.state.isInProgress {
+                    if publishViewModel.state.isInProgress {
                         progressView
                             .background(Color.black.opacity(0.8))
                     }
@@ -111,22 +146,59 @@ struct MontagePreviewView: View {
             }
         }
         .task {
-            await setupQueuePlayer()
+            // Check for cached player first (instant playback on re-open)
+            if let cachedPlayer = cardViewModel?.montagePlayer, cardViewModel?.isMontageReady == true {
+                queuePlayer = cachedPlayer
+                signedURLs = cardViewModel?.montageSignedURLs ?? []
+                isPlayerReady = true
+                isLoadingURLs = false
+                loadingProgress = 1.0
+                isPlaybackFinished = false
+
+                // Re-queue items for multiple clips (items are consumed after playback)
+                if signedURLs.count > 1 {
+                    cachedPlayer.removeAllItems()
+                    for url in signedURLs {
+                        let newItem = AVPlayerItem(url: url)
+                        newItem.preferredForwardBufferDuration = 5
+                        cachedPlayer.insert(newItem, after: nil)
+                    }
+                    if let lastItem = cachedPlayer.items().last {
+                        setupPlaybackEndObserver(for: lastItem)
+                    }
+                } else if signedURLs.count == 1 {
+                    // Single clip - seek to start and set up observer
+                    await cachedPlayer.seek(to: .zero)
+                    if let currentItem = cachedPlayer.currentItem {
+                        setupPlaybackEndObserver(for: currentItem)
+                    }
+                }
+
+                cachedPlayer.play()
+            } else {
+                await setupQueuePlayer()
+            }
         }
         .onDisappear {
+            // Pause but don't destroy - cache for re-opening
             queuePlayer?.pause()
-            queuePlayer = nil
-            looper = nil
-            signedURLs = []
-            isPlayerReady = false
+            bufferObserver?.invalidate()
+            bufferObserver = nil
+
+            // Cache player state in cardViewModel for re-use
+            if let cardViewModel {
+                cardViewModel.montagePlayer = queuePlayer
+                cardViewModel.montageSignedURLs = signedURLs
+                cardViewModel.isMontageReady = isPlayerReady
+            }
         }
-        .onChange(of: viewModel.state) { _, newState in
+        .onChange(of: publishViewModel.state) { _, newState in
             if case .success = newState {
                 showPublishedView = true
             }
         }
         .fullScreenCover(isPresented: $showPublishedView) {
-            if case .success(let videoURL) = viewModel.state {
+            if case .success(let videoURL) = publishViewModel.state {
                 PublishedCardView(card: card, videoURL: videoURL) {
                     showPublishedView = false
                     onPublished()
@@ -134,12 +206,12 @@ struct MontagePreviewView: View {
             }
         }
         .alert("Error", isPresented: .init(
-            get: { viewModel.state.isFailed },
-            set: { if !$0 { viewModel.reset() } }
+            get: { publishViewModel.state.isFailed },
+            set: { if !$0 { publishViewModel.reset() } }
         )) {
-            Button("OK") { viewModel.reset() }
+            Button("OK") { publishViewModel.reset() }
         } message: {
-            if case .failed(let error) = viewModel.state {
+            if case .failed(let error) = publishViewModel.state {
                 Text(error)
             }
         }
@@ -154,7 +226,7 @@ struct MontagePreviewView: View {
                 .scaleEffect(1.5)
                 .tint(.warmCream)
 
-            switch viewModel.state {
+            switch publishViewModel.state {
             case .generating(let progress, let phase):
                 VStack(spacing: TOYSpacing.sm) {
                     Text(phase)
@@ -184,17 +256,17 @@ struct MontagePreviewView: View {
     private var actionButtons: some View {
         VStack(spacing: TOYSpacing.md) {
             TOYButton.primary(
-                viewModel.state.isInProgress ? "Publishing..." : "Publish Card",
-                isLoading: viewModel.state.isInProgress
+                publishViewModel.state.isInProgress ? "Publishing..." : "Publish Card",
+                isLoading: publishViewModel.state.isInProgress
             ) {
                 Task {
-                    await viewModel.publishWithStitching(
+                    await publishViewModel.publishWithStitching(
                         card: card,
                         clips: sortedClips
                     )
                 }
             }
-            .disabled(isLoadingURLs || viewModel.state.isInProgress)
+            .disabled(isLoadingURLs || publishViewModel.state.isInProgress)
         }
     }
 
@@ -202,7 +274,10 @@ struct MontagePreviewView: View {
 
     private func setupQueuePlayer() async {
         isLoadingURLs = true
+        loadingProgress = 0
         defer { isLoadingURLs = false }
+
+        let totalClips = Double(sortedClips.count)
 
         // Use cached URLs when available, fetch only missing ones
         let urls = await withTaskGroup(of: (Int, URL?).self) { group in
@@ -226,8 +301,15 @@ struct MontagePreviewView: View {
             }
 
             var results: [(Int, URL?)] = []
+            var fetchedCount = 0
             for await result in group {
                 results.append(result)
+                fetchedCount += 1
+                // 0-50% for URL fetching
+                let progress = (Double(fetchedCount) / totalClips) * 0.5
+                await MainActor.run {
+                    loadingProgress = progress
+                }
             }
             return results.sorted { $0.0 < $1.0 }.compactMap { $0.1 }
         }
@@ -235,42 +317,117 @@ struct MontagePreviewView: View {
         guard !urls.isEmpty else { return }
         signedURLs = urls
 
-        // Single clip: use AVPlayerLooper for seamless looping
+        // Update to 50% after URLs ready
+        loadingProgress = 0.5
+
+        // Single clip: play once
         if urls.count == 1 {
             let item = AVPlayerItem(url: urls[0])
+            observeBuffering(item: item)
             let player = AVQueuePlayer(playerItem: item)
-            looper = AVPlayerLooper(player: player, templateItem: item)
             player.play()
             queuePlayer = player
+            setupPlaybackEndObserver(for: item)
         } else {
-            // Multiple clips: create queue player
-            let items = urls.map { AVPlayerItem(url: $0) }
+            // Multiple clips: create queue player with pre-buffered items
+            let items = urls.map { url -> AVPlayerItem in
+                let item = AVPlayerItem(url: url)
+                // Pre-buffer more aggressively to prevent black flash
+                item.preferredForwardBufferDuration = 5
+                return item
+            }
+
+            // Observe buffering on first item for progress
+            if let firstItem = items.first {
+                observeBuffering(item: firstItem)
+            }
+
             let player = AVQueuePlayer(items: items)
             player.actionAtItemEnd = .advance
+            // Wait for buffering to prevent black flash between clips
+            player.automaticallyWaitsToMinimizeStalling = true
             player.play()
             queuePlayer = player
 
-            // Observe when last item finishes to loop
-            setupLooping(player: player)
+            // Observe when last item finishes to show play button
+            if let lastItem = items.last {
+                setupPlaybackEndObserver(for: lastItem)
+            }
         }
     }
 
-    private func setupLooping(player: AVQueuePlayer) {
+    /// Observes when playback ends to show the replay button
+    private func setupPlaybackEndObserver(for item: AVPlayerItem) {
         NotificationCenter.default.addObserver(
             forName: .AVPlayerItemDidPlayToEndTime,
-            object: nil,
+            object: item,
             queue: .main
         ) { [self] _ in
-            // Check if queue is empty (all items played)
-            if player.items().count <= 1 {
-                // Re-queue all items from stored URLs
-                for url in signedURLs {
-                    let newItem = AVPlayerItem(url: url)
-                    player.insert(newItem, after: nil)
+            Task { @MainActor in
+                // Seek back to start and pause
+                await queuePlayer?.seek(to: .zero)
+                queuePlayer?.pause()
+                isPlaybackFinished = true
+            }
+        }
+    }
+
+    /// Replays the video from the beginning
+    private func replayVideo() {
+        isPlaybackFinished = false
+
+        // Re-queue all items for multiple clips
+        if signedURLs.count > 1, let player = queuePlayer {
+            // Remove remaining items and re-add all
+            player.removeAllItems()
+            for url in signedURLs {
+                let newItem = AVPlayerItem(url: url)
+                newItem.preferredForwardBufferDuration = 5
+                player.insert(newItem, after: nil)
+            }
+            // Observe last item for playback end
+            if let lastItem = player.items().last {
+                setupPlaybackEndObserver(for: lastItem)
+            }
+        }
+
+        queuePlayer?.play()
+    }
+
+    /// Observes buffering progress on the first item to update loading progress (50% → 100%)
+    private func observeBuffering(item: AVPlayerItem) {
+        bufferObserver = item.observe(\.loadedTimeRanges, options: [.new]) { observedItem, _ in
+            // Get duration - may not be available immediately
+            let duration = observedItem.duration.seconds
+            guard duration.isFinite && duration > 0 else {
+                // Duration not yet known - animate progress slowly
+                DispatchQueue.main.async { [self] in
+                    if loadingProgress < 0.8 {
+                        loadingProgress = min(loadingProgress + 0.05, 0.8)
+                    }
+                }
+                return
+            }
+
+            let bufferedTime = observedItem.loadedTimeRanges
+                .compactMap { $0.timeRangeValue }
+                .reduce(0) { $0 + $1.duration.seconds }
+
+            // Calculate buffer progress (0.0 to 1.0)
+            let bufferProgress = min(bufferedTime / duration, 1.0)
+
+            // Map to 50% → 100% range
+            let progress = 0.5 + (bufferProgress * 0.5)
+
+            DispatchQueue.main.async { [self] in
+                // Only update if higher (don't go backwards)
+                if progress > loadingProgress {
+                    loadingProgress = progress
                 }
             }
         }
     }
+
 }
 
 // MARK: - Queue Video Player
