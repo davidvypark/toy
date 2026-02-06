@@ -38,163 +38,163 @@ struct PublishedCardPlayerView: View {
     private let detailsPanelHeight: CGFloat = UIScreen.main.bounds.height * 0.55
 
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // True black background
-                Color.black.ignoresSafeArea()
+        ZStack {
+            TOYBackground()
 
-                // Video player
-                if let player = player {
-                    VideoPlayerView(player: player, showDetails: showDetails, geometry: geometry, onReadyToDisplay: {
-                        isPlayerReady = true
-                        loadingProgress = 1.0
-                    })
-                    .opacity(isPlayerReady ? 1 : 0)
-                    .onTapGesture {
-                        if showDetails {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                showDetails = false
-                            }
-                        }
+            VStack(spacing: 0) {
+                // Top bar - back button
+                HStack {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.toyText)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
-                }
-
-                // Loading overlay — full-brightness thumbnail with subtle loading bar
-                if !isPlayerReady && error == nil {
-                    ZStack(alignment: .bottom) {
-                        if let thumbnailURL = firstClipThumbnailURL {
-                            KFImage(thumbnailURL)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .clipped()
-                        } else {
-                            Color.black
-                        }
-
-                        TOYLoadingBar()
-                    }
-                    .ignoresSafeArea()
-                }
-
-                if let error = error {
-                    VStack(spacing: TOYSpacing.md) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 40, weight: .light))
-                            .foregroundColor(.warmGrayDark)
-                        Text(error)
-                            .font(.toyBody())
-                            .foregroundColor(.warmCream)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
-                }
-
-                // Overlay content
-                VStack {
-                    // Top bar - back button
-                    HStack {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(.warmCream)
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, TOYSpacing.sm)
-                    .padding(.top, TOYSpacing.sm)
-
                     Spacer()
+                }
+                .padding(.horizontal, TOYSpacing.sm)
+                .padding(.top, TOYSpacing.sm)
 
-                    // Bottom hint - tappable with up arrow
-                    if !showDetails {
-                        Button {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                showDetails = true
+                // Video card
+                ZStack {
+                    if let player = player {
+                        PlayerLayerView(player: player, onReadyToDisplay: {
+                            isPlayerReady = true
+                            loadingProgress = 1.0
+                        })
+                        .opacity(isPlayerReady ? 1 : 0)
+                    }
+
+                    // Thumbnail placeholder
+                    if !isPlayerReady && error == nil {
+                        ZStack(alignment: .bottom) {
+                            if let thumbnailURL = firstClipThumbnailURL {
+                                KFImage(thumbnailURL)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(maxWidth: .infinity)
+                                    .clipped()
+                            } else {
+                                Rectangle().fill(Color.black)
                             }
-                        } label: {
-                            VStack(spacing: TOYSpacing.xs) {
-                                Image(systemName: "chevron.up")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.warmGrayDark)
-                                Text("DETAILS")
-                                    .font(.toyCaption2())
-                                    .foregroundColor(.warmGrayDark)
-                                    .toyLetterSpacing(2)
-                            }
+
+                            TOYLoadingBar()
                         }
-                        .padding(.bottom, TOYSpacing.xxl)
+                    }
+
+                    if let error = error {
+                        VStack(spacing: TOYSpacing.md) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 40, weight: .light))
+                                .foregroundColor(.warmGrayDark)
+                            Text(error)
+                                .font(.toyBody())
+                                .foregroundColor(.toyText)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding()
                     }
                 }
-                .opacity(showDetails ? 0.3 : 1)
+                .aspectRatio(9/16, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 24)
+                .onTapGesture {
+                    if showDetails {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showDetails = false
+                        }
+                    }
+                }
 
-                // Details panel (slides up)
-                VStack(spacing: 0) {
-                    Spacer()
+                Spacer()
 
-                    DetailsPanel(
-                        card: card,
-                        clips: clips,
-                        profiles: profiles,
-                        currentUserId: currentUserId,
-                        onDismiss: {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                showDetails = false
-                            }
-                        },
-                        showCopiedToast: $showCopiedToast
-                    )
-                    .frame(height: detailsPanelHeight)
-                    .offset(y: showDetails ? 0 : detailsPanelHeight + 50)
+                // Bottom hint - tappable with up arrow
+                if !showDetails {
+                    Button {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showDetails = true
+                        }
+                    } label: {
+                        VStack(spacing: TOYSpacing.xs) {
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.warmGrayDark)
+                            Text("DETAILS")
+                                .font(.toyCaption2())
+                                .foregroundColor(.warmGrayDark)
+                                .toyLetterSpacing(2)
+                        }
+                    }
+                    .padding(.bottom, TOYSpacing.xxl)
                 }
             }
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        // Swipe up to show details
-                        if !showDetails && value.translation.height < -20 {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                showDetails = true
-                            }
+            .opacity(showDetails ? 0.3 : 1)
+
+            // Details panel (slides up)
+            VStack(spacing: 0) {
+                Spacer()
+
+                DetailsPanel(
+                    card: card,
+                    clips: clips,
+                    profiles: profiles,
+                    currentUserId: currentUserId,
+                    onDismiss: {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showDetails = false
                         }
-                        // Swipe down to hide details
-                        else if showDetails && value.translation.height > 20 {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                showDetails = false
-                            }
-                        }
-                    }
-            )
-            .overlay {
-                // Copied toast - minimal
-                if showCopiedToast {
-                    VStack {
-                        Spacer()
-                        Text("Copied")
-                            .font(.toyCaption())
-                            .foregroundColor(.black)
-                            .toyLetterSpacing(1)
-                            .padding(.horizontal, TOYSpacing.lg)
-                            .padding(.vertical, TOYSpacing.sm)
-                            .background(Color.white)
-                            .padding(.bottom, 100)
-                    }
-                    .transition(.opacity)
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            withAnimation {
-                                showCopiedToast = false
-                            }
-                        }
-                    }
-                }
+                    },
+                    showCopiedToast: $showCopiedToast
+                )
+                .frame(height: detailsPanelHeight)
+                .offset(y: showDetails ? 0 : detailsPanelHeight + 50)
             }
-            .animation(.easeInOut(duration: 0.2), value: showCopiedToast)
         }
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    // Swipe up to show details
+                    if !showDetails && value.translation.height < -20 {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showDetails = true
+                        }
+                    }
+                    // Swipe down to hide details
+                    else if showDetails && value.translation.height > 20 {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showDetails = false
+                        }
+                    }
+                }
+        )
+        .overlay {
+            // Copied toast - minimal
+            if showCopiedToast {
+                VStack {
+                    Spacer()
+                    Text("Copied")
+                        .font(.toyCaption())
+                        .foregroundColor(.black)
+                        .toyLetterSpacing(1)
+                        .padding(.horizontal, TOYSpacing.lg)
+                        .padding(.vertical, TOYSpacing.sm)
+                        .background(Color.white)
+                        .padding(.bottom, 100)
+                }
+                .transition(.opacity)
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation {
+                            showCopiedToast = false
+                        }
+                    }
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showCopiedToast)
         .task {
             // Load clips and video in parallel — they're independent
             async let clipsTask: () = loadClips()
@@ -317,28 +317,6 @@ struct PublishedCardPlayerView: View {
             print("[PUBLISHED] Failed to load clips: \(error)")
             #endif
         }
-    }
-}
-
-// MARK: - Video Player View
-
-private struct VideoPlayerView: View {
-    let player: AVPlayer
-    let showDetails: Bool
-    let geometry: GeometryProxy
-    let onReadyToDisplay: () -> Void
-
-    var body: some View {
-        let videoHeight = showDetails ? geometry.size.height * 0.40 : geometry.size.height
-        let videoWidth = showDetails ? geometry.size.width * 0.85 : geometry.size.width
-
-        PlayerLayerView(player: player, onReadyToDisplay: onReadyToDisplay)
-            .frame(width: videoWidth, height: videoHeight)
-            .clipped()
-            .background(Color.black)
-            .animation(.easeOut(duration: 0.2), value: showDetails)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: showDetails ? .top : .center)
-            .padding(.top, showDetails ? 50 : 0)
     }
 }
 

@@ -74,6 +74,7 @@ public actor CardService {
 
             return card
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.createFailed(error.localizedDescription)
         }
     }
@@ -98,6 +99,7 @@ public actor CardService {
 
             return cards
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.fetchFailed(error.localizedDescription)
         }
     }
@@ -122,6 +124,7 @@ public actor CardService {
 
             return card
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.fetchFailed(error.localizedDescription)
         }
     }
@@ -146,6 +149,7 @@ public actor CardService {
 
             return card
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.fetchFailed(error.localizedDescription)
         }
     }
@@ -167,6 +171,7 @@ public actor CardService {
             print("✅ Updated card \(cardId) status to: \(status)")
             #endif
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.updateFailed(error.localizedDescription)
         }
     }
@@ -192,6 +197,7 @@ public actor CardService {
             print("✅ Published card \(cardId) with video: \(videoUrl)")
             #endif
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.updateFailed(error.localizedDescription)
         }
     }
@@ -213,6 +219,7 @@ public actor CardService {
             print("✅ Updated card \(cardId) maxParticipants to: \(maxParticipants)")
             #endif
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.updateFailed(error.localizedDescription)
         }
     }
@@ -247,6 +254,7 @@ public actor CardService {
             print("🗑️ Deleted card: \(cardId)")
             #endif
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.deleteFailed(error.localizedDescription)
         }
     }
@@ -298,6 +306,7 @@ public actor CardService {
 
             return clip
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.clipCreateFailed(error.localizedDescription)
         }
     }
@@ -324,6 +333,7 @@ public actor CardService {
 
             return participants
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.fetchFailed(error.localizedDescription)
         }
     }
@@ -348,6 +358,7 @@ public actor CardService {
 
             return clips
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.fetchFailed(error.localizedDescription)
         }
     }
@@ -393,6 +404,7 @@ public actor CardService {
 
             return result
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.fetchFailed(error.localizedDescription)
         }
     }
@@ -492,6 +504,7 @@ public actor CardService {
 
             return results
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.fetchFailed(error.localizedDescription)
         }
     }
@@ -531,6 +544,7 @@ public actor CardService {
 
             return cards
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.fetchFailed(error.localizedDescription)
         }
     }
@@ -567,6 +581,7 @@ public actor CardService {
             print("🗑️ Deleted clip record: \(clipId)")
             #endif
         } catch {
+            if Task.isCancelled { throw CancellationError() }
             throw CardError.deleteFailed(error.localizedDescription)
         }
     }

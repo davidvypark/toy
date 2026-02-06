@@ -96,8 +96,14 @@ struct HomeView: View {
                     initialClips: cardClips[card.id] ?? [],
                     initialProfiles: cardProfiles[card.id] ?? [:],
                     initialThumbnailURLs: cardThumbnailURLs[card.id] ?? [:],
-                    currentUser: viewModel.authState.user
+                    currentUser: viewModel.authState.user,
+                    onClipsChanged: { clips in
+                        cardClips[card.id] = clips
+                    }
                 )
+                .onDisappear {
+                    Task { await loadCardDetails() }
+                }
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView(authViewModel: viewModel)
@@ -586,7 +592,7 @@ private struct DirectorSectionView: View {
                     NavigationLink(value: card) {
                         DirectorCardTile(
                             card: card,
-                            clipCount: cardClips[card.id]?.count ?? 0
+                            clipCount: cardClips[card.id]?.count
                         )
                     }
                     .buttonStyle(.plain)
@@ -740,7 +746,7 @@ private struct ParticipantSubmittedTile: View {
 
 private struct DirectorCardTile: View {
     let card: Card
-    let clipCount: Int
+    let clipCount: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -766,10 +772,12 @@ private struct DirectorCardTile: View {
 
             Spacer()
 
-            // Clip count - bottom, minimal
-            Text("\(clipCount) clip\(clipCount == 1 ? "" : "s") submitted")
-                .font(.toyCaption())
-                .foregroundColor(.toyTextSecondary)
+            // Clip count - bottom, minimal (hidden until data loads)
+            if let clipCount {
+                Text("\(clipCount) clip\(clipCount == 1 ? "" : "s") submitted")
+                    .font(.toyCaption())
+                    .foregroundColor(.toyTextSecondary)
+            }
         }
         .padding(TOYSpacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)

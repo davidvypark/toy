@@ -10,6 +10,7 @@ struct CardDetailView: View {
     var initialProfiles: [UUID: (displayName: String?, avatarURL: URL?)] = [:]
     var initialThumbnailURLs: [UUID: URL] = [:]  // clipId -> signedURL
     var currentUser: User?
+    var onClipsChanged: (([Clip]) -> Void)?
 
     @State private var viewModel = CardDetailViewModel()
     @State private var selectedClip: Clip?
@@ -168,6 +169,9 @@ struct CardDetailView: View {
                 .padding(.vertical, TOYSpacing.lg)
             }
         }
+        .onDisappear {
+            onClipsChanged?(viewModel.clips)
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
@@ -202,7 +206,8 @@ struct CardDetailView: View {
         .sheet(item: $selectedClip) { clip in
             ClipPreviewSheet(
                 clip: clip,
-                cachedURL: viewModel.cachedSignedURLs[clip.id]
+                cachedURL: viewModel.cachedSignedURLs[clip.id],
+                cachedThumbnailURL: initialThumbnailURLs[clip.id]
             ) {
                 await viewModel.deleteClip(clip)
             }

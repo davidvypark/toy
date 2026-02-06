@@ -1,4 +1,5 @@
 import AVFoundation
+import Kingfisher
 import SwiftUI
 import TOYShared
 
@@ -6,9 +7,11 @@ import TOYShared
 struct ClipPreviewSheet: View {
     let clip: Clip
     let cachedURL: URL?
+    let cachedThumbnailURL: URL?
     let onDelete: () async -> Void
 
     @State private var signedURL: URL?
+    @State private var thumbnailURL: URL?
     @State private var isLoading = true
     @State private var isPlayerReady = false
     @State private var loadError: String?
@@ -22,9 +25,10 @@ struct ClipPreviewSheet: View {
 
     private let storageService = StorageService()
 
-    init(clip: Clip, cachedURL: URL? = nil, onDelete: @escaping () async -> Void) {
+    init(clip: Clip, cachedURL: URL? = nil, cachedThumbnailURL: URL? = nil, onDelete: @escaping () async -> Void) {
         self.clip = clip
         self.cachedURL = cachedURL
+        self.cachedThumbnailURL = cachedThumbnailURL
         self.onDelete = onDelete
     }
 
@@ -52,8 +56,16 @@ struct ClipPreviewSheet: View {
                             }
                         }
 
-                        if isLoading || !isPlayerReady {
-                            loadingView
+                        if !isPlayerReady {
+                            if let thumbnailURL {
+                                KFImage(thumbnailURL)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(maxWidth: .infinity)
+                                    .clipped()
+                            } else {
+                                Rectangle().fill(Color.black)
+                            }
                         }
 
                         if let error = loadError {
@@ -61,11 +73,8 @@ struct ClipPreviewSheet: View {
                         }
                     }
                     .aspectRatio(9/16, contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.toyVideoContainer)
-                    .clipped()
-                    .padding(.horizontal, TOYSpacing.lg)
-                    .padding(.top, TOYSpacing.md)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal, 24)
 
                     Spacer()
 
@@ -159,6 +168,13 @@ struct ClipPreviewSheet: View {
     private func loadSignedURL() async {
         isLoading = true
         loadError = nil
+
+        // Use pre-fetched thumbnail URL if available, otherwise fetch inline
+        if let cachedThumbnailURL {
+            thumbnailURL = cachedThumbnailURL
+        } else if let thumbnailPath = clip.thumbnailUrl {
+            thumbnailURL = try? await storageService.createSignedURL(path: thumbnailPath)
+        }
 
         do {
             let url: URL

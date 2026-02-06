@@ -52,12 +52,12 @@ struct MontagePreviewView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            TOYBackground()
 
             VStack(spacing: 0) {
                 // Video player area - always reserve space
                 ZStack {
-                    // Video player with brand overlay
+                    // 1. Video player with brand overlay
                     if let queuePlayer {
                         QueueVideoPlayer(player: queuePlayer) {
                             loadingProgress = 1.0
@@ -65,7 +65,7 @@ struct MontagePreviewView: View {
                         }
                         .opacity(isPlayerReady ? 1 : 0)
                         .overlay(alignment: .bottom) {
-                            if isPlayerReady {
+                            if isPlayerReady && !isPlaybackFinished {
                                 Text("Thinking Of You")
                                     .font(.custom("DMSerifDisplay-Regular", size: 24))
                                     .foregroundColor(.white)
@@ -73,50 +73,44 @@ struct MontagePreviewView: View {
                                     .padding(.bottom, 16)
                             }
                         }
-                        .overlay {
-                            // Play again button after playback finishes
-                            if isPlaybackFinished {
-                                Button {
-                                    replayVideo()
-                                } label: {
-                                    Circle()
-                                        .fill(Color.black.opacity(0.5))
-                                        .frame(width: 72, height: 72)
-                                        .overlay {
-                                            Image(systemName: "play.fill")
-                                                .font(.system(size: 28))
-                                                .foregroundColor(.white)
-                                                .offset(x: 2) // Visual centering for play icon
-                                        }
-                                }
-                            }
-                        }
                     }
 
-                    // Loading overlay — full-brightness thumbnail with subtle loading bar
+                    // 2. Loading overlay — thumbnail with loading bar (before player ready)
                     if !isPlayerReady && !publishViewModel.state.isInProgress {
                         ZStack(alignment: .bottom) {
-                            if let thumbnailURL = firstClipThumbnailURL {
-                                KFImage(thumbnailURL)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .clipped()
-                            }
-
+                            thumbnailOrBlack
                             TOYLoadingBar()
                         }
                     }
 
-                    // Progress overlay during publishing
+                    // 3. Playback finished overlay — thumbnail with replay button
+                    if isPlaybackFinished {
+                        thumbnailOrBlack
+
+                        Button {
+                            replayVideo()
+                        } label: {
+                            Circle()
+                                .fill(Color.black.opacity(0.5))
+                                .frame(width: 72, height: 72)
+                                .overlay {
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 28))
+                                        .foregroundColor(.white)
+                                        .offset(x: 2)
+                                }
+                        }
+                    }
+
+                    // 4. Progress overlay during publishing
                     if publishViewModel.state.isInProgress {
                         progressView
                             .background(Color.black.opacity(0.8))
                     }
                 }
                 .aspectRatio(9/16, contentMode: .fit)
-                .background(Color.toyVideoContainer)
-                .padding()
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 24)
 
                 Spacer()
 
@@ -127,7 +121,6 @@ struct MontagePreviewView: View {
         }
         .navigationTitle("Preview")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
@@ -135,7 +128,7 @@ struct MontagePreviewView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.warmCream)
+                        .foregroundColor(.toyText)
                 }
             }
         }
@@ -212,6 +205,19 @@ struct MontagePreviewView: View {
     }
 
     // MARK: - Subviews
+
+    @ViewBuilder
+    private var thumbnailOrBlack: some View {
+        if let thumbnailURL = firstClipThumbnailURL {
+            KFImage(thumbnailURL)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+        } else {
+            Rectangle().fill(Color.black)
+        }
+    }
 
     @ViewBuilder
     private var progressView: some View {

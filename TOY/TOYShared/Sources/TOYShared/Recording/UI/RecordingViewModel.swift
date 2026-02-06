@@ -202,9 +202,8 @@ public final class RecordingViewModel: ObservableObject {
             // Upload video
             let path = try await storageService.uploadVideo(fileURL: videoURL, clipId: clipId)
             uploadedPath = path
-            uploadState = .success(storagePath: path)
             print("Upload successful: \(path)")
-            
+
             // Upload thumbnail (best-effort, don't fail if thumbnail upload fails)
             var thumbnailPath: String? = nil
             if let thumbnailData {
@@ -219,49 +218,46 @@ public final class RecordingViewModel: ObservableObject {
 #endif
                 }
             }
-            
-            // Create clip record if we have card context
+
+            // Create clip record — must succeed for upload to count
             if let cardId = cardId, let participantId = participantId {
-                do {
-                    // Host clip = orderPosition 0 (appears first in montage)
-                    let orderPosition = isHostClip ? 0 : 1
+                // Host clip = orderPosition 0 (appears first in montage)
+                let orderPosition = isHostClip ? 0 : 1
 #if DEBUG
-                    print("[DURATION DEBUG] Creating clip with duration: \(String(describing: duration))")
-                    print("[DURATION DEBUG] cardId: \(cardId), participantId: \(participantId)")
+                print("[DURATION DEBUG] Creating clip with duration: \(String(describing: duration))")
+                print("[DURATION DEBUG] cardId: \(cardId), participantId: \(participantId)")
 #endif
-                    let clip = try await cardService.createClip(
-                        cardId: cardId,
-                        participantId: participantId,
-                        videoUrl: path,
-                        thumbnailUrl: thumbnailPath,
-                        durationSeconds: duration,
-                        orderPosition: orderPosition,
-                        status: "uploaded"
-                    )
-                    createdClip = clip
-                    onClipCreated?(clip)
+                let clip = try await cardService.createClip(
+                    cardId: cardId,
+                    participantId: participantId,
+                    videoUrl: path,
+                    thumbnailUrl: thumbnailPath,
+                    durationSeconds: duration,
+                    orderPosition: orderPosition,
+                    status: "uploaded"
+                )
+                createdClip = clip
+                onClipCreated?(clip)
 #if DEBUG
-                    print("[DURATION DEBUG] Created clip, returned duration: \(String(describing: clip.durationSeconds))")
+                print("[DURATION DEBUG] Created clip, returned duration: \(String(describing: clip.durationSeconds))")
 #endif
-                    
-                    // If host clip, update card status to 'collecting'
-                    if isHostClip {
-                        try await cardService.updateCardStatus(cardId: cardId, status: "collecting")
-                    } else if let callback = onParticipantClipUploaded {
-                        // Notify director of new participant clip (main app provides this callback)
-                        if let card = try? await cardService.fetchCardById(cardId: cardId) {
-                            await callback(card)
-                        }
+
+                // If host clip, update card status to 'collecting'
+                if isHostClip {
+                    try await cardService.updateCardStatus(cardId: cardId, status: "collecting")
+                } else if let callback = onParticipantClipUploaded {
+                    // Notify director of new participant clip (main app provides this callback)
+                    if let card = try? await cardService.fetchCardById(cardId: cardId) {
+                        await callback(card)
                     }
-                } catch {
-                    // Best-effort: don't fail the upload if clip record fails
-                    print("Failed to create clip record: \(error)")
                 }
             } else {
                 #if DEBUG
                 print("[DURATION DEBUG] No card context - cardId: \(String(describing: cardId)), participantId: \(String(describing: participantId))")
                 #endif
             }
+
+            uploadState = .success(storagePath: path)
         } catch {
             let message = (error as? UploadError)?.errorDescription ?? error.localizedDescription
             uploadState = .failed(error: message)

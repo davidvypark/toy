@@ -92,7 +92,7 @@ public struct VideoPreviewView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
-        .background(Color.toyBackground)
+        .background(TOYBackground())
         .onAppear {
             generateThumbnail()
             setupPlayer()

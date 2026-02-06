@@ -88,10 +88,12 @@ final class CardDetailViewModel {
             #endif
 
         } catch {
-            #if DEBUG
-            print("Failed to load card data: \(error)")
-            #endif
-            errorMessage = error.localizedDescription
+            if !Task.isCancelled {
+                #if DEBUG
+                print("Failed to load card data: \(error)")
+                #endif
+                errorMessage = error.localizedDescription
+            }
         }
 
         isLoading = false
