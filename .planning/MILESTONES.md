@@ -26,4 +26,30 @@
 **Requirements completed:** 35/35 v1 requirements
 
 ---
-*Last updated: 2026-02-02*
+
+### v1.1 — Video Playback Quality & UI Polish (2026-02-06 to 2026-02-07)
+
+**Goal:** Improve video playback smoothness and polish the app UI for launch readiness
+
+**Phases:** 9-12 (partially completed via GSD, rest done manually)
+
+**Delivered:**
+- Removed percentage text from loading overlays (spinner-only)
+- Thumbnail generation at 1.5s (natural pose) instead of 0.5s
+- Audio plays correctly in silent mode (.playback audio session)
+- AVPlayerLooper for seamless video loops
+- Tap-to-pause/play across all video surfaces
+- Videos resume after app backgrounding
+- Published video layout improvements (title above video, details caret)
+- Onboarding slideshow (3 value prop slides + sign-in)
+- URL consolidation (/card + /watch)
+
+**Key Decisions:**
+- Download-first-then-play over streaming (7s clips are 2-5MB)
+- AVPlayerLooper over manual seek-to-zero
+- Simplified onboarding architecture (TabView + fullScreenCover for sign-in)
+
+**Requirements completed:** v1.1 playback quality improvements + UI polish
+
+---
+*Last updated: 2026-02-07*

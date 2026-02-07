@@ -2,19 +2,17 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-06)
+See: .planning/PROJECT.md (updated 2026-02-07)
 
 **Core value:** Anyone can create a heartfelt group video message in minutes
-**Current focus:** Phase 9 - Quick Playback Wins (v1.1 Video Playback Quality)
+**Current focus:** v1.2 Seat-Based Monetization
 
 ## Current Position
 
-Phase: 9 of 12 (Quick Playback Wins)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-06 -- Completed 09-01-PLAN.md (remove percentage text, fast playback start)
-
-Progress: [########..] 78% (v1.0 complete, v1.1 phase 9: 2/3 plans done)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-07 — Milestone v1.2 started
 
 ## Performance Metrics
 
@@ -37,11 +35,6 @@ Progress: [########..] 78% (v1.0 complete, v1.1 phase 9: 2/3 plans done)
 | 8 | 6/6 | ~26min | ~4.3min |
 | 9 | 2/3 | ~2min | ~1min |
 
-**Recent Trend:**
-- v1.0 complete (38 plans across 8 phases)
-- v1.1 phase 9: 2/3 plans done, averaging ~1 min per plan (small targeted fixes)
-- Trend: Stable, averaging ~3-5 min per plan
-
 *Updated after each plan completion*
 
 ## Accumulated Context
@@ -51,17 +44,11 @@ Progress: [########..] 78% (v1.0 complete, v1.1 phase 9: 2/3 plans done)
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [v1.1 Research]: Download-first-then-play strategy over streaming optimization (7s clips are 2-5MB)
-- [v1.1 Research]: Custom VideoCacheService over third-party libraries (signed URL rotation breaks URL-keyed caches)
-- [v1.1 Research]: Storage path as cache key, not signed URL (stable across URL rotations)
-- [v1.1 Research]: Actor-based services matching existing StorageService/CardService pattern
-- [v1.1 Research]: AVPlayerLooper over manual NotificationCenter seek-to-zero pattern
-- [v1.1 Research]: 50-minute TTL for signed URL cache (10-min buffer before 1-hour expiry)
-- [09-01]: Spinner-only loading overlays (no text) -- cleaner UX, text added noise without value
-- [09-01]: Keep loadingProgress/observeBuffering internals despite removing visible text -- still drives state transitions
-- [09-01]: No stall recovery observers for immediate playback -- 7s clips won't stall on reasonable connections
-- [09-02]: Thumbnail time 1.5s (person composed at 1.5s vs mid-adjustment at 0.5s)
-- [09-02]: Audio session .playback category verified correct -- no conflicting usage in codebase
+- [v1.2]: Seat-based pricing replaces one-time purchase model
+- [v1.2]: Free tier reduced from ~8 to 5 participants
+- [v1.2]: Never block submissions — payment at publish time
+- [v1.2]: User-initiated tier upgrades (no auto-charge)
+- [v1.2]: RevenueCat already integrated (from v1.0 phase 8)
 
 ### Pending Todos
 
@@ -69,11 +56,12 @@ None.
 
 ### Blockers/Concerns
 
-- Existing thumbnails at 0.5s will not retroactively update (QUAL-01 applies to new clips only)
-- 4 separate UIViewRepresentable wrappers to unify (PlayerLayerView, QueuePlayerUIView, ClipPlayerUIView, PlayerUIView)
+- Existing RevenueCat integration may need rework for seat-based tiers (currently set up for single IAP)
+- Need to design pricing tiers as RevenueCat products
+- Supabase schema may need participant count tracking per card
 
 ## Session Continuity
 
-Last session: 2026-02-06
-Stopped at: Completed 09-01-PLAN.md and 09-02-PLAN.md, next is 09-03 (AVPlayerLooper)
+Last session: 2026-02-07
+Stopped at: Starting milestone v1.2 — gathering requirements
 Resume file: None

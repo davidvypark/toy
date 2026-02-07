@@ -58,21 +58,22 @@ A group video greeting card app where a host creates a card, invites participant
 - Text overlays on videos — video-only for MVP
 - OAuth/social login — simple auth for MVP
 
-## Current Milestone: v1.1 Video Playback Quality
+## Current Milestone: v1.2 Seat-Based Monetization
 
-**Goal:** Achieve Instagram/TikTok-level video playback smoothness across all video surfaces in the app
+**Goal:** Implement a transparent, GitHub-style seat-based pricing model where hosts start free and upgrade based on participant count at publish time
 
 **Target features:**
-- Unified video playback infrastructure (shared across all player views)
-- Disk-level video caching (videos don't re-download on revisit)
-- Preloading and buffer-before-display (no frozen frames)
-- Smooth loading UX with real progress (no jumps from 0% to 30%)
-- First-frame thumbnails (not 0.5s)
-- Instant replay on re-visit (cached videos play immediately)
+- Seat-based pricing tiers (5 free → 10/$1.99 → 25/$4.99 → ... → 250/$89.99)
+- No prepayment — all cards start free, payment at publish
+- Never block participant submissions — let anyone record regardless of tier
+- Tier awareness UI on card detail — visual showing remaining slots + next tier cost
+- User-initiated tier upgrades — host explicitly chooses to upgrade, no auto-charge
+- Checkout carousel at publish — current tier with prev/next tiers visible
+- Transparent pricing that feels fun, not deceptive
 
 ## Context
 
-**Existing codebase:** Complete v1.0 MVP with full end-to-end flow. 4 separate video player implementations with no shared infrastructure. Video playback suffers from slow loading, progress jumps, frozen first frames, and non-functional caching on re-visit.
+**Existing codebase:** Complete v1.0 MVP with full end-to-end flow. v1.1 polished video playback and added onboarding. RevenueCat SDK already integrated with basic upgrade UI from v1.0.
 
 **Target users:**
 - Hosts: People organizing group messages for occasions (birthdays, weddings, get well, congratulations, holidays)
@@ -100,8 +101,8 @@ A group video greeting card app where a host creates a card, invites participant
 | App Clip for participants | Reduces friction for recording | — Pending |
 | Auto-order clips (host first, then chronological) | Simplifies host experience | — Pending |
 | 7-second max clip length | Keeps montages watchable, reduces storage | — Pending |
-| One-time purchase model | Simple, event-based usage pattern | — Pending |
-| Free tier ~8 participants | Allows small groups to try before paying | — Pending |
+| One-time purchase model | Simple, event-based usage pattern | ⚠️ Revisit — replacing with seat-based tiers in v1.2 |
+| Free tier ~8 participants | Allows small groups to try before paying | ⚠️ Revisit — changing to 5 free participants in v1.2 |
 
 ---
-*Last updated: 2026-02-06 after milestone v1.1 start*
+*Last updated: 2026-02-07 after milestone v1.2 start*
