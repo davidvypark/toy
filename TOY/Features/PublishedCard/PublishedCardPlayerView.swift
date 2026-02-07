@@ -492,7 +492,7 @@ private struct DetailsPanel: View {
 
     @ViewBuilder
     private func shareLinkSection(shareToken: String) -> some View {
-        let shareURL = "https://sendtoycard.com/view/\(shareToken)"
+        let shareURL = "https://sendtoycard.com/watch/\(shareToken)"
 
         VStack(alignment: .leading, spacing: TOYSpacing.md) {
             Text("SHARE")

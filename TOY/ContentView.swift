@@ -24,7 +24,12 @@ struct ContentView: View {
                 .background(Color.toyBackground)
 
             case .signedOut:
-                LoginView(viewModel: authViewModel)
+                // TODO: Uncomment to skip onboarding for returning users
+                // if hasCompletedOnboarding {
+                //     LoginView(viewModel: authViewModel)
+                // } else {
+                    OnboardingView(authViewModel: authViewModel)
+                // }
 
             case .signedIn:
                 HomeView(viewModel: authViewModel)
