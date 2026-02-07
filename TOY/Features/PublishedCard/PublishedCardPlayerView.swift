@@ -391,14 +391,12 @@ private struct DetailsPanel: View {
 
     var body: some View {
         ZStack {
-            // Film grain texture on black
-            Color.black
-            TOYTextureOverlay(opacity: 0.04)
+            TOYBackground()
 
             VStack(spacing: 0) {
                 // Drag indicator - minimal line
                 Rectangle()
-                    .fill(Color.warmGrayDark)
+                    .fill(Color.toyTextSecondary)
                     .frame(width: 32, height: 2)
                     .padding(.top, TOYSpacing.lg)
                     .padding(.bottom, TOYSpacing.xl)
@@ -422,17 +420,17 @@ private struct DetailsPanel: View {
                         VStack(alignment: .leading, spacing: TOYSpacing.sm) {
                             Text(card.title)
                                 .font(.toyLargeTitle())
-                                .foregroundColor(.warmCream)
+                                .foregroundColor(.toyText)
                                 .lineLimit(3)
 
                             Text("For \(card.recipientName)")
                                 .font(.toyBody())
-                                .foregroundColor(.warmGrayDark)
+                                .foregroundColor(.toyTextSecondary)
 
                             if let publishedAt = card.publishedAt {
                                 Text(publishedAt.formatted(date: .abbreviated, time: .omitted))
                                     .font(.toyCaption())
-                                    .foregroundColor(.warmGrayDark)
+                                    .foregroundColor(.toyTextSecondary)
                                     .padding(.top, TOYSpacing.xs)
                             }
                         }
@@ -481,7 +479,7 @@ private struct DetailsPanel: View {
         VStack(alignment: .leading, spacing: TOYSpacing.md) {
             Text("SHARE")
                 .font(.toyCaption())
-                .foregroundColor(.warmGrayDark)
+                .foregroundColor(.toyTextSecondary)
                 .toyLetterSpacing(1.5)
 
             Button {
@@ -494,10 +492,10 @@ private struct DetailsPanel: View {
                     Text("Copy Link")
                         .font(.toyBodyMedium())
                 }
-                .foregroundColor(.black)
+                .foregroundColor(.toyBackground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, TOYSpacing.md)
-                .background(Color.warmCream)
+                .background(Color.toyText)
             }
         }
     }
@@ -507,13 +505,13 @@ private struct DetailsPanel: View {
         VStack(alignment: .leading, spacing: TOYSpacing.lg) {
             Text("CONTRIBUTORS")
                 .font(.toyCaption())
-                .foregroundColor(.warmGrayDark)
+                .foregroundColor(.toyTextSecondary)
                 .toyLetterSpacing(1.5)
 
             if clips.isEmpty {
                 Text("No clips yet")
                     .font(.toyBody())
-                    .foregroundColor(.warmGrayDark)
+                    .foregroundColor(.toyTextSecondary)
             } else {
                 VStack(alignment: .leading, spacing: TOYSpacing.md) {
                     ForEach(Array(clips.enumerated()), id: \.element.id) { index, clip in
@@ -536,7 +534,7 @@ private struct DetailsPanel: View {
                 KFImage(avatarURL)
                     .placeholder {
                         Circle()
-                            .fill(Color.warmGrayDark.opacity(0.3))
+                            .fill(Color.toyDivider)
                     }
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -544,18 +542,18 @@ private struct DetailsPanel: View {
                     .clipShape(Circle())
             } else {
                 Circle()
-                    .fill(Color.warmGrayDark.opacity(0.3))
+                    .fill(Color.toyDivider)
                     .frame(width: 32, height: 32)
                     .overlay {
                         Text(String(displayName.prefix(1)).uppercased())
                             .font(.toyCaption())
-                            .foregroundColor(.warmCream)
+                            .foregroundColor(.toyText)
                     }
             }
 
             Text(isMe ? "\(displayName) (me)" : displayName)
                 .font(.toyBody())
-                .foregroundColor(.warmCream)
+                .foregroundColor(.toyText)
 
             Spacer()
         }
