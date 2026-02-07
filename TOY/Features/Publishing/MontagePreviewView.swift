@@ -21,6 +21,7 @@ struct MontagePreviewView: View {
     @State private var loadingProgress: Double = 0
     @State private var bufferObserver: NSKeyValueObservation?
     @State private var isPlaybackFinished = false
+    @State private var isPaused = false
 
     @Environment(\.dismiss) private var dismiss
     private let storageService = StorageService()
@@ -102,7 +103,15 @@ struct MontagePreviewView: View {
                         }
                     }
 
-                    // 4. Progress overlay during publishing
+                    // 4. Pause overlay
+                    if isPaused && isPlayerReady && !isPlaybackFinished {
+                        Color.black.opacity(0.3)
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 44))
+                            .foregroundColor(.white)
+                    }
+
+                    // 5. Progress overlay during publishing
                     if publishViewModel.state.isInProgress {
                         progressView
                             .background(Color.black.opacity(0.8))
@@ -111,6 +120,15 @@ struct MontagePreviewView: View {
                 .aspectRatio(9/16, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 24)
+                .onTapGesture {
+                    guard isPlayerReady, !isPlaybackFinished, !publishViewModel.state.isInProgress else { return }
+                    isPaused.toggle()
+                    if isPaused {
+                        queuePlayer?.pause()
+                    } else {
+                        queuePlayer?.play()
+                    }
+                }
 
                 Spacer()
 
@@ -164,6 +182,11 @@ struct MontagePreviewView: View {
                 cachedPlayer.play()
             } else {
                 await setupQueuePlayer()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            if !isPlaybackFinished && !isPaused {
+                queuePlayer?.play()
             }
         }
         .onDisappear {
@@ -375,6 +398,7 @@ struct MontagePreviewView: View {
     /// Replays the video from the beginning
     private func replayVideo() {
         isPlaybackFinished = false
+        isPaused = false
 
         // Re-queue all items for multiple clips
         if signedURLs.count > 1, let player = queuePlayer {

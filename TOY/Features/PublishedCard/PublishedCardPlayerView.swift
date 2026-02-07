@@ -31,6 +31,7 @@ struct PublishedCardPlayerView: View {
     @State private var bufferObserver: NSKeyValueObservation?
     @State private var playerLooper: AVPlayerLooper?
     @State private var firstClipThumbnailURL: URL?
+    @State private var isPaused = false
 
     private let storageService = StorageService()
     private let cardService = CardService()
@@ -42,8 +43,8 @@ struct PublishedCardPlayerView: View {
             TOYBackground()
 
             VStack(spacing: 0) {
-                // Top bar - back button
-                HStack {
+                // Top bar - back button + title
+                HStack(alignment: .center, spacing: TOYSpacing.sm) {
                     Button {
                         dismiss()
                     } label: {
@@ -53,10 +54,21 @@ struct PublishedCardPlayerView: View {
                             .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                     }
+
+                    VStack(alignment: .leading, spacing: TOYSpacing.xs) {
+                        Text(card.title)
+                            .font(.toyTitle())
+                            .foregroundColor(.toyText)
+                            .lineLimit(2)
+                        Text("For \(card.recipientName)")
+                            .font(.toyBody())
+                            .foregroundColor(.toyTextSecondary)
+                    }
                     Spacer()
                 }
                 .padding(.horizontal, TOYSpacing.sm)
                 .padding(.top, TOYSpacing.sm)
+                .padding(.bottom, TOYSpacing.md)
 
                 // Video card
                 ZStack {
@@ -85,6 +97,14 @@ struct PublishedCardPlayerView: View {
                         }
                     }
 
+                    // Pause overlay
+                    if isPaused && isPlayerReady {
+                        Color.black.opacity(0.3)
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 44))
+                            .foregroundColor(.white)
+                    }
+
                     if let error = error {
                         VStack(spacing: TOYSpacing.md) {
                             Image(systemName: "exclamationmark.triangle")
@@ -106,12 +126,17 @@ struct PublishedCardPlayerView: View {
                         withAnimation(.easeOut(duration: 0.2)) {
                             showDetails = false
                         }
+                    } else if isPlayerReady {
+                        isPaused.toggle()
+                        if isPaused {
+                            player?.pause()
+                        } else {
+                            player?.play()
+                        }
                     }
                 }
 
-                Spacer()
-
-                // Bottom hint - tappable with up arrow
+                // Details hint - right under the video
                 if !showDetails {
                     Button {
                         withAnimation(.easeOut(duration: 0.2)) {
@@ -121,15 +146,17 @@ struct PublishedCardPlayerView: View {
                         VStack(spacing: TOYSpacing.xs) {
                             Image(systemName: "chevron.up")
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.warmGrayDark)
+                                .foregroundColor(.toyTextSecondary)
                             Text("DETAILS")
                                 .font(.toyCaption2())
-                                .foregroundColor(.warmGrayDark)
+                                .foregroundColor(.toyTextSecondary)
                                 .toyLetterSpacing(2)
                         }
                     }
-                    .padding(.bottom, TOYSpacing.xxl)
+                    .padding(.top, TOYSpacing.md)
                 }
+
+                Spacer()
             }
             .opacity(showDetails ? 0.3 : 1)
 
@@ -200,6 +227,9 @@ struct PublishedCardPlayerView: View {
             async let clipsTask: () = loadClips()
             async let videoTask: () = loadVideo()
             _ = await (clipsTask, videoTask)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            if !isPaused { player?.play() }
         }
         .onDisappear {
             playerLooper?.disableLooping()
@@ -416,31 +446,19 @@ private struct DetailsPanel: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: TOYSpacing.xxl) {
-                        // Card title - large serif, type-forward
-                        VStack(alignment: .leading, spacing: TOYSpacing.sm) {
-                            Text(card.title)
-                                .font(.toyLargeTitle())
-                                .foregroundColor(.toyText)
-                                .lineLimit(3)
-
-                            Text("For \(card.recipientName)")
-                                .font(.toyBody())
+                        // Published date
+                        if let publishedAt = card.publishedAt {
+                            Text(publishedAt.formatted(date: .abbreviated, time: .omitted))
+                                .font(.toyCaption())
                                 .foregroundColor(.toyTextSecondary)
-
-                            if let publishedAt = card.publishedAt {
-                                Text(publishedAt.formatted(date: .abbreviated, time: .omitted))
-                                    .font(.toyCaption())
-                                    .foregroundColor(.toyTextSecondary)
-                                    .padding(.top, TOYSpacing.xs)
-                            }
                         }
 
-                        // Share link - bottom border style
+                        // Share link
                         if let shareToken = card.shareToken {
                             shareLinkSection(shareToken: shareToken)
                         }
 
-                        // Contributors - simple numbered list
+                        // Contributors
                         contributorsSection
                     }
                     .padding(.horizontal, TOYSpacing.lg)

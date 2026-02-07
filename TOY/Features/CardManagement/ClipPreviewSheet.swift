@@ -20,6 +20,7 @@ struct ClipPreviewSheet: View {
     @State private var isDeleting = false
     @State private var playerStatusObserver: NSKeyValueObservation?
     @State private var playerLooper: AVPlayerLooper?
+    @State private var isPaused = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -68,6 +69,14 @@ struct ClipPreviewSheet: View {
                             }
                         }
 
+                        // Pause overlay
+                        if isPaused && isPlayerReady {
+                            Color.black.opacity(0.3)
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 44))
+                                .foregroundColor(.white)
+                        }
+
                         if let error = loadError {
                             errorView(error)
                         }
@@ -75,6 +84,15 @@ struct ClipPreviewSheet: View {
                     .aspectRatio(9/16, contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .padding(.horizontal, 24)
+                    .onTapGesture {
+                        guard isPlayerReady else { return }
+                        isPaused.toggle()
+                        if isPaused {
+                            player?.pause()
+                        } else {
+                            player?.play()
+                        }
+                    }
 
                     Spacer()
 
@@ -113,6 +131,9 @@ struct ClipPreviewSheet: View {
             }
             .task {
                 await loadSignedURL()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                if !isPaused { player?.play() }
             }
             .onDisappear {
                 cleanupPlayer()

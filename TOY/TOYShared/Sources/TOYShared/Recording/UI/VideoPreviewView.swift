@@ -97,6 +97,9 @@ public struct VideoPreviewView: View {
             generateThumbnail()
             setupPlayer()
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+            player?.play()
+        }
         .onDisappear {
             playerLooper?.disableLooping()
             playerLooper = nil
