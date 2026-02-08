@@ -22,6 +22,8 @@ struct MontagePreviewView: View {
     @State private var bufferObserver: NSKeyValueObservation?
     @State private var isPlaybackFinished = false
     @State private var isPaused = false
+    @State private var showCheckout = false
+    @State private var hasPurchased = false
 
     @Environment(\.dismiss) private var dismiss
     private let storageService = StorageService()
@@ -49,6 +51,12 @@ struct MontagePreviewView: View {
                 return clip1.createdAt < clip2.createdAt
             }
         return [hostClip].compactMap { $0 } + participantClips
+    }
+
+    /// Whether this publish attempt needs a tier upgrade.
+    /// Uses card.maxParticipants directly (not CardTier comparison) to respect grandfathered cards.
+    private var needsUpgrade: Bool {
+        sortedClips.count > card.maxParticipants
     }
 
     var body: some View {
@@ -215,6 +223,24 @@ struct MontagePreviewView: View {
                 }
             }
         }
+        .sheet(isPresented: $showCheckout) {
+            CheckoutSheet(
+                card: card,
+                clipCount: sortedClips.count,
+                onPurchaseComplete: {
+                    hasPurchased = true
+                    Task {
+                        await publishViewModel.publishWithStitching(
+                            card: card,
+                            clips: sortedClips
+                        )
+                    }
+                },
+                onCancel: {
+                    // Do nothing -- host stays on montage preview
+                }
+            )
+        }
         .alert("Error", isPresented: .init(
             get: { publishViewModel.state.isFailed },
             set: { if !$0 { publishViewModel.reset() } }
@@ -282,11 +308,15 @@ struct MontagePreviewView: View {
                 publishViewModel.state.isInProgress ? "Publishing..." : "Publish Card",
                 isLoading: publishViewModel.state.isInProgress
             ) {
-                Task {
-                    await publishViewModel.publishWithStitching(
-                        card: card,
-                        clips: sortedClips
-                    )
+                if !hasPurchased && needsUpgrade {
+                    showCheckout = true
+                } else {
+                    Task {
+                        await publishViewModel.publishWithStitching(
+                            card: card,
+                            clips: sortedClips
+                        )
+                    }
                 }
             }
             .disabled(isLoadingURLs || publishViewModel.state.isInProgress)
