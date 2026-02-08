@@ -238,15 +238,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | Pending roadmap |
+| PRICE-01 | Phase 13 | Pending |
+| PRICE-02 | Phase 13 | Pending |
+| PRICE-05 | Phase 13 | Pending |
+| PURCH-04 | Phase 13 | Pending |
+| TIER-01 | Phase 14 | Pending |
+| TIER-02 | Phase 14 | Pending |
+| PRICE-03 | Phase 15 | Pending |
+| PRICE-04 | Phase 15 | Pending |
+| TIER-03 | Phase 15 | Pending |
+| TIER-04 | Phase 15 | Pending |
+| PURCH-01 | Phase 15 | Pending |
+| PURCH-02 | Phase 15 | Pending |
+| PURCH-03 | Phase 15 | Pending |
+| CLEAN-01 | Phase 16 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 35 total (all complete)
 - v1.1 requirements: 13 total (all complete)
 - v1.2 requirements: 14 total
-- Mapped to phases: 0/14 (pending roadmap)
-- Unmapped: 14
+- Mapped to phases: 14/14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-08 after v1.2 requirements definition*
+*Last updated: 2026-02-08 after v1.2 roadmap creation*

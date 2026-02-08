@@ -3,7 +3,8 @@
 ## Milestones
 
 - v1.0 MVP - Phases 1-8 (shipped 2026-02-02)
-- v1.1 Video Playback Quality - Phases 9-12 (in progress)
+- v1.1 Video Playback Quality - Phases 9-12 (shipped 2026-02-07)
+- v1.2 Seat-Based Monetization - Phases 13-16 (in progress)
 
 ## Phases
 
@@ -106,83 +107,128 @@ Plans:
 
 </details>
 
-### v1.1 Video Playback Quality (In Progress)
-
-**Milestone Goal:** Achieve Instagram/TikTok-level video playback smoothness across all video surfaces -- instant replay on re-visit, seamless loading transitions, no frozen frames or progress jumps
-
-- [ ] **Phase 9: Quick Playback Wins** - Eliminate visible playback annoyances with targeted fixes
-- [ ] **Phase 10: Unified Player & Loading UX** - Single player component with polished thumbnail-to-video transitions
-- [ ] **Phase 11: Cache Infrastructure** - Disk video cache and signed URL management for instant replay
-- [ ] **Phase 12: Preloading Pipeline** - Background video downloads so playback starts instantly on navigation
-
-## Phase Details
+<details>
+<summary>v1.1 Video Playback Quality (Phases 9-12) - SHIPPED 2026-02-07</summary>
 
 ### Phase 9: Quick Playback Wins
 **Goal**: Users experience noticeably faster, smoother video playback through targeted behavioral fixes across all existing player views
-**Depends on**: Phase 8 (v1.0 complete)
 **Requirements**: LOAD-02, LOAD-04, QUAL-01, QUAL-02, QUAL-03
-**Success Criteria** (what must be TRUE):
-  1. No percentage text appears anywhere during video loading -- loading state is communicated visually through thumbnails and transitions only
-  2. Video playback begins within ~500ms of player appearing, without waiting for full buffer to fill
-  3. Newly recorded clips generate thumbnails at a natural moment (~1.5s) where the person is composed, not mid-setup at 0.5s
-  4. Videos loop seamlessly with no visible pause, stutter, or black flash at the loop point
-  5. Video audio plays correctly even when the device ringer/silent switch is set to silent mode
-**Plans**: 3 plans
+**Plans**: 3/3 complete
 
 Plans:
-- [x] 09-01-PLAN.md -- Remove percentage text from loading overlays and enable immediate playback start
-- [x] 09-02-PLAN.md -- Change thumbnail generation time to 1.5s and verify audio session
-- [ ] 09-03-PLAN.md -- Replace looping pattern with AVPlayerLooper for seamless video loops
+- [x] 09-01: Remove percentage text from loading overlays and enable immediate playback start
+- [x] 09-02: Change thumbnail generation time to 1.5s and verify audio session
+- [x] 09-03: Replace looping pattern with AVPlayerLooper for seamless video loops
 
 ### Phase 10: Unified Player & Loading UX
-**Goal**: All 4 separate video player implementations are replaced by a single TOYVideoPlayerView with a polished loading experience that transitions seamlessly from thumbnail to video
-**Depends on**: Phase 9
+**Goal**: All 4 separate video player implementations are replaced by a single TOYVideoPlayerView with a polished loading experience
 **Requirements**: PLAY-01, LOAD-01, LOAD-03, LOAD-05
-**Success Criteria** (what must be TRUE):
-  1. A single TOYVideoPlayerView component is used across PublishedCardPlayerView, MontagePreviewView, ClipPreviewSheet, and VideoPreviewView -- no duplicate UIViewRepresentable wrappers remain
-  2. When a video is loading, the thumbnail fills the entire frame as a placeholder (no small thumbnail with dark overlay or "Loading video..." text)
-  3. The transition from thumbnail to live video is a smooth crossfade with zero black frames visible at any point
-  4. A subtle shimmer animation plays over the thumbnail while the video is loading, replacing any static loading indicators
-**Plans**: TBD
+**Plans**: 3/3 complete
 
 Plans:
-- [ ] 10-01: TBD
-- [ ] 10-02: TBD
-- [ ] 10-03: TBD
+- [x] 10-01: Unified TOYVideoPlayerView component
+- [x] 10-02: Thumbnail-to-video crossfade transitions
+- [x] 10-03: Shimmer loading animation
 
 ### Phase 11: Cache Infrastructure
-**Goal**: Videos play instantly from disk on re-visit and signed URLs are managed transparently so playback never fails due to URL expiry
-**Depends on**: Phase 10
+**Goal**: Videos play instantly from disk on re-visit and signed URLs are managed transparently
 **Requirements**: PLAY-02, PLAY-03
-**Success Criteria** (what must be TRUE):
-  1. Re-visiting a previously watched published card plays the video instantly from disk cache (~100ms) with no loading indicator or network activity
-  2. Videos remain cached across app launches -- closing and reopening the app does not require re-downloading previously watched videos
-  3. Signed URLs refresh transparently when they approach expiry -- the user never sees a playback error caused by an expired URL, even if the app has been open for hours
-  4. Cache respects a size limit (LRU eviction) so disk usage stays bounded even after watching many videos
-**Plans**: TBD
+**Plans**: 2/2 complete
 
 Plans:
-- [ ] 11-01: TBD
-- [ ] 11-02: TBD
+- [x] 11-01: Disk video cache with LRU eviction
+- [x] 11-02: Signed URL manager with TTL tracking
 
 ### Phase 12: Preloading Pipeline
-**Goal**: Videos are downloaded in the background before the user navigates to them, so playback starts instantly on every tap
-**Depends on**: Phase 11
+**Goal**: Videos are downloaded in the background before the user navigates to them
 **Requirements**: PLAY-04, PLAY-05
+**Plans**: 2/2 complete
+
+Plans:
+- [x] 12-01: Published card video preloading from home screen
+- [x] 12-02: Montage clip pre-download for queue playback
+
+</details>
+
+### v1.2 Seat-Based Monetization (In Progress)
+
+**Milestone Goal:** Implement transparent, GitHub-style seat-based pricing where hosts start free (5 clips) and upgrade based on participant count at publish time -- never blocking participant submissions, never auto-charging
+
+- [ ] **Phase 13: Pricing Infrastructure** - CardTier model, RevenueCat multi-product setup, free tier default change, grandfathering
+- [ ] **Phase 14: Tier Awareness UI** - Tier indicator on card detail showing clip count, tier status, and upgrade path
+- [ ] **Phase 15: Checkout & Purchase Flow** - Publish-time tier gate, static tier visualization, purchase recording to Supabase
+- [ ] **Phase 16: Cleanup & Verification** - Remove old binary upgrade flow, end-to-end verification of all tier paths
+
+## Phase Details
+
+### Phase 13: Pricing Infrastructure
+**Goal**: The app has a complete tier data model and multi-product purchase capability so that all downstream UI can compute tiers and initiate purchases
+**Depends on**: Phase 12 (v1.1 complete)
+**Requirements**: PRICE-01, PRICE-02, PRICE-05, PURCH-04
 **Success Criteria** (what must be TRUE):
-  1. When the home screen card list loads, published card videos begin downloading in the background -- by the time the user taps a card, playback starts instantly from cache
-  2. When the montage preview opens, all clip videos have been downloaded to disk and the AVQueuePlayer plays from local files with no inter-clip buffering gaps
-  3. Preloading respects network conditions and does not visibly degrade app responsiveness or consume excessive bandwidth
+  1. A card with 5 or fewer clips shows no pricing UI and can reach the publish flow without any payment interaction
+  2. Participants can submit clips to any card regardless of how many clips already exist -- no submission blocking at any count
+  3. New cards are created with maxParticipants = 5 (new free tier default)
+  4. Existing cards with maxParticipants = 8 continue to function with their original 8-clip free allowance (grandfathered)
+  5. PurchaseService can fetch all tier packages from a single RevenueCat offering and each tier product is configured as a consumable IAP
 **Plans**: TBD
 
 Plans:
-- [ ] 12-01: TBD
-- [ ] 12-02: TBD
+- [ ] 13-01: TBD
+- [ ] 13-02: TBD
+- [ ] 13-03: TBD
+
+### Phase 14: Tier Awareness UI
+**Goal**: Hosts always know where their card stands in the tier system -- how many clips they have, what tier that requires, and what it will cost to publish
+**Depends on**: Phase 13
+**Requirements**: TIER-01, TIER-02
+**Success Criteria** (what must be TRUE):
+  1. Card detail view shows a tier indicator displaying clip count, current tier status, and cost to publish when the card exceeds the free limit
+  2. When a card is within the free tier (5 or fewer clips), no pricing or tier information appears on the card detail view
+  3. Host can tap the tier indicator to open a tier selection view and proactively upgrade their card before publish time
+**Plans**: TBD
+
+Plans:
+- [ ] 14-01: TBD
+- [ ] 14-02: TBD
+
+### Phase 15: Checkout & Purchase Flow
+**Goal**: Hosts can publish any card -- free cards publish instantly, paid cards present a clear tier selection with one-tap purchase that records the transaction and proceeds to publish
+**Depends on**: Phase 14
+**Requirements**: PRICE-03, PRICE-04, TIER-03, TIER-04, PURCH-01, PURCH-02, PURCH-03
+**Success Criteria** (what must be TRUE):
+  1. When a host taps "Publish" on a card with more clips than their free/purchased tier allows, a checkout sheet appears showing a static tier visualization with their position in the tier range
+  2. The checkout auto-selects the cheapest tier that fits the current clip count, and the host can select a higher tier but cannot select one below their clip count
+  3. The host explicitly confirms the purchase -- no auto-charges happen at any point in the flow
+  4. After successful purchase, the transaction ID and tier are recorded to the card in Supabase, and maxParticipants is updated to the purchased tier's limit
+  5. If the publish process fails after payment succeeds, the host can retry publishing without being charged again -- the card retains its purchased tier
+**Plans**: TBD
+
+Plans:
+- [ ] 15-01: TBD
+- [ ] 15-02: TBD
+- [ ] 15-03: TBD
+
+### Phase 16: Cleanup & Verification
+**Goal**: The old binary upgrade system is fully removed and the new tier system works correctly across all edge cases
+**Depends on**: Phase 15
+**Requirements**: CLEAN-01
+**Success Criteria** (what must be TRUE):
+  1. The old CardUpgradeView, binary "upgrade for unlimited" banner, and single-product upgrade flow are completely removed from the codebase
+  2. A card with 3 clips publishes for free with no payment interaction
+  3. A card with 12 clips presents the checkout, auto-selects the correct tier, completes purchase, and publishes successfully
+  4. A card with maxParticipants = 8 (legacy) and 6 clips publishes for free (grandfathered)
+  5. A card where publish fails after payment can retry publishing without re-purchasing
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: TBD
+- [ ] 16-02: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 9 -> 10 -> 11 -> 12
+Phases execute in numeric order: 13 -> 14 -> 15 -> 16
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -194,13 +240,18 @@ Phases execute in numeric order: 9 -> 10 -> 11 -> 12
 | 6. Video Stitching & Publishing | v1.0 | 4/4 | Complete | 2026-02-02 |
 | 7. App Clip Integration | v1.0 | 4/4 | Complete | 2026-02-02 |
 | 8. Recipient Flow & Monetization | v1.0 | 6/6 | Complete | 2026-02-02 |
-| 9. Quick Playback Wins | v1.1 | 2/3 | In progress | - |
-| 10. Unified Player & Loading UX | v1.1 | 0/TBD | Not started | - |
-| 11. Cache Infrastructure | v1.1 | 0/TBD | Not started | - |
-| 12. Preloading Pipeline | v1.1 | 0/TBD | Not started | - |
+| 9. Quick Playback Wins | v1.1 | 3/3 | Complete | 2026-02-06 |
+| 10. Unified Player & Loading UX | v1.1 | 3/3 | Complete | 2026-02-07 |
+| 11. Cache Infrastructure | v1.1 | 2/2 | Complete | 2026-02-07 |
+| 12. Preloading Pipeline | v1.1 | 2/2 | Complete | 2026-02-07 |
+| 13. Pricing Infrastructure | v1.2 | 0/TBD | Not started | - |
+| 14. Tier Awareness UI | v1.2 | 0/TBD | Not started | - |
+| 15. Checkout & Purchase Flow | v1.2 | 0/TBD | Not started | - |
+| 16. Cleanup & Verification | v1.2 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-01*
 *v1.1 roadmap added: 2026-02-06*
-*Depth: comprehensive (4 phases for v1.1, 12 total)*
-*Coverage: 35/35 v1.0 + 13/13 v1.1 requirements mapped*
+*v1.2 roadmap added: 2026-02-08*
+*Depth: comprehensive (4 phases for v1.2, 16 total)*
+*Coverage: 35/35 v1.0 + 13/13 v1.1 + 14/14 v1.2 requirements mapped*
