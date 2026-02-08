@@ -155,7 +155,7 @@ Plans:
 **Milestone Goal:** Implement transparent, GitHub-style seat-based pricing where hosts start free (5 clips) and upgrade based on participant count at publish time -- never blocking participant submissions, never auto-charging
 
 - [x] **Phase 13: Pricing Infrastructure** - CardTier model, RevenueCat multi-product setup, free tier default change, grandfathering
-- [ ] **Phase 14: Tier Awareness UI** - Tier indicator on card detail showing clip count, tier status, and upgrade path
+- [x] **Phase 14: Tier Awareness UI** - Tier indicator on card detail showing clip count, tier status, and upgrade path
 - [ ] **Phase 15: Checkout & Purchase Flow** - Publish-time tier gate, static tier visualization, purchase recording to Supabase
 - [ ] **Phase 16: Cleanup & Verification** - Remove old binary upgrade flow, end-to-end verification of all tier paths
 
@@ -188,8 +188,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — TierIndicatorView + ViewModel tier properties + CardDetailView wiring (replace upgrade banner)
-- [ ] 14-02-PLAN.md — TierSelectionSheet with price display + wire sheet presentation
+- [x] 14-01-PLAN.md — TierIndicatorView + ViewModel tier properties + CardDetailView wiring (replace upgrade banner)
+- [x] 14-02-PLAN.md — TierSelectionSheet with price display + wire sheet presentation
 
 ### Phase 15: Checkout & Purchase Flow
 **Goal**: Hosts can publish any card -- free cards publish instantly, paid cards present a clear tier selection with one-tap purchase that records the transaction and proceeds to publish
@@ -244,7 +244,7 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16
 | 11. Cache Infrastructure | v1.1 | 2/2 | Complete | 2026-02-07 |
 | 12. Preloading Pipeline | v1.1 | 2/2 | Complete | 2026-02-07 |
 | 13. Pricing Infrastructure | v1.2 | 2/2 | Complete | 2026-02-08 |
-| 14. Tier Awareness UI | v1.2 | 0/2 | Not started | - |
+| 14. Tier Awareness UI | v1.2 | 2/2 | Complete | 2026-02-08 |
 | 15. Checkout & Purchase Flow | v1.2 | 0/TBD | Not started | - |
 | 16. Cleanup & Verification | v1.2 | 0/TBD | Not started | - |
 

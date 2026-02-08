@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Anyone can create a heartfelt group video message in minutes
-**Current focus:** Phase 14 -- Tier Awareness UI (v1.2 Seat-Based Monetization)
+**Current focus:** Phase 15 -- Checkout & Purchase Flow (v1.2 Seat-Based Monetization)
 
 ## Current Position
 
-Phase: 14 of 16 (Tier Awareness UI)
-Plan: 1 of 2 in current phase
-Status: Plan 01 complete
-Last activity: 2026-02-08 -- Completed 14-01 TierIndicatorView + CardDetailView tier awareness
+Phase: 14 of 16 (Tier Awareness UI) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase 14 complete
+Last activity: 2026-02-08 -- Completed 14-02 TierSelectionSheet + CardDetailView sheet wiring
 
-Progress: [=========█████░░░░] 76% (42/55 estimated plans)
+Progress: [=========██████░░░] 78% (43/55 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 42
+- Total plans completed: 43
 - Average duration: ~3.2 minutes
-- Total execution time: ~135 minutes
+- Total execution time: ~137 minutes
 
 **By Phase:**
 
@@ -38,7 +38,7 @@ Progress: [=========█████░░░░] 76% (42/55 estimated plans)
 | 9 | 3/3 | ~2min | ~0.7min |
 | 10-12 | 7/7 | manual | manual |
 | 13 | 2/2 | ~4min | ~2min |
-| 14 | 1/2 | ~4min | ~4min |
+| 14 | 2/2 | ~6min | ~3min |
 
 *Updated after each plan completion*
 
@@ -58,6 +58,8 @@ Recent decisions affecting current work:
 - [v1.2]: Client-side purchase recording for MVP (no Edge Function webhook)
 - [v1.2]: Tier indicator visibility uses card.maxParticipants threshold (not CardTier.free.clipLimit) for grandfathering
 - [v1.2]: TierIndicatorView is stateless -- receives all data as parameters, no network calls
+- [v1.2]: TierSelectionSheet is browse-only -- no purchase button (Phase 15 adds purchase CTA)
+- [v1.2]: Price fetching isolated to TierSelectionSheet, not in CardDetailViewModel
 
 ### Pending Todos
 
@@ -72,5 +74,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 14-01 (TierIndicatorView + CardDetailView wiring)
+Stopped at: Completed 14-02 (TierSelectionSheet + CardDetailView sheet wiring) -- Phase 14 complete
 Resume file: None
