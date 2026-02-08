@@ -33,9 +33,9 @@ public enum PurchaseError: LocalizedError, Sendable {
 ///
 /// Usage:
 /// ```swift
-/// let offerings = try await PurchaseService.shared.fetchOfferings()
-/// if let package = offerings.current?.availablePackages.first {
-///     let customerInfo = try await PurchaseService.shared.purchase(package: package)
+/// let packages = try await PurchaseService.shared.fetchTierPackages()
+/// if let package = packages["starter"] {
+///     let (info, txnId) = try await PurchaseService.shared.purchaseWithTransaction(package: package)
 /// }
 /// ```
 public actor PurchaseService {
@@ -45,17 +45,6 @@ public actor PurchaseService {
     private init() {}
 
     // MARK: - Offerings
-
-    /// Fetches available offerings from RevenueCat
-    ///
-    /// Offerings contain the products configured in RevenueCat Dashboard.
-    /// Each offering can contain multiple packages (e.g., monthly, yearly).
-    ///
-    /// - Returns: The available offerings
-    /// - Throws: Error if fetch fails
-    public func fetchOfferings() async throws -> Offerings {
-        try await Purchases.shared.offerings()
-    }
 
     /// Fetches all tier packages from the current RevenueCat offering.
     ///
@@ -79,20 +68,6 @@ public actor PurchaseService {
     }
 
     // MARK: - Purchases
-
-    /// Purchases a package and returns the customer info
-    ///
-    /// - Parameter package: The package to purchase (from offerings)
-    /// - Returns: Updated customer info with entitlements
-    /// - Throws: PurchaseError if purchase fails
-    public func purchase(package: Package) async throws -> CustomerInfo {
-        do {
-            let (_, customerInfo, _) = try await Purchases.shared.purchase(package: package)
-            return customerInfo
-        } catch {
-            throw PurchaseError.purchaseFailed(error.localizedDescription)
-        }
-    }
 
     /// Purchases a package and returns both the customer info and the transaction identifier.
     ///
@@ -154,26 +129,4 @@ public actor PurchaseService {
         }
     }
 
-    /// Checks if a specific card has been upgraded (purchased)
-    ///
-    /// This checks the product ID for per-card purchases.
-    /// The product ID should match the card's purchase identifier.
-    ///
-    /// - Parameter cardId: The card UUID to check
-    /// - Returns: True if the card upgrade was purchased
-    @available(*, deprecated, message: "Use card.maxParticipants for tier status. Per-card product IDs are not used in the tier model.")
-    public func isCardUpgraded(cardId: UUID) async -> Bool {
-        do {
-            let customerInfo = try await getCustomerInfo()
-            // Check if any active subscription or non-consumable includes this card
-            // In RevenueCat 5.x, nonSubscriptions is [NonSubscriptionTransaction]
-            let productId = "card_upgrade_\(cardId.uuidString.lowercased())"
-            // Search through all non-subscription transactions for matching product
-            return customerInfo.nonSubscriptions.contains { transaction in
-                transaction.productIdentifier == productId
-            }
-        } catch {
-            return false
-        }
-    }
 }

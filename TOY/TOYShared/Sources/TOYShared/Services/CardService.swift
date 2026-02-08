@@ -202,28 +202,6 @@ public actor CardService {
         }
     }
 
-    /// Updates a card's maximum participant limit (for upgrades).
-    /// - Parameters:
-    ///   - cardId: The ID of the card to update
-    ///   - maxParticipants: The new maximum participant limit (999 = unlimited)
-    /// - Throws: `CardError.updateFailed` if update fails
-    public func updateCardMaxParticipants(cardId: UUID, maxParticipants: Int) async throws {
-        do {
-            try await supabase
-                .from("cards")
-                .update(["max_participants": maxParticipants])
-                .eq("id", value: cardId)
-                .execute()
-
-            #if DEBUG
-            print("✅ Updated card \(cardId) maxParticipants to: \(maxParticipants)")
-            #endif
-        } catch {
-            if Task.isCancelled { throw CancellationError() }
-            throw CardError.updateFailed(error.localizedDescription)
-        }
-    }
-
     /// Records a tier purchase on a card, atomically writing both the new participant
     /// limit and the transaction identifier for audit trail.
     /// - Parameters:
