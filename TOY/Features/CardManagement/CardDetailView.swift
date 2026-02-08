@@ -17,6 +17,7 @@ struct CardDetailView: View {
     @State private var showError = false
     @State private var showMontagePreview = false
     @State private var showUpgradeSheet = false
+    @State private var showTierSelection = false
     @State private var showDeleteConfirmation = false
     @State private var showFinalDeleteConfirmation = false
     @State private var isDeleting = false
@@ -95,10 +96,6 @@ struct CardDetailView: View {
         return URL(string: "https://sendtoycard.com/card/\(token)")
     }
 
-    private var needsUpgrade: Bool {
-        viewModel.participants.count >= card.maxParticipants && card.maxParticipants < 999
-    }
-
     /// Whether the director (host) has recorded their clip
     private var hostHasRecorded: Bool {
         let clips = viewModel.clips.isEmpty ? initialClips : viewModel.clips
@@ -152,9 +149,14 @@ struct CardDetailView: View {
                     // Summary stats
                     summaryStatsView
 
-                    // Upgrade banner
-                    if needsUpgrade {
-                        upgradeBannerView
+                    // Tier indicator (only shown when clips exceed card's free allowance)
+                    if viewModel.clips.count > card.maxParticipants {
+                        TierIndicatorView(
+                            clipCount: viewModel.clips.count,
+                            requiredTier: viewModel.requiredTier(for: card),
+                            purchasedTier: viewModel.purchasedTier(for: card),
+                            onTapUpgrade: { showTierSelection = true }
+                        )
                     }
 
                     // Contributors section
@@ -232,6 +234,7 @@ struct CardDetailView: View {
                 currentParticipantCount: viewModel.participants.count
             )
         }
+        // TierSelectionSheet will be wired here in Plan 02
         .fullScreenCover(isPresented: $showRecordingView) {
             if let vm = recordingViewModel {
                 RecordingView(viewModel: vm)
@@ -428,37 +431,6 @@ struct CardDetailView: View {
                 )
             }
         }
-    }
-
-    // MARK: - Upgrade Banner
-
-    private var upgradeBannerView: some View {
-        Button {
-            showUpgradeSheet = true
-        } label: {
-            HStack(spacing: TOYSpacing.md) {
-                VStack(alignment: .leading, spacing: TOYSpacing.xs) {
-                    Text("Card is full")
-                        .font(.toyBodyMedium())
-                        .foregroundColor(.toyText)
-                    Text("Upgrade for unlimited participants")
-                        .font(.toyCaption())
-                        .foregroundColor(.toyTextSecondary)
-                }
-
-                Spacer()
-
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.toyText)
-            }
-            .padding(TOYSpacing.md)
-            .background(
-                Rectangle()
-                    .stroke(Color.toyDivider, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Contributors Section
