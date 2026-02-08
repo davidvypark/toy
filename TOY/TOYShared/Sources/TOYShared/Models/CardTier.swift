@@ -84,8 +84,8 @@ public enum CardTier: Int, CaseIterable, Comparable, Sendable {
     /// incorrectly prompted to upgrade.
     ///
     /// Mapping:
-    /// - `...5` -> `.free`
-    /// - `6...10` -> `.starter`
+    /// - `...8` -> `.free` (covers new default 5 AND legacy grandfathered 8)
+    /// - `9...10` -> `.starter`
     /// - `11...25` -> `.group`
     /// - `>25` (including 999) -> `.mega`
     ///
@@ -93,8 +93,8 @@ public enum CardTier: Int, CaseIterable, Comparable, Sendable {
     /// - Returns: The corresponding `CardTier` for display purposes.
     public static func fromMaxParticipants(_ maxParticipants: Int) -> CardTier {
         switch maxParticipants {
-        case ...5: return .free
-        case 6...10: return .starter
+        case ...8: return .free
+        case 9...10: return .starter
         case 11...25: return .group
         default: return .mega
         }
