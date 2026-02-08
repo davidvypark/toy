@@ -16,7 +16,6 @@ struct CardDetailView: View {
     @State private var selectedClip: Clip?
     @State private var showError = false
     @State private var showMontagePreview = false
-    @State private var showUpgradeSheet = false
     @State private var showTierSelection = false
     @State private var showDeleteConfirmation = false
     @State private var showFinalDeleteConfirmation = false
@@ -227,12 +226,6 @@ struct CardDetailView: View {
                     Task { await viewModel.loadData(for: card.id, hostId: card.hostId) }
                 }
             }
-        }
-        .sheet(isPresented: $showUpgradeSheet) {
-            CardUpgradeView(
-                card: card,
-                currentParticipantCount: viewModel.participants.count
-            )
         }
         .sheet(isPresented: $showTierSelection) {
             TierSelectionSheet(card: card, clipCount: viewModel.clips.count)
