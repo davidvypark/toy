@@ -60,31 +60,61 @@ Requirements for initial release (v1.0). All delivered.
 - [x] **ARCH-03**: Theme system supporting future dark/light mode
 - [x] **ARCH-04**: Shared Swift package for code reuse between app and App Clip
 
-## v1.1 Requirements
+## v1.1 Requirements (Complete)
 
-Requirements for Video Playback Quality milestone. Each maps to roadmap phases.
+Requirements for Video Playback Quality milestone. Delivered manually outside GSD.
 
 ### Playback Infrastructure
 
-- [ ] **PLAY-01**: Unified video player component replaces all 4 separate player implementations
-- [ ] **PLAY-02**: Videos cached to disk with LRU eviction for instant replay on re-visit
-- [ ] **PLAY-03**: Signed URLs managed with TTL tracking and auto-refresh before expiry
-- [ ] **PLAY-04**: Published card videos preloaded in background when card list loads
-- [ ] **PLAY-05**: Montage clips downloaded to disk before queue playback begins
+- [x] **PLAY-01**: Unified video player component replaces all 4 separate player implementations
+- [x] **PLAY-02**: Videos cached to disk with LRU eviction for instant replay on re-visit
+- [x] **PLAY-03**: Signed URLs managed with TTL tracking and auto-refresh before expiry
+- [x] **PLAY-04**: Published card videos preloaded in background when card list loads
+- [x] **PLAY-05**: Montage clips downloaded to disk before queue playback begins
 
 ### Loading UX
 
-- [ ] **LOAD-01**: Thumbnail displays as full-bleed placeholder with seamless crossfade to video
-- [ ] **LOAD-02**: No percentage text shown during video loading
-- [ ] **LOAD-03**: Zero black frames between thumbnail and video playback
-- [ ] **LOAD-04**: Video playback starts immediately without waiting for full buffer
-- [ ] **LOAD-05**: Shimmer animation shown over thumbnail during video loading
+- [x] **LOAD-01**: Thumbnail displays as full-bleed placeholder with seamless crossfade to video
+- [x] **LOAD-02**: No percentage text shown during video loading
+- [x] **LOAD-03**: Zero black frames between thumbnail and video playback
+- [x] **LOAD-04**: Video playback starts immediately without waiting for full buffer
+- [x] **LOAD-05**: Shimmer animation shown over thumbnail during video loading
 
 ### Playback Quality
 
-- [ ] **QUAL-01**: Thumbnails generated at 1.5s into clip instead of 0.5s
-- [ ] **QUAL-02**: Video loops seamlessly with no visible gap at loop point
-- [ ] **QUAL-03**: Video audio plays correctly when device is in silent mode
+- [x] **QUAL-01**: Thumbnails generated at 1.5s into clip instead of 0.5s
+- [x] **QUAL-02**: Video loops seamlessly with no visible gap at loop point
+- [x] **QUAL-03**: Video audio plays correctly when device is in silent mode
+
+## v1.2 Requirements
+
+Requirements for Seat-Based Monetization milestone. Each maps to roadmap phases.
+
+### Pricing (PRICE)
+
+- [ ] **PRICE-01**: Cards with 5 or fewer clips can be published for free with no payment interaction
+- [ ] **PRICE-02**: Participants can always record and submit clips regardless of how many clips exist on the card
+- [ ] **PRICE-03**: Host is prompted to select a tier and pay only when they tap "Publish" and clip count exceeds the free tier
+- [ ] **PRICE-04**: Host explicitly chooses their tier — no auto-charges, no surprise billing
+- [ ] **PRICE-05**: Tier products are consumable IAPs so the same host can purchase the same tier for different cards
+
+### Tier Awareness (TIER)
+
+- [ ] **TIER-01**: Card detail view shows a tier indicator with clip count, current tier status, and cost to publish when over free limit
+- [ ] **TIER-02**: Host can tap the tier indicator to proactively upgrade their card's tier before publish time
+- [ ] **TIER-03**: At publish checkout, a static tier visualization shows where the host falls in the tier range (not an interactive carousel)
+- [ ] **TIER-04**: Checkout auto-selects the cheapest tier that fits the current clip count
+
+### Purchase Flow (PURCH)
+
+- [ ] **PURCH-01**: Purchase records the transaction ID and tier to the card record in Supabase
+- [ ] **PURCH-02**: Card's `maxParticipants` is updated to the purchased tier's clip limit after successful purchase
+- [ ] **PURCH-03**: If publish fails after payment, host can retry publish without re-purchasing
+- [ ] **PURCH-04**: Existing cards with `maxParticipants = 8` are grandfathered (treated as free with 8-clip allowance)
+
+### Cleanup (CLEAN)
+
+- [ ] **CLEAN-01**: Old single-product `CardUpgradeView` and binary upgrade flow are removed and replaced by the new tier system
 
 ## v2 Requirements
 
@@ -127,7 +157,14 @@ Explicitly excluded. Documented to prevent scope creep.
 | Video filters/effects | Post-MVP feature, adds complexity to recording flow |
 | Text overlays | Video-only, keeps focus on the message |
 | OAuth/social login | Simple auth is sufficient |
-| Subscription model | One-time purchase aligns with event-based usage |
+| Subscription model | Per-card consumable purchases align with event-based usage |
+| Interactive checkout carousel | Static tier visualization is cleaner; swipeable carousel adds complexity without value |
+| Celebratory publish animation | Deferred to future polish milestone |
+| Per-participant cost framing | Nice-to-have but not essential for v1.2 |
+| Server-side purchase verification (Edge Function) | Client-side tracking sufficient for MVP; add when fraud is a concern |
+| RevenueCat webhooks | Not needed for MVP; client-side purchase recording is sufficient |
+| A/B testing pricing | Need baseline conversion data first |
+| Group gifting / cost-splitting | Future consideration |
 | Real-time collaboration | Adds significant complexity, async flow works |
 | Multi-recipient cards | One recipient per card |
 | HLS / adaptive bitrate streaming | Videos are 2-5MB; download-first is better than streaming optimization |
@@ -179,30 +216,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MNTZ-02 | Phase 8 | Complete |
 | TECH-09 | Phase 8 | Complete |
 
-### v1.1 (In Progress)
+### v1.1 (Complete)
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOAD-02 | Phase 9 | Pending |
-| LOAD-04 | Phase 9 | Pending |
-| QUAL-01 | Phase 9 | Pending |
-| QUAL-02 | Phase 9 | Pending |
-| QUAL-03 | Phase 9 | Pending |
-| PLAY-01 | Phase 10 | Pending |
-| LOAD-01 | Phase 10 | Pending |
-| LOAD-03 | Phase 10 | Pending |
-| LOAD-05 | Phase 10 | Pending |
-| PLAY-02 | Phase 11 | Pending |
-| PLAY-03 | Phase 11 | Pending |
-| PLAY-04 | Phase 12 | Pending |
-| PLAY-05 | Phase 12 | Pending |
+| LOAD-02 | Phase 9 | Complete |
+| LOAD-04 | Phase 9 | Complete |
+| QUAL-01 | Phase 9 | Complete |
+| QUAL-02 | Phase 9 | Complete |
+| QUAL-03 | Phase 9 | Complete |
+| PLAY-01 | Phase 10 | Complete |
+| LOAD-01 | Phase 10 | Complete |
+| LOAD-03 | Phase 10 | Complete |
+| LOAD-05 | Phase 10 | Complete |
+| PLAY-02 | Phase 11 | Complete |
+| PLAY-03 | Phase 11 | Complete |
+| PLAY-04 | Phase 12 | Complete |
+| PLAY-05 | Phase 12 | Complete |
+
+### v1.2 (In Progress)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| — | — | Pending roadmap |
 
 **Coverage:**
 - v1.0 requirements: 35 total (all complete)
-- v1.1 requirements: 13 total
-- Mapped to phases: 13/13
-- Unmapped: 0
+- v1.1 requirements: 13 total (all complete)
+- v1.2 requirements: 14 total
+- Mapped to phases: 0/14 (pending roadmap)
+- Unmapped: 14
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-06 after v1.1 roadmap creation*
+*Last updated: 2026-02-08 after v1.2 requirements definition*
