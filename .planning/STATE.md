@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 ## Current Position
 
 Phase: 15 of 16 (Checkout & Purchase Flow)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-08 -- Completed 15-01 Purchase Infrastructure (PurchaseService + CardService methods)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-08 -- Completed 15-02 CheckoutSheet + MontagePreviewView tier gate
 
-Progress: [=========███████░░] 80% (44/55 estimated plans)
+Progress: [=========████████░] 82% (45/55 estimated plans)
 
 ## Performance Metrics
 
@@ -39,7 +39,7 @@ Progress: [=========███████░░] 80% (44/55 estimated plans)
 | 10-12 | 7/7 | manual | manual |
 | 13 | 2/2 | ~4min | ~2min |
 | 14 | 2/2 | ~6min | ~3min |
-| 15 | 1/2 | ~3min | ~3min |
+| 15 | 2/2 | ~6min | ~3min |
 
 *Updated after each plan completion*
 
@@ -63,6 +63,8 @@ Recent decisions affecting current work:
 - [v1.2]: Price fetching isolated to TierSelectionSheet, not in CardDetailViewModel
 - [v1.2]: AnyJSON for mixed-type Supabase update dictionaries (Int + String in one call)
 - [v1.2]: purchaseWithTransaction re-throws PurchaseError to preserve cancellation, wraps others as purchaseFailed
+- [v1.2]: Publish gate uses card.maxParticipants directly (not CardTier enum) for grandfathering safety
+- [v1.2]: Separate CheckoutTierRow from TierRowView -- checkout rows are selectable, browse rows are static
 
 ### Pending Todos
 
@@ -78,5 +80,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 15-01 (Purchase Infrastructure) -- Plan 02 (CheckoutSheet) next
-Resume file: .planning/phases/15-checkout-purchase-flow/15-02-PLAN.md
+Stopped at: Completed 15-02 (CheckoutSheet + Tier Gate) -- Phase 15 complete, Phase 16 next
+Resume file: .planning/phases/16-cleanup/16-01-PLAN.md
