@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Anyone can create a heartfelt group video message in minutes
-**Current focus:** Phase 13 -- Pricing Infrastructure (v1.2 Seat-Based Monetization)
+**Current focus:** Phase 14 -- Tier Awareness UI (v1.2 Seat-Based Monetization)
 
 ## Current Position
 
-Phase: 13 of 16 (Pricing Infrastructure)
-Plan: 2 of 2 in current phase
-Status: Phase 13 complete
-Last activity: 2026-02-08 -- Completed 13-02 PurchaseService multi-tier fetch + StoreKit config
+Phase: 14 of 16 (Tier Awareness UI)
+Plan: 1 of 2 in current phase
+Status: Plan 01 complete
+Last activity: 2026-02-08 -- Completed 14-01 TierIndicatorView + CardDetailView tier awareness
 
-Progress: [=========████░░░░░] 75% (41/55 estimated plans)
+Progress: [=========█████░░░░] 76% (42/55 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 41
+- Total plans completed: 42
 - Average duration: ~3.2 minutes
-- Total execution time: ~131 minutes
+- Total execution time: ~135 minutes
 
 **By Phase:**
 
@@ -38,6 +38,7 @@ Progress: [=========████░░░░░] 75% (41/55 estimated plans)
 | 9 | 3/3 | ~2min | ~0.7min |
 | 10-12 | 7/7 | manual | manual |
 | 13 | 2/2 | ~4min | ~2min |
+| 14 | 1/2 | ~4min | ~4min |
 
 *Updated after each plan completion*
 
@@ -55,6 +56,8 @@ Recent decisions affecting current work:
 - [v1.2]: New cards default to maxParticipants = 5; existing cards with 8 are grandfathered
 - [v1.2]: Static tier visualization at checkout (not interactive carousel)
 - [v1.2]: Client-side purchase recording for MVP (no Edge Function webhook)
+- [v1.2]: Tier indicator visibility uses card.maxParticipants threshold (not CardTier.free.clipLimit) for grandfathering
+- [v1.2]: TierIndicatorView is stateless -- receives all data as parameters, no network calls
 
 ### Pending Todos
 
@@ -69,5 +72,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 13-02 (Phase 13 complete)
+Stopped at: Completed 14-01 (TierIndicatorView + CardDetailView wiring)
 Resume file: None
