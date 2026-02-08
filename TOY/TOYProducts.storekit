@@ -1,0 +1,63 @@
+{
+  "identifier" : "TOY_PRODUCTS",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : false,
+      "internalID" : "A1B2C3D4",
+      "localizations" : [
+        {
+          "description" : "Publish a card with up to 10 participants",
+          "displayName" : "Starter (10 clips)",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "toy_tier_starter",
+      "referenceName" : "Starter (10 clips)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "E5F6G7H8",
+      "localizations" : [
+        {
+          "description" : "Publish a card with up to 25 participants",
+          "displayName" : "Group (25 clips)",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "toy_tier_group",
+      "referenceName" : "Group (25 clips)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "I9J0K1L2",
+      "localizations" : [
+        {
+          "description" : "Publish a card with unlimited participants",
+          "displayName" : "Mega (Unlimited)",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "toy_tier_mega",
+      "referenceName" : "Mega (Unlimited)",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_timeRate" : 6
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 1,
+    "minor" : 1
+  }
+}
