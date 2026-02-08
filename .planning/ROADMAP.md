@@ -154,7 +154,7 @@ Plans:
 
 **Milestone Goal:** Implement transparent, GitHub-style seat-based pricing where hosts start free (5 clips) and upgrade based on participant count at publish time -- never blocking participant submissions, never auto-charging
 
-- [ ] **Phase 13: Pricing Infrastructure** - CardTier model, RevenueCat multi-product setup, free tier default change, grandfathering
+- [x] **Phase 13: Pricing Infrastructure** - CardTier model, RevenueCat multi-product setup, free tier default change, grandfathering
 - [ ] **Phase 14: Tier Awareness UI** - Tier indicator on card detail showing clip count, tier status, and upgrade path
 - [ ] **Phase 15: Checkout & Purchase Flow** - Publish-time tier gate, static tier visualization, purchase recording to Supabase
 - [ ] **Phase 16: Cleanup & Verification** - Remove old binary upgrade flow, end-to-end verification of all tier paths
@@ -174,8 +174,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 13-01-PLAN.md — CardTier enum + Card default change + Supabase migration
-- [ ] 13-02-PLAN.md — PurchaseService multi-tier fetch + deprecation + StoreKit config
+- [x] 13-01-PLAN.md — CardTier enum + Card default change + Supabase migration
+- [x] 13-02-PLAN.md — PurchaseService multi-tier fetch + deprecation + StoreKit config
 
 ### Phase 14: Tier Awareness UI
 **Goal**: Hosts always know where their card stands in the tier system -- how many clips they have, what tier that requires, and what it will cost to publish
@@ -243,7 +243,7 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16
 | 10. Unified Player & Loading UX | v1.1 | 3/3 | Complete | 2026-02-07 |
 | 11. Cache Infrastructure | v1.1 | 2/2 | Complete | 2026-02-07 |
 | 12. Preloading Pipeline | v1.1 | 2/2 | Complete | 2026-02-07 |
-| 13. Pricing Infrastructure | v1.2 | 0/TBD | Not started | - |
+| 13. Pricing Infrastructure | v1.2 | 2/2 | Complete | 2026-02-08 |
 | 14. Tier Awareness UI | v1.2 | 0/TBD | Not started | - |
 | 15. Checkout & Purchase Flow | v1.2 | 0/TBD | Not started | - |
 | 16. Cleanup & Verification | v1.2 | 0/TBD | Not started | - |
