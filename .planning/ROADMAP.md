@@ -171,12 +171,11 @@ Plans:
   3. New cards are created with maxParticipants = 5 (new free tier default)
   4. Existing cards with maxParticipants = 8 continue to function with their original 8-clip free allowance (grandfathered)
   5. PurchaseService can fetch all tier packages from a single RevenueCat offering and each tier product is configured as a consumable IAP
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 13-01: TBD
-- [ ] 13-02: TBD
-- [ ] 13-03: TBD
+- [ ] 13-01-PLAN.md — CardTier enum + Card default change + Supabase migration
+- [ ] 13-02-PLAN.md — PurchaseService multi-tier fetch + deprecation + StoreKit config
 
 ### Phase 14: Tier Awareness UI
 **Goal**: Hosts always know where their card stands in the tier system -- how many clips they have, what tier that requires, and what it will cost to publish
