@@ -201,12 +201,11 @@ Plans:
   3. The host explicitly confirms the purchase -- no auto-charges happen at any point in the flow
   4. After successful purchase, the transaction ID and tier are recorded to the card in Supabase, and maxParticipants is updated to the purchased tier's limit
   5. If the publish process fails after payment succeeds, the host can retry publishing without being charged again -- the card retains its purchased tier
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 15-01: TBD
-- [ ] 15-02: TBD
-- [ ] 15-03: TBD
+- [ ] 15-01-PLAN.md — PurchaseService transaction ID exposure + CardService recordTierPurchase method
+- [ ] 15-02-PLAN.md — CheckoutSheet view + MontagePreviewView tier gate wiring
 
 ### Phase 16: Cleanup & Verification
 **Goal**: The old binary upgrade system is fully removed and the new tier system works correctly across all edge cases
@@ -245,7 +244,7 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16
 | 12. Preloading Pipeline | v1.1 | 2/2 | Complete | 2026-02-07 |
 | 13. Pricing Infrastructure | v1.2 | 2/2 | Complete | 2026-02-08 |
 | 14. Tier Awareness UI | v1.2 | 2/2 | Complete | 2026-02-08 |
-| 15. Checkout & Purchase Flow | v1.2 | 0/TBD | Not started | - |
+| 15. Checkout & Purchase Flow | v1.2 | 0/2 | Not started | - |
 | 16. Cleanup & Verification | v1.2 | 0/TBD | Not started | - |
 
 ---
