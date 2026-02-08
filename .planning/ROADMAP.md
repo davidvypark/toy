@@ -220,7 +220,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 16-01-PLAN.md — Remove old binary upgrade system (delete files, clean dead methods and references)
+- [x] 16-01-PLAN.md — Remove old binary upgrade system (delete files, clean dead methods and references)
 - [ ] 16-02-PLAN.md — Human verification of all 5 success criteria across tier edge cases
 
 ## Progress
@@ -245,7 +245,7 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16
 | 13. Pricing Infrastructure | v1.2 | 2/2 | Complete | 2026-02-08 |
 | 14. Tier Awareness UI | v1.2 | 2/2 | Complete | 2026-02-08 |
 | 15. Checkout & Purchase Flow | v1.2 | 2/2 | Complete | 2026-02-08 |
-| 16. Cleanup & Verification | v1.2 | 0/2 | Not started | - |
+| 16. Cleanup & Verification | v1.2 | 1/2 | In progress | - |
 
 ---
 *Roadmap created: 2026-02-01*
