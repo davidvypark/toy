@@ -5,6 +5,7 @@ import RevenueCat
 public enum PurchaseError: LocalizedError, Sendable {
     case productNotFound
     case purchaseFailed(String)
+    case purchaseCancelled
     case restoreFailed(String)
     case noOfferings
 
@@ -14,6 +15,8 @@ public enum PurchaseError: LocalizedError, Sendable {
             return "Product not found"
         case .purchaseFailed(let message):
             return "Purchase failed: \(message)"
+        case .purchaseCancelled:
+            return "Purchase was cancelled"
         case .restoreFailed(let message):
             return "Restore failed: \(message)"
         case .noOfferings:
@@ -86,6 +89,29 @@ public actor PurchaseService {
         do {
             let (_, customerInfo, _) = try await Purchases.shared.purchase(package: package)
             return customerInfo
+        } catch {
+            throw PurchaseError.purchaseFailed(error.localizedDescription)
+        }
+    }
+
+    /// Purchases a package and returns both the customer info and the transaction identifier.
+    ///
+    /// Unlike `purchase(package:)`, this method:
+    /// - Returns the transaction identifier for audit trail recording
+    /// - Explicitly detects and throws on user cancellation
+    ///
+    /// - Parameter package: The package to purchase (from offerings)
+    /// - Returns: Tuple of customer info and optional transaction identifier
+    /// - Throws: `PurchaseError.purchaseCancelled` if user cancels, `PurchaseError.purchaseFailed` for other errors
+    public func purchaseWithTransaction(package: Package) async throws -> (customerInfo: CustomerInfo, transactionId: String?) {
+        do {
+            let (transaction, customerInfo, userCancelled) = try await Purchases.shared.purchase(package: package)
+            if userCancelled {
+                throw PurchaseError.purchaseCancelled
+            }
+            return (customerInfo: customerInfo, transactionId: transaction?.transactionIdentifier)
+        } catch let error as PurchaseError {
+            throw error
         } catch {
             throw PurchaseError.purchaseFailed(error.localizedDescription)
         }
