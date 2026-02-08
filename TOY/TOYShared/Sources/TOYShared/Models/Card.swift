@@ -27,7 +27,8 @@ public struct Card: Codable, Identifiable, Sendable, Equatable, Hashable {
         publishedAt: Date? = nil,
         videoUrl: String? = nil,
         shareToken: String? = nil,
-        maxParticipants: Int = 8,
+        /// Maximum number of participants. New cards default to 5 (free tier). Legacy cards may have 8 (grandfathered).
+        maxParticipants: Int = 5,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
