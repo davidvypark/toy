@@ -156,7 +156,7 @@ Plans:
 
 - [x] **Phase 13: Pricing Infrastructure** - CardTier model, RevenueCat multi-product setup, free tier default change, grandfathering
 - [x] **Phase 14: Tier Awareness UI** - Tier indicator on card detail showing clip count, tier status, and upgrade path
-- [ ] **Phase 15: Checkout & Purchase Flow** - Publish-time tier gate, static tier visualization, purchase recording to Supabase
+- [x] **Phase 15: Checkout & Purchase Flow** - Publish-time tier gate, static tier visualization, purchase recording to Supabase
 - [ ] **Phase 16: Cleanup & Verification** - Remove old binary upgrade flow, end-to-end verification of all tier paths
 
 ## Phase Details
@@ -204,8 +204,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md — PurchaseService transaction ID exposure + CardService recordTierPurchase method
-- [ ] 15-02-PLAN.md — CheckoutSheet view + MontagePreviewView tier gate wiring
+- [x] 15-01-PLAN.md — PurchaseService transaction ID exposure + CardService recordTierPurchase method
+- [x] 15-02-PLAN.md — CheckoutSheet view + MontagePreviewView tier gate wiring
 
 ### Phase 16: Cleanup & Verification
 **Goal**: The old binary upgrade system is fully removed and the new tier system works correctly across all edge cases
@@ -244,7 +244,7 @@ Phases execute in numeric order: 13 -> 14 -> 15 -> 16
 | 12. Preloading Pipeline | v1.1 | 2/2 | Complete | 2026-02-07 |
 | 13. Pricing Infrastructure | v1.2 | 2/2 | Complete | 2026-02-08 |
 | 14. Tier Awareness UI | v1.2 | 2/2 | Complete | 2026-02-08 |
-| 15. Checkout & Purchase Flow | v1.2 | 0/2 | Not started | - |
+| 15. Checkout & Purchase Flow | v1.2 | 2/2 | Complete | 2026-02-08 |
 | 16. Cleanup & Verification | v1.2 | 0/TBD | Not started | - |
 
 ---
