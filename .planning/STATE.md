@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 ## Current Position
 
-Phase: 14 of 16 (Tier Awareness UI) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase 14 complete
-Last activity: 2026-02-08 -- Completed 14-02 TierSelectionSheet + CardDetailView sheet wiring
+Phase: 15 of 16 (Checkout & Purchase Flow)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-08 -- Completed 15-01 Purchase Infrastructure (PurchaseService + CardService methods)
 
-Progress: [=========██████░░░] 78% (43/55 estimated plans)
+Progress: [=========███████░░] 80% (44/55 estimated plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 43
+- Total plans completed: 44
 - Average duration: ~3.2 minutes
-- Total execution time: ~137 minutes
+- Total execution time: ~140 minutes
 
 **By Phase:**
 
@@ -39,6 +39,7 @@ Progress: [=========██████░░░] 78% (43/55 estimated plans)
 | 10-12 | 7/7 | manual | manual |
 | 13 | 2/2 | ~4min | ~2min |
 | 14 | 2/2 | ~6min | ~3min |
+| 15 | 1/2 | ~3min | ~3min |
 
 *Updated after each plan completion*
 
@@ -60,6 +61,8 @@ Recent decisions affecting current work:
 - [v1.2]: TierIndicatorView is stateless -- receives all data as parameters, no network calls
 - [v1.2]: TierSelectionSheet is browse-only -- no purchase button (Phase 15 adds purchase CTA)
 - [v1.2]: Price fetching isolated to TierSelectionSheet, not in CardDetailViewModel
+- [v1.2]: AnyJSON for mixed-type Supabase update dictionaries (Int + String in one call)
+- [v1.2]: purchaseWithTransaction re-throws PurchaseError to preserve cancellation, wraps others as purchaseFailed
 
 ### Pending Todos
 
@@ -70,9 +73,10 @@ None.
 - App Store Connect products need to be created (consumable IAPs) -- external dependency
 - RevenueCat offering needs dashboard configuration for multi-tier packages
 - TOYProducts.storekit must be added to Xcode project and scheme manually
+- Supabase migration: purchase_transaction_id TEXT column must be added to cards table before Plan 02 testing
 
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 14-02 (TierSelectionSheet + CardDetailView sheet wiring) -- Phase 14 complete
-Resume file: None
+Stopped at: Completed 15-01 (Purchase Infrastructure) -- Plan 02 (CheckoutSheet) next
+Resume file: .planning/phases/15-checkout-purchase-flow/15-02-PLAN.md
