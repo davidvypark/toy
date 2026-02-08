@@ -190,6 +190,26 @@ final class CardDetailViewModel {
         return NSDecimalNumber(decimal: dbDuration).doubleValue
     }
 
+    // MARK: - Tier Status
+
+    /// The number of clips currently on this card
+    var clipCount: Int { clips.count }
+
+    /// The minimum tier required to publish this card based on clip count
+    func requiredTier(for card: Card) -> CardTier {
+        CardTier.requiredTier(for: clips.count)
+    }
+
+    /// The tier this card currently has (from database maxParticipants)
+    func purchasedTier(for card: Card) -> CardTier {
+        CardTier.fromMaxParticipants(card.maxParticipants)
+    }
+
+    /// Whether the card needs a tier upgrade before publishing
+    func needsUpgradeToPublish(for card: Card) -> Bool {
+        requiredTier(for: card) > purchasedTier(for: card)
+    }
+
     // MARK: - Private Methods
 
     /// Pre-fetches signed URLs for all clips concurrently.
