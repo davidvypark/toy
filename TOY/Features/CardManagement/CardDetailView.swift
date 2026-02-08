@@ -234,7 +234,9 @@ struct CardDetailView: View {
                 currentParticipantCount: viewModel.participants.count
             )
         }
-        // TierSelectionSheet will be wired here in Plan 02
+        .sheet(isPresented: $showTierSelection) {
+            TierSelectionSheet(card: card, clipCount: viewModel.clips.count)
+        }
         .fullScreenCover(isPresented: $showRecordingView) {
             if let vm = recordingViewModel {
                 RecordingView(viewModel: vm)
