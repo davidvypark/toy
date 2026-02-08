@@ -54,6 +54,27 @@ public actor PurchaseService {
         try await Purchases.shared.offerings()
     }
 
+    /// Fetches all tier packages from the current RevenueCat offering.
+    ///
+    /// Returns packages keyed by their custom identifier (e.g., "starter", "group", "mega").
+    /// These are consumable IAP products -- each purchase applies to a single card.
+    /// The offering should be configured in RevenueCat Dashboard with packages
+    /// matching CardTier.packageIdentifier values.
+    ///
+    /// - Returns: Dictionary of packages keyed by identifier string
+    /// - Throws: PurchaseError.noOfferings if no current offering exists
+    public func fetchTierPackages() async throws -> [String: Package] {
+        let offerings = try await Purchases.shared.offerings()
+        guard let offering = offerings.current else {
+            throw PurchaseError.noOfferings
+        }
+        var packages: [String: Package] = [:]
+        for package in offering.availablePackages {
+            packages[package.identifier] = package
+        }
+        return packages
+    }
+
     // MARK: - Purchases
 
     /// Purchases a package and returns the customer info
@@ -114,6 +135,7 @@ public actor PurchaseService {
     ///
     /// - Parameter cardId: The card UUID to check
     /// - Returns: True if the card upgrade was purchased
+    @available(*, deprecated, message: "Use card.maxParticipants for tier status. Per-card product IDs are not used in the tier model.")
     public func isCardUpgraded(cardId: UUID) async -> Bool {
         do {
             let customerInfo = try await getCustomerInfo()
