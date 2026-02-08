@@ -224,6 +224,37 @@ public actor CardService {
         }
     }
 
+    /// Records a tier purchase on a card, atomically writing both the new participant
+    /// limit and the transaction identifier for audit trail.
+    /// - Parameters:
+    ///   - cardId: The ID of the card to upgrade
+    ///   - maxParticipants: The new maximum participant limit for the purchased tier
+    ///   - transactionId: The App Store transaction identifier from RevenueCat
+    /// - Throws: `CardError.updateFailed` if update fails
+    public func recordTierPurchase(
+        cardId: UUID,
+        maxParticipants: Int,
+        transactionId: String
+    ) async throws {
+        do {
+            try await supabase
+                .from("cards")
+                .update([
+                    "max_participants": AnyJSON.integer(maxParticipants),
+                    "purchase_transaction_id": AnyJSON.string(transactionId)
+                ])
+                .eq("id", value: cardId)
+                .execute()
+
+            #if DEBUG
+            print("✅ Recorded tier purchase for card \(cardId): maxParticipants=\(maxParticipants), transactionId=\(transactionId)")
+            #endif
+        } catch {
+            if Task.isCancelled { throw CancellationError() }
+            throw CardError.updateFailed(error.localizedDescription)
+        }
+    }
+
     /// Permanently deletes a card and all associated data (clips, participants).
     /// - Parameter cardId: The ID of the card to delete
     /// - Throws: `CardError.deleteFailed` if deletion fails
