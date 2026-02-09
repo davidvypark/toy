@@ -107,7 +107,7 @@ struct CardDetailView: View {
         // Host clip is first in montage order
         let firstClip = clips.first { $0.participantId == card.hostId } ?? clips.first
         guard let clipId = firstClip?.id else { return nil }
-        return initialThumbnailURLs[clipId]
+        return viewModel.cachedThumbnailURLs[clipId] ?? initialThumbnailURLs[clipId]
     }
 
     // MARK: - Body
@@ -200,14 +200,15 @@ struct CardDetailView: View {
                 for: card.id,
                 hostId: card.hostId,
                 initialClips: initialClips.isEmpty ? nil : initialClips,
-                initialProfiles: initialProfiles.isEmpty ? nil : initialProfiles
+                initialProfiles: initialProfiles.isEmpty ? nil : initialProfiles,
+                initialThumbnailURLs: initialThumbnailURLs.isEmpty ? nil : initialThumbnailURLs
             )
         }
         .sheet(item: $selectedClip) { clip in
             ClipPreviewSheet(
                 clip: clip,
                 cachedURL: viewModel.cachedSignedURLs[clip.id],
-                cachedThumbnailURL: initialThumbnailURLs[clip.id],
+                cachedThumbnailURL: viewModel.cachedThumbnailURLs[clip.id] ?? initialThumbnailURLs[clip.id],
                 localVideoFile: viewModel.localVideoFiles[clip.id]
             ) {
                 await viewModel.deleteClip(clip)

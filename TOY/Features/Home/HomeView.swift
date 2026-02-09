@@ -33,6 +33,7 @@ struct HomeView: View {
     @State private var isLoadingCards = false
     @State private var publishedVideoURLCache: [UUID: URL] = [:]
     @State private var prefetchedVideoAssets: [UUID: AVURLAsset] = [:]
+    @State private var publishedThumbnailURLCache: [UUID: URL] = [:]
     @State private var hostRecordingViewModel: RecordingViewModel?
     @State private var participantRecordingViewModel: RecordingViewModel?
     @State private var isPreparingHostCamera = false
@@ -115,6 +116,7 @@ struct HomeView: View {
                     currentUserId: viewModel.authState.user?.id,
                     cachedVideoURL: publishedVideoURLCache[card.id],
                     cachedVideoAsset: prefetchedVideoAssets[card.id],
+                    initialThumbnailURL: publishedThumbnailURLCache[card.id],
                     onVideoURLLoaded: { url in
                         publishedVideoURLCache[card.id] = url
                     }
@@ -425,6 +427,22 @@ struct HomeView: View {
                 #if DEBUG
                 Swift.print("Failed to prefetch video URL for card \(card.id): \(error)")
                 #endif
+            }
+
+            // Pre-fetch first clip thumbnail URL (prevents black flash in player view)
+            if publishedThumbnailURLCache[card.id] == nil {
+                do {
+                    let clips = try await cardService.fetchClipsForCard(cardId: card.id)
+                    let firstClip = clips.first { $0.participantId == card.hostId } ?? clips.first
+                    if let thumbnailPath = firstClip?.thumbnailUrl {
+                        let thumbnailURL = try await storageService.createSignedURL(path: thumbnailPath)
+                        publishedThumbnailURLCache[card.id] = thumbnailURL
+                    }
+                } catch {
+                    #if DEBUG
+                    Swift.print("Failed to prefetch thumbnail for card \(card.id): \(error)")
+                    #endif
+                }
             }
         }
     }

@@ -23,6 +23,9 @@ final class CardDetailViewModel {
     /// Local video files downloaded to Caches directory for instant playback
     var localVideoFiles: [UUID: URL] = [:]
 
+    /// Cached signed thumbnail URLs for clips
+    var cachedThumbnailURLs: [UUID: URL] = [:]
+
     /// Cached profiles for participants
     /// Key is user ID, value is profile data (displayName, avatarURL)
     var participantProfiles: [UUID: (displayName: String?, avatarURL: URL?)] = [:]
@@ -54,7 +57,8 @@ final class CardDetailViewModel {
         for cardId: UUID,
         hostId: UUID? = nil,
         initialClips: [Clip]? = nil,
-        initialProfiles: [UUID: (displayName: String?, avatarURL: URL?)]? = nil
+        initialProfiles: [UUID: (displayName: String?, avatarURL: URL?)]? = nil,
+        initialThumbnailURLs: [UUID: URL]? = nil
     ) async {
         self.hostId = hostId
         isLoading = true
@@ -64,6 +68,13 @@ final class CardDetailViewModel {
         if let initialProfiles {
             for (userId, profile) in initialProfiles {
                 participantProfiles[userId] = profile
+            }
+        }
+
+        // Use initial thumbnail URLs immediately if provided
+        if let initialThumbnailURLs {
+            for (clipId, url) in initialThumbnailURLs {
+                cachedThumbnailURLs[clipId] = url
             }
         }
 
@@ -101,9 +112,10 @@ final class CardDetailViewModel {
 
         isLoading = false
 
-        // Pre-fetch signed URLs, then download video files for instant playback
+        // Pre-fetch signed URLs + thumbnail URLs, then download video files for instant playback
         Task {
             await prefetchSignedURLs()
+            await prefetchThumbnailURLs()
             await downloadClipVideos()
         }
         // Only fetch profiles if we don't have initial profiles
@@ -274,6 +286,26 @@ final class CardDetailViewModel {
         #if DEBUG
         print("[URL CACHE] Cached \(cachedSignedURLs.count) signed URLs")
         #endif
+    }
+
+    private func prefetchThumbnailURLs() async {
+        let clipsNeedingThumbnails = clips.filter {
+            $0.thumbnailUrl != nil && cachedThumbnailURLs[$0.id] == nil
+        }
+        guard !clipsNeedingThumbnails.isEmpty else { return }
+
+        await withTaskGroup(of: (UUID, URL?).self) { group in
+            for clip in clipsNeedingThumbnails {
+                group.addTask {
+                    guard let thumbnailPath = clip.thumbnailUrl else { return (clip.id, nil) }
+                    let url = try? await self.storageService.createSignedURL(path: thumbnailPath)
+                    return (clip.id, url)
+                }
+            }
+            for await (clipId, url) in group {
+                if let url { cachedThumbnailURLs[clipId] = url }
+            }
+        }
     }
 
     /// Downloads clip videos to local Caches directory for instant playback.

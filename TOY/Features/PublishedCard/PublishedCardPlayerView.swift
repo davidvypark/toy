@@ -16,6 +16,7 @@ struct PublishedCardPlayerView: View {
     var currentUserId: UUID? = nil
     var cachedVideoURL: URL? = nil
     var cachedVideoAsset: AVURLAsset? = nil
+    var initialThumbnailURL: URL? = nil
     var onVideoURLLoaded: ((URL) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
 
@@ -72,18 +73,17 @@ struct PublishedCardPlayerView: View {
 
                 // Video card
                 ZStack {
-                    // Thumbnail — always underneath as safety net against white flash
-                    if error == nil {
-                        if let thumbnailURL = firstClipThumbnailURL {
-                            KFImage(thumbnailURL)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(maxWidth: .infinity)
-                                .clipped()
-                        } else {
-                            Rectangle().fill(Color.black)
+                    // Stable base — never swapped, light grey before thumbnail loads
+                    Color.gray.opacity(0.2)
+                        .overlay {
+                            if let thumbnailURL = firstClipThumbnailURL {
+                                KFImage(thumbnailURL)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .clipped()
+                            }
                         }
-                    }
 
                     // Loading bar — only while player not ready
                     if !isPlayerReady && error == nil {
@@ -229,6 +229,11 @@ struct PublishedCardPlayerView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: showCopiedToast)
         .task {
+            // Use pre-fetched thumbnail immediately (prevents black flash)
+            if let initialThumbnailURL {
+                firstClipThumbnailURL = initialThumbnailURL
+            }
+
             // Load clips and video in parallel — they're independent
             async let clipsTask: () = loadClips()
             async let videoTask: () = loadVideo()
@@ -364,12 +369,13 @@ private struct PlayerLayerView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PlayerUIView {
         let view = PlayerUIView()
-        view.player = player
         view.onReadyToDisplay = onReadyToDisplay
+        view.player = player
         return view
     }
 
     func updateUIView(_ uiView: PlayerUIView, context: Context) {
+        guard uiView.playerLayer.player !== player else { return }
         uiView.player = player
     }
 }
@@ -391,7 +397,7 @@ private class PlayerUIView: UIView {
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
-            playerLayer.backgroundColor = UIColor.black.cgColor
+            playerLayer.backgroundColor = UIColor.clear.cgColor
 
             layerObserver?.invalidate()
             layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in
@@ -403,7 +409,9 @@ private class PlayerUIView: UIView {
             }
 
             if playerLayer.isReadyForDisplay {
-                onReadyToDisplay?()
+                DispatchQueue.main.async { [weak self] in
+                    self?.onReadyToDisplay?()
+                }
             }
         }
     }

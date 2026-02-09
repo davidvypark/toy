@@ -18,8 +18,6 @@ struct MontagePreviewView: View {
     @State private var isLoadingURLs = true
     @State private var isPlayerReady = false
     @State private var showPublishedView = false
-    @State private var loadingProgress: Double = 0
-    @State private var bufferObserver: NSKeyValueObservation?
     @State private var isPlaybackFinished = false
     @State private var isPaused = false
     @State private var showCheckout = false
@@ -88,11 +86,9 @@ struct MontagePreviewView: View {
                     // 3. Video player with brand overlay — fades in on top of thumbnail
                     if let queuePlayer {
                         QueueVideoPlayer(player: queuePlayer) {
-                            loadingProgress = 1.0
                             isPlayerReady = true
                         }
                         .opacity(isPlayerReady ? 1 : 0)
-                        .animation(.easeIn(duration: 0.3), value: isPlayerReady)
                         .overlay(alignment: .bottom) {
                             if isPlayerReady && !isPlaybackFinished {
                                 Text("Thinking Of You")
@@ -177,7 +173,6 @@ struct MontagePreviewView: View {
                 signedURLs = cardViewModel?.montageSignedURLs ?? []
                 isPlayerReady = true
                 isLoadingURLs = false
-                loadingProgress = 1.0
                 isPlaybackFinished = false
 
                 // Re-queue items for multiple clips (items are consumed after playback)
@@ -212,8 +207,6 @@ struct MontagePreviewView: View {
         .onDisappear {
             // Pause but don't destroy - cache for re-opening
             queuePlayer?.pause()
-            bufferObserver?.invalidate()
-            bufferObserver = nil
 
             // Cache player state in cardViewModel for re-use
             if let cardViewModel {
@@ -284,15 +277,16 @@ struct MontagePreviewView: View {
 
     @ViewBuilder
     private var thumbnailOrBlack: some View {
-        if let thumbnailURL = firstClipThumbnailURL {
-            KFImage(thumbnailURL)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
-        } else {
-            Rectangle().fill(Color.black)
-        }
+        Color.gray.opacity(0.2)
+            .overlay {
+                if let thumbnailURL = firstClipThumbnailURL {
+                    KFImage(thumbnailURL)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                }
+            }
     }
 
     @ViewBuilder
@@ -354,10 +348,7 @@ struct MontagePreviewView: View {
 
     private func setupQueuePlayer() async {
         isLoadingURLs = true
-        loadingProgress = 0
         defer { isLoadingURLs = false }
-
-        let totalClips = Double(sortedClips.count)
 
         // Use cached URLs when available, fetch only missing ones
         let urls = await withTaskGroup(of: (Int, URL?).self) { group in
@@ -381,15 +372,8 @@ struct MontagePreviewView: View {
             }
 
             var results: [(Int, URL?)] = []
-            var fetchedCount = 0
             for await result in group {
                 results.append(result)
-                fetchedCount += 1
-                // 0-50% for URL fetching
-                let progress = (Double(fetchedCount) / totalClips) * 0.5
-                await MainActor.run {
-                    loadingProgress = progress
-                }
             }
             return results.sorted { $0.0 < $1.0 }.compactMap { $0.1 }
         }
@@ -397,13 +381,9 @@ struct MontagePreviewView: View {
         guard !urls.isEmpty else { return }
         signedURLs = urls
 
-        // Update to 50% after URLs ready
-        loadingProgress = 0.5
-
         // Single clip: play once
         if urls.count == 1 {
             let item = AVPlayerItem(url: urls[0])
-            observeBuffering(item: item)
             let player = AVQueuePlayer(playerItem: item)
             player.play()
             queuePlayer = player
@@ -415,11 +395,6 @@ struct MontagePreviewView: View {
                 // Pre-buffer more aggressively to prevent black flash
                 item.preferredForwardBufferDuration = 5
                 return item
-            }
-
-            // Observe buffering on first item for progress
-            if let firstItem = items.first {
-                observeBuffering(item: firstItem)
             }
 
             let player = AVQueuePlayer(items: items)
@@ -475,40 +450,6 @@ struct MontagePreviewView: View {
         queuePlayer?.play()
     }
 
-    /// Observes buffering progress on the first item to update loading progress (50% → 100%)
-    private func observeBuffering(item: AVPlayerItem) {
-        bufferObserver = item.observe(\.loadedTimeRanges, options: [.new]) { observedItem, _ in
-            // Get duration - may not be available immediately
-            let duration = observedItem.duration.seconds
-            guard duration.isFinite && duration > 0 else {
-                // Duration not yet known - animate progress slowly
-                DispatchQueue.main.async { [self] in
-                    if loadingProgress < 0.8 {
-                        loadingProgress = min(loadingProgress + 0.05, 0.8)
-                    }
-                }
-                return
-            }
-
-            let bufferedTime = observedItem.loadedTimeRanges
-                .compactMap { $0.timeRangeValue }
-                .reduce(0) { $0 + $1.duration.seconds }
-
-            // Calculate buffer progress (0.0 to 1.0)
-            let bufferProgress = min(bufferedTime / duration, 1.0)
-
-            // Map to 50% → 100% range
-            let progress = 0.5 + (bufferProgress * 0.5)
-
-            DispatchQueue.main.async { [self] in
-                // Only update if higher (don't go backwards)
-                if progress > loadingProgress {
-                    loadingProgress = progress
-                }
-            }
-        }
-    }
-
 }
 
 // MARK: - Queue Video Player
@@ -519,12 +460,13 @@ private struct QueueVideoPlayer: UIViewRepresentable {
 
     func makeUIView(context: Context) -> QueuePlayerUIView {
         let view = QueuePlayerUIView()
-        view.player = player
         view.onReadyToDisplay = onReadyToDisplay
+        view.player = player
         return view
     }
 
     func updateUIView(_ uiView: QueuePlayerUIView, context: Context) {
+        guard uiView.playerLayer.player !== player else { return }
         uiView.player = player
     }
 }
@@ -546,7 +488,7 @@ private class QueuePlayerUIView: UIView {
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
-            playerLayer.backgroundColor = UIColor.black.cgColor
+            playerLayer.backgroundColor = UIColor.clear.cgColor
 
             layerObserver?.invalidate()
             layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in

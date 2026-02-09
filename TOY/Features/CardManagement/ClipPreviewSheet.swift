@@ -43,16 +43,17 @@ struct ClipPreviewSheet: View {
                 VStack(spacing: 0) {
                     // Video player area - takes up most of the screen
                     ZStack {
-                        // Thumbnail — always underneath as safety net against white flash
-                        if let thumbnailURL {
-                            KFImage(thumbnailURL)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(maxWidth: .infinity)
-                                .clipped()
-                        } else {
-                            Rectangle().fill(Color.black)
-                        }
+                        // Stable base — never swapped, light grey before thumbnail loads
+                        Color.gray.opacity(0.2)
+                            .overlay {
+                                if let url = cachedThumbnailURL ?? thumbnailURL {
+                                    KFImage(url)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        .clipped()
+                                }
+                            }
 
                         // Video player — fades in on top of thumbnail
                         if let player {
@@ -60,7 +61,6 @@ struct ClipPreviewSheet: View {
                                 isPlayerReady = true
                             }
                             .opacity(isPlayerReady ? 1 : 0)
-                            .animation(.easeIn(duration: 0.3), value: isPlayerReady)
                             .overlay(alignment: .bottom) {
                                 if isPlayerReady {
                                     Text("Thinking Of You")
@@ -268,12 +268,13 @@ private struct ClipVideoPlayer: UIViewRepresentable {
 
     func makeUIView(context: Context) -> ClipPlayerUIView {
         let view = ClipPlayerUIView()
-        view.player = player
         view.onReadyToDisplay = onReadyToDisplay
+        view.player = player
         return view
     }
 
     func updateUIView(_ uiView: ClipPlayerUIView, context: Context) {
+        guard uiView.playerLayer.player !== player else { return }
         uiView.player = player
     }
 }
@@ -295,7 +296,7 @@ private class ClipPlayerUIView: UIView {
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
-            playerLayer.backgroundColor = UIColor.black.cgColor
+            playerLayer.backgroundColor = UIColor.clear.cgColor
 
             layerObserver?.invalidate()
             layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in

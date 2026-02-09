@@ -54,7 +54,6 @@ public struct VideoPreviewView: View {
                     }
                     .aspectRatio(9/16, contentMode: .fit)
                     .opacity(isPlayerReady ? 1 : 0)
-                    .animation(.easeIn(duration: 0.3), value: isPlayerReady)
                     .overlay(alignment: .bottom) {
                         if isPlayerReady {
                             Text("Thinking Of You")
@@ -147,6 +146,7 @@ private struct LoopingVideoPlayer: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: PlayerUIView, context: Context) {
+        guard uiView.playerLayer.player !== player else { return }
         uiView.player = player
     }
 }
