@@ -72,29 +72,35 @@ struct PublishedCardPlayerView: View {
 
                 // Video card
                 ZStack {
+                    // Thumbnail — always underneath as safety net against white flash
+                    if error == nil {
+                        if let thumbnailURL = firstClipThumbnailURL {
+                            KFImage(thumbnailURL)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(maxWidth: .infinity)
+                                .clipped()
+                        } else {
+                            Rectangle().fill(Color.black)
+                        }
+                    }
+
+                    // Loading bar — only while player not ready
+                    if !isPlayerReady && error == nil {
+                        VStack {
+                            Spacer()
+                            TOYLoadingBar()
+                        }
+                    }
+
+                    // Video player — fades in on top of thumbnail
                     if let player = player {
                         PlayerLayerView(player: player, onReadyToDisplay: {
                             isPlayerReady = true
                             loadingProgress = 1.0
                         })
                         .opacity(isPlayerReady ? 1 : 0)
-                    }
-
-                    // Thumbnail placeholder
-                    if !isPlayerReady && error == nil {
-                        ZStack(alignment: .bottom) {
-                            if let thumbnailURL = firstClipThumbnailURL {
-                                KFImage(thumbnailURL)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(maxWidth: .infinity)
-                                    .clipped()
-                            } else {
-                                Rectangle().fill(Color.black)
-                            }
-
-                            TOYLoadingBar()
-                        }
+                        .animation(.easeIn(duration: 0.3), value: isPlayerReady)
                     }
 
                     // Pause overlay
@@ -385,6 +391,7 @@ private class PlayerUIView: UIView {
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
+            playerLayer.backgroundColor = UIColor.black.cgColor
 
             layerObserver?.invalidate()
             layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in

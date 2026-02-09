@@ -207,7 +207,8 @@ struct CardDetailView: View {
             ClipPreviewSheet(
                 clip: clip,
                 cachedURL: viewModel.cachedSignedURLs[clip.id],
-                cachedThumbnailURL: initialThumbnailURLs[clip.id]
+                cachedThumbnailURL: initialThumbnailURLs[clip.id],
+                localVideoFile: viewModel.localVideoFiles[clip.id]
             ) {
                 await viewModel.deleteClip(clip)
             }

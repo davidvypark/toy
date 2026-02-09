@@ -8,6 +8,7 @@ struct ClipPreviewSheet: View {
     let clip: Clip
     let cachedURL: URL?
     let cachedThumbnailURL: URL?
+    let localVideoFile: URL?
     let onDelete: () async -> Void
 
     @State private var signedURL: URL?
@@ -26,10 +27,11 @@ struct ClipPreviewSheet: View {
 
     private let storageService = StorageService()
 
-    init(clip: Clip, cachedURL: URL? = nil, cachedThumbnailURL: URL? = nil, onDelete: @escaping () async -> Void) {
+    init(clip: Clip, cachedURL: URL? = nil, cachedThumbnailURL: URL? = nil, localVideoFile: URL? = nil, onDelete: @escaping () async -> Void) {
         self.clip = clip
         self.cachedURL = cachedURL
         self.cachedThumbnailURL = cachedThumbnailURL
+        self.localVideoFile = localVideoFile
         self.onDelete = onDelete
     }
 
@@ -41,11 +43,24 @@ struct ClipPreviewSheet: View {
                 VStack(spacing: 0) {
                     // Video player area - takes up most of the screen
                     ZStack {
+                        // Thumbnail — always underneath as safety net against white flash
+                        if let thumbnailURL {
+                            KFImage(thumbnailURL)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(maxWidth: .infinity)
+                                .clipped()
+                        } else {
+                            Rectangle().fill(Color.black)
+                        }
+
+                        // Video player — fades in on top of thumbnail
                         if let player {
                             ClipVideoPlayer(player: player) {
                                 isPlayerReady = true
                             }
                             .opacity(isPlayerReady ? 1 : 0)
+                            .animation(.easeIn(duration: 0.3), value: isPlayerReady)
                             .overlay(alignment: .bottom) {
                                 if isPlayerReady {
                                     Text("Thinking Of You")
@@ -54,18 +69,6 @@ struct ClipPreviewSheet: View {
                                         .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                                         .padding(.bottom, 16)
                                 }
-                            }
-                        }
-
-                        if !isPlayerReady {
-                            if let thumbnailURL {
-                                KFImage(thumbnailURL)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(maxWidth: .infinity)
-                                    .clipped()
-                            } else {
-                                Rectangle().fill(Color.black)
                             }
                         }
 
@@ -130,7 +133,7 @@ struct ClipPreviewSheet: View {
                 }
             }
             .task {
-                await loadSignedURL()
+                await loadAndPlay()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 if !isPaused { player?.play() }
@@ -186,27 +189,30 @@ struct ClipPreviewSheet: View {
 
     // MARK: - Actions
 
-    private func loadSignedURL() async {
+    private func loadAndPlay() async {
         isLoading = true
         loadError = nil
 
-        // Use pre-fetched thumbnail URL if available, otherwise fetch inline
+        // Load thumbnail
         if let cachedThumbnailURL {
             thumbnailURL = cachedThumbnailURL
         } else if let thumbnailPath = clip.thumbnailUrl {
             thumbnailURL = try? await storageService.createSignedURL(path: thumbnailPath)
         }
 
+        // Resolve video URL: local file (instant) → cached signed URL → fresh fetch
         do {
-            let url: URL
-            if let cachedURL {
-                url = cachedURL
+            let videoURL: URL
+            if let localVideoFile {
+                videoURL = localVideoFile
+            } else if let cachedURL {
+                videoURL = cachedURL
             } else {
-                url = try await storageService.createSignedURL(path: clip.videoUrl)
+                videoURL = try await storageService.createSignedURL(path: clip.videoUrl)
             }
 
-            signedURL = url
-            setupPlayer(with: url)
+            signedURL = videoURL
+            setupPlayer(with: videoURL)
         } catch {
             loadError = error.localizedDescription
         }
@@ -219,10 +225,8 @@ struct ClipPreviewSheet: View {
         let queuePlayer = AVQueuePlayer()
         queuePlayer.automaticallyWaitsToMinimizeStalling = false
 
-        // AVPlayerLooper handles seamless looping internally
         let looper = AVPlayerLooper(player: queuePlayer, templateItem: playerItem)
 
-        // Status observer on the template item
         playerStatusObserver = playerItem.observe(\.status, options: [.new]) { item, _ in
             DispatchQueue.main.async {
                 if case .failed = item.status {
@@ -291,6 +295,7 @@ private class ClipPlayerUIView: UIView {
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
+            playerLayer.backgroundColor = UIColor.black.cgColor
 
             layerObserver?.invalidate()
             layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in

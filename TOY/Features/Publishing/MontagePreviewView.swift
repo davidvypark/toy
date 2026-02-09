@@ -74,13 +74,25 @@ struct MontagePreviewView: View {
             VStack(spacing: 0) {
                 // Video player area - always reserve space
                 ZStack {
-                    // 1. Video player with brand overlay
+                    // 1. Thumbnail — always underneath as safety net against white flash
+                    thumbnailOrBlack
+
+                    // 2. Loading bar (before player ready)
+                    if !isPlayerReady && !publishViewModel.state.isInProgress {
+                        VStack {
+                            Spacer()
+                            TOYLoadingBar()
+                        }
+                    }
+
+                    // 3. Video player with brand overlay — fades in on top of thumbnail
                     if let queuePlayer {
                         QueueVideoPlayer(player: queuePlayer) {
                             loadingProgress = 1.0
                             isPlayerReady = true
                         }
                         .opacity(isPlayerReady ? 1 : 0)
+                        .animation(.easeIn(duration: 0.3), value: isPlayerReady)
                         .overlay(alignment: .bottom) {
                             if isPlayerReady && !isPlaybackFinished {
                                 Text("Thinking Of You")
@@ -92,17 +104,9 @@ struct MontagePreviewView: View {
                         }
                     }
 
-                    // 2. Loading overlay — thumbnail with loading bar (before player ready)
-                    if !isPlayerReady && !publishViewModel.state.isInProgress {
-                        ZStack(alignment: .bottom) {
-                            thumbnailOrBlack
-                            TOYLoadingBar()
-                        }
-                    }
-
-                    // 3. Playback finished overlay — thumbnail with replay button
+                    // 4. Playback finished overlay — replay button
                     if isPlaybackFinished {
-                        thumbnailOrBlack
+                        Color.black.opacity(0.3)
 
                         Button {
                             replayVideo()
@@ -119,7 +123,7 @@ struct MontagePreviewView: View {
                         }
                     }
 
-                    // 4. Pause overlay
+                    // 5. Pause overlay
                     if isPaused && isPlayerReady && !isPlaybackFinished {
                         Color.black.opacity(0.3)
                         Image(systemName: "play.fill")
@@ -127,7 +131,7 @@ struct MontagePreviewView: View {
                             .foregroundColor(.white)
                     }
 
-                    // 5. Progress overlay during publishing
+                    // 6. Progress overlay during publishing
                     if publishViewModel.state.isInProgress {
                         progressView
                             .background(Color.black.opacity(0.8))
@@ -542,6 +546,7 @@ private class QueuePlayerUIView: UIView {
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
+            playerLayer.backgroundColor = UIColor.black.cgColor
 
             layerObserver?.invalidate()
             layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in

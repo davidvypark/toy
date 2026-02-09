@@ -33,12 +33,28 @@ public struct VideoPreviewView: View {
         VStack(spacing: 0) {
             // Video player - custom view without controls
             ZStack {
+                // Thumbnail — always underneath as safety net against white flash
+                if let thumbnail {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(9/16, contentMode: .fit)
+                        .clipped()
+                } else {
+                    Rectangle()
+                        .fill(Color.black)
+                        .aspectRatio(9/16, contentMode: .fit)
+                }
+
+                // Video player — fades in on top of thumbnail
                 if let player {
                     LoopingVideoPlayer(player: player) {
                         isPlayerReady = true
                     }
                     .aspectRatio(9/16, contentMode: .fit)
                     .opacity(isPlayerReady ? 1 : 0)
+                    .animation(.easeIn(duration: 0.3), value: isPlayerReady)
                     .overlay(alignment: .bottom) {
                         if isPlayerReady {
                             Text("Thinking Of You")
@@ -47,22 +63,6 @@ public struct VideoPreviewView: View {
                                 .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                                 .padding(.bottom, 16)
                         }
-                    }
-                }
-
-                // Thumbnail placeholder — shown until player renders first frame
-                if !isPlayerReady {
-                    if let thumbnail {
-                        Image(uiImage: thumbnail)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(maxWidth: .infinity)
-                            .aspectRatio(9/16, contentMode: .fit)
-                            .clipped()
-                    } else {
-                        Rectangle()
-                            .fill(Color.black)
-                            .aspectRatio(9/16, contentMode: .fit)
                     }
                 }
             }
@@ -168,6 +168,7 @@ private class PlayerUIView: UIView {
         set {
             playerLayer.player = newValue
             playerLayer.videoGravity = .resizeAspectFill
+            playerLayer.backgroundColor = UIColor.black.cgColor
 
             layerObserver?.invalidate()
             layerObserver = playerLayer.observe(\.isReadyForDisplay, options: [.new]) { [weak self] layer, _ in

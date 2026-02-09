@@ -20,6 +20,9 @@ final class CardDetailViewModel {
     /// Key is clip ID, value is signed URL
     var cachedSignedURLs: [UUID: URL] = [:]
 
+    /// Local video files downloaded to Caches directory for instant playback
+    var localVideoFiles: [UUID: URL] = [:]
+
     /// Cached profiles for participants
     /// Key is user ID, value is profile data (displayName, avatarURL)
     var participantProfiles: [UUID: (displayName: String?, avatarURL: URL?)] = [:]
@@ -98,9 +101,10 @@ final class CardDetailViewModel {
 
         isLoading = false
 
-        // Pre-fetch signed URLs in background
+        // Pre-fetch signed URLs, then download video files for instant playback
         Task {
             await prefetchSignedURLs()
+            await downloadClipVideos()
         }
         // Only fetch profiles if we don't have initial profiles
         if initialProfiles == nil {
@@ -221,12 +225,17 @@ final class CardDetailViewModel {
         requiredTier(for: card) > purchasedTier(for: card)
     }
 
-    // MARK: - Private Methods
+    // MARK: - Video Caching
+
+    private static let clipCacheDir: URL = {
+        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let dir = caches.appendingPathComponent("toy-clips", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
 
     /// Pre-fetches signed URLs for all clips concurrently.
-    /// This speeds up thumbnail loading and preview opening.
     private func prefetchSignedURLs() async {
-        // Only fetch URLs we don't already have cached
         let clipsNeedingURLs = clips.filter { cachedSignedURLs[$0.id] == nil }
 
         guard !clipsNeedingURLs.isEmpty else {
@@ -264,6 +273,46 @@ final class CardDetailViewModel {
 
         #if DEBUG
         print("[URL CACHE] Cached \(cachedSignedURLs.count) signed URLs")
+        #endif
+    }
+
+    /// Downloads clip videos to local Caches directory for instant playback.
+    private func downloadClipVideos() async {
+        await withTaskGroup(of: (UUID, URL?).self) { group in
+            for clip in clips {
+                let localURL = Self.clipCacheDir.appendingPathComponent("\(clip.id).mov")
+
+                // Skip if already downloaded
+                if FileManager.default.fileExists(atPath: localURL.path) {
+                    localVideoFiles[clip.id] = localURL
+                    continue
+                }
+
+                guard let signedURL = cachedSignedURLs[clip.id] else { continue }
+
+                group.addTask {
+                    do {
+                        let (tempURL, _) = try await URLSession.shared.download(from: signedURL)
+                        try FileManager.default.moveItem(at: tempURL, to: localURL)
+                        return (clip.id, localURL)
+                    } catch {
+                        #if DEBUG
+                        print("[VIDEO CACHE] Failed to download clip \(clip.id): \(error)")
+                        #endif
+                        return (clip.id, nil)
+                    }
+                }
+            }
+
+            for await (clipId, fileURL) in group {
+                if let fileURL {
+                    localVideoFiles[clipId] = fileURL
+                }
+            }
+        }
+
+        #if DEBUG
+        print("[VIDEO CACHE] Downloaded \(localVideoFiles.count) clips to local cache")
         #endif
     }
 }
