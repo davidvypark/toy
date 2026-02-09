@@ -148,12 +148,11 @@ struct CardDetailView: View {
                     // Summary stats
                     summaryStatsView
 
-                    // Tier indicator (only shown when clips exceed card's free allowance)
-                    if viewModel.clips.count > card.maxParticipants {
+                    // Tier indicator
+                    if !viewModel.clips.isEmpty {
                         TierIndicatorView(
-                            clipCount: viewModel.clips.count,
-                            requiredTier: viewModel.requiredTier(for: card),
-                            purchasedTier: viewModel.purchasedTier(for: card),
+                            clipCount: viewModel.effectiveClipCount,
+                            needsUpgrade: viewModel.effectiveClipCount > card.maxParticipants,
                             onTapUpgrade: { showTierSelection = true }
                         )
                     }
@@ -174,7 +173,7 @@ struct CardDetailView: View {
             onClipsChanged?(viewModel.clips)
         }
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarBackground(Color.toyBackground, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 EmptyView()
@@ -228,7 +227,7 @@ struct CardDetailView: View {
             }
         }
         .sheet(isPresented: $showTierSelection) {
-            TierSelectionSheet(card: card, clipCount: viewModel.clips.count)
+            TierSelectionSheet(card: card, clipCount: viewModel.effectiveClipCount)
         }
         .fullScreenCover(isPresented: $showRecordingView) {
             if let vm = recordingViewModel {

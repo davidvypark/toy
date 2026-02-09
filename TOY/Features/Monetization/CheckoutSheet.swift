@@ -3,7 +3,7 @@ import RevenueCat
 import TOYShared
 
 /// Publish-time checkout sheet presented when a host needs to upgrade before publishing.
-/// Distinct from TierSelectionSheet (browse-only) -- this includes a purchase CTA.
+/// Shows the required tier prominently with neighboring tiers grayed out for context.
 struct CheckoutSheet: View {
     let card: Card
     let clipCount: Int
@@ -11,7 +11,6 @@ struct CheckoutSheet: View {
     let onCancel: () -> Void
 
     @State private var packages: [String: Package] = [:]
-    @State private var selectedTier: CardTier
     @State private var isLoading = true
     @State private var isPurchasing = false
     @State private var errorMessage: String?
@@ -22,18 +21,13 @@ struct CheckoutSheet: View {
         CardTier.requiredTier(for: clipCount)
     }
 
-    init(
-        card: Card,
-        clipCount: Int,
-        onPurchaseComplete: @escaping () -> Void,
-        onCancel: @escaping () -> Void
-    ) {
-        self.card = card
-        self.clipCount = clipCount
-        self.onPurchaseComplete = onPurchaseComplete
-        self.onCancel = onCancel
-        // Auto-select the cheapest tier that fits the clip count (TIER-04)
-        self._selectedTier = State(initialValue: CardTier.requiredTier(for: clipCount))
+    /// Show only the required tier plus one below and one above (for context).
+    private var visibleTiers: [CardTier] {
+        let all = CardTier.allCases
+        guard let idx = all.firstIndex(of: requiredTier) else { return [requiredTier] }
+        let lower = idx > 0 ? idx - 1 : idx
+        let upper = min(idx + 1, all.count - 1)
+        return Array(all[lower...upper])
     }
 
     var body: some View {
@@ -57,6 +51,7 @@ struct CheckoutSheet: View {
                         .padding(.horizontal, TOYSpacing.lg)
                         .padding(.vertical, TOYSpacing.lg)
                     }
+                    .scrollBounceBehavior(.basedOnSize)
 
                     // Pinned bottom CTA (not in ScrollView)
                     purchaseButton
@@ -65,6 +60,7 @@ struct CheckoutSheet: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.toyBackground, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
@@ -83,11 +79,14 @@ struct CheckoutSheet: View {
 
     private var headerView: some View {
         VStack(alignment: .leading, spacing: TOYSpacing.md) {
-            Text("Publish Card")
+            Text("Purchase Card")
                 .font(.toyTitle())
                 .foregroundColor(.toyText)
-            Text("\(clipCount) clips \u{2014} requires \(requiredTier.displayName) tier")
+            Text("\(clipCount) clips \u{2014} upgrade required")
                 .font(.toySubheadline())
+                .foregroundColor(.toyTextSecondary)
+            Text("One-time purchase to publish this card with \(requiredTier.displayName.lowercased()).")
+                .font(.toyCaption())
                 .foregroundColor(.toyTextSecondary)
         }
     }
@@ -102,22 +101,14 @@ struct CheckoutSheet: View {
                 .padding(.vertical, TOYSpacing.xl)
         } else {
             VStack(spacing: TOYSpacing.md) {
-                ForEach(CardTier.allCases.filter { $0.isPaid }, id: \.self) { tier in
-                    let isDisabled = isTierDisabled(tier)
-                    let isSelected = tier == selectedTier
-
-                    Button {
-                        selectedTier = tier
-                    } label: {
-                        CheckoutTierRow(
-                            tier: tier,
-                            priceString: priceString(for: tier),
-                            isSelected: isSelected,
-                            clipCount: clipCount
-                        )
-                    }
-                    .disabled(isDisabled)
-                    .opacity(isDisabled ? 0.4 : 1.0)
+                ForEach(visibleTiers, id: \.self) { tier in
+                    let isRequired = tier == requiredTier
+                    CheckoutTierRow(
+                        tier: tier,
+                        priceString: priceString(for: tier),
+                        isRequired: isRequired
+                    )
+                    .opacity(isRequired ? 1.0 : 0.4)
                 }
             }
         }
@@ -128,11 +119,11 @@ struct CheckoutSheet: View {
     @ViewBuilder
     private var purchaseButton: some View {
         let ctaTitle: String = {
-            if isPurchasing { return "Publishing..." }
-            if let price = priceString(for: selectedTier) {
-                return "Publish \u{2014} \(price)"
+            if isPurchasing { return "Purchasing..." }
+            if let price = priceString(for: requiredTier) {
+                return "Purchase \u{2014} \(price)"
             }
-            return "Publish"
+            return "Purchase"
         }()
 
         TOYButton.primary(
@@ -144,20 +135,13 @@ struct CheckoutSheet: View {
         .disabled(isPurchasing || isLoading)
     }
 
-    // MARK: - Tier Helpers
-
-    /// A tier is disabled (not selectable) if it cannot hold the current clip count.
-    /// Mega tier is never disabled (unlimited).
-    private func isTierDisabled(_ tier: CardTier) -> Bool {
-        guard tier != .mega else { return false }
-        return tier.clipLimit < clipCount
-    }
-
     // MARK: - Price Helpers
 
     private func priceString(for tier: CardTier) -> String? {
         guard let identifier = tier.packageIdentifier,
-              let package = packages[identifier] else { return nil }
+              let package = packages[identifier] else {
+            return tier.fallbackPrice
+        }
         return package.localizedPriceString
     }
 
@@ -173,7 +157,7 @@ struct CheckoutSheet: View {
     // MARK: - Purchase Flow
 
     private func handlePurchase() async {
-        guard let identifier = selectedTier.packageIdentifier,
+        guard let identifier = requiredTier.packageIdentifier,
               let package = packages[identifier] else { return }
 
         isPurchasing = true
@@ -187,7 +171,7 @@ struct CheckoutSheet: View {
             let cardService = CardService()
             try await cardService.recordTierPurchase(
                 cardId: card.id,
-                maxParticipants: selectedTier.maxParticipantsValue,
+                maxParticipants: requiredTier.maxParticipantsValue,
                 transactionId: transactionId ?? "unknown"
             )
 
@@ -210,49 +194,32 @@ struct CheckoutSheet: View {
 
 // MARK: - Checkout Tier Row
 
-/// A single selectable row displaying a tier's name, clip limit, price, and selection state.
+/// A single row displaying a tier's name, price, and whether it's the required tier.
 private struct CheckoutTierRow: View {
     let tier: CardTier
     let priceString: String?
-    let isSelected: Bool
-    let clipCount: Int
+    let isRequired: Bool
 
-    private var clipLimitText: String {
-        if tier == .mega {
-            return "Unlimited clips"
-        }
-        return "Up to \(tier.clipLimit) clips"
+    private var tierLabel: String {
+        tier == .free ? "Up to \(tier.clipLimit) People" : tier.displayName
     }
 
     var body: some View {
         HStack(spacing: TOYSpacing.md) {
-            VStack(alignment: .leading, spacing: TOYSpacing.xs) {
-                Text(tier.displayName)
-                    .font(.toyBodyMedium())
-                    .foregroundColor(.toyText)
-                Text(clipLimitText)
-                    .font(.toyCaption())
-                    .foregroundColor(.toyTextSecondary)
-            }
+            Text(tierLabel)
+                .font(.toyBodyMedium())
+                .foregroundColor(.toyText)
 
             Spacer()
 
-            HStack(spacing: TOYSpacing.sm) {
-                Text(priceString ?? "\u{2014}")
-                    .font(.toyBodyMedium())
-                    .foregroundColor(.toyText)
-
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.toyText)
-                }
-            }
+            Text(priceString ?? "\u{2014}")
+                .font(.toyBodyMedium())
+                .foregroundColor(.toyText)
         }
         .padding(TOYSpacing.md)
         .background(
             Rectangle()
-                .stroke(isSelected ? Color.toyText : Color.toyDivider, lineWidth: isSelected ? 2 : 1)
+                .stroke(isRequired ? Color.toyText : Color.toyDivider, lineWidth: isRequired ? 2 : 1)
         )
     }
 }

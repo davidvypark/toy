@@ -11,12 +11,12 @@
       "localizations" : [
         {
           "description" : "Publish a card with up to 10 participants",
-          "displayName" : "Starter (10 clips)",
+          "displayName" : "Toy Card 10",
           "locale" : "en_US"
         }
       ],
-      "productID" : "toy_tier_starter",
-      "referenceName" : "Starter (10 clips)",
+      "productID" : "toy_card_10",
+      "referenceName" : "Toy Card 10",
       "type" : "Consumable"
     },
     {
@@ -26,27 +26,72 @@
       "localizations" : [
         {
           "description" : "Publish a card with up to 25 participants",
-          "displayName" : "Group (25 clips)",
+          "displayName" : "Toy Card 25",
           "locale" : "en_US"
         }
       ],
-      "productID" : "toy_tier_group",
-      "referenceName" : "Group (25 clips)",
+      "productID" : "toy_card_25",
+      "referenceName" : "Toy Card 25",
       "type" : "Consumable"
     },
     {
-      "displayPrice" : "9.99",
+      "displayPrice" : "14.99",
       "familyShareable" : false,
       "internalID" : "I9J0K1L2",
       "localizations" : [
         {
-          "description" : "Publish a card with unlimited participants",
-          "displayName" : "Mega (Unlimited)",
+          "description" : "Publish a card with up to 50 participants",
+          "displayName" : "Toy Card 50",
           "locale" : "en_US"
         }
       ],
-      "productID" : "toy_tier_mega",
-      "referenceName" : "Mega (Unlimited)",
+      "productID" : "toy_card_50",
+      "referenceName" : "Toy Card 50",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "29.99",
+      "familyShareable" : false,
+      "internalID" : "M3N4O5P6",
+      "localizations" : [
+        {
+          "description" : "Publish a card with up to 100 participants",
+          "displayName" : "Toy Card 100",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "toy_card_100",
+      "referenceName" : "Toy Card 100",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "Q7R8S9T0",
+      "localizations" : [
+        {
+          "description" : "Publish a card with up to 150 participants",
+          "displayName" : "Toy Card 150",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "toy_card_150",
+      "referenceName" : "Toy Card 150",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "69.99",
+      "familyShareable" : false,
+      "internalID" : "U1V2W3X4",
+      "localizations" : [
+        {
+          "description" : "Publish a card with up to 200 participants",
+          "displayName" : "Toy Card 200",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "toy_card_200",
+      "referenceName" : "Toy Card 200",
       "type" : "Consumable"
     }
   ],

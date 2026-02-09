@@ -48,7 +48,7 @@ public actor PurchaseService {
 
     /// Fetches all tier packages from the current RevenueCat offering.
     ///
-    /// Returns packages keyed by their custom identifier (e.g., "starter", "group", "mega").
+    /// Returns packages keyed by their custom identifier (e.g., "toy_card_10", "toy_card_25").
     /// These are consumable IAP products -- each purchase applies to a single card.
     /// The offering should be configured in RevenueCat Dashboard with packages
     /// matching CardTier.packageIdentifier values.

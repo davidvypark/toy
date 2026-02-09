@@ -2,18 +2,14 @@ import SwiftUI
 import TOYShared
 
 /// Stateless tier indicator component for CardDetailView.
-/// Shows clip count and tier status with a tappable chevron to browse tiers.
+/// Shows clip count and pricing status with a tappable area to browse tiers.
 struct TierIndicatorView: View {
     let clipCount: Int
-    let requiredTier: CardTier
-    let purchasedTier: CardTier
+    let needsUpgrade: Bool
     let onTapUpgrade: () -> Void
 
-    private var tierStatusText: String {
-        if requiredTier == purchasedTier {
-            return "\(requiredTier.displayName) tier"
-        }
-        return "\(requiredTier.displayName) tier to publish"
+    private var subtitleText: String {
+        needsUpgrade ? "Check Pricing" : "Free Tier"
     }
 
     var body: some View {
@@ -23,7 +19,7 @@ struct TierIndicatorView: View {
                     Text("\(clipCount) clips submitted")
                         .font(.toyBodyMedium())
                         .foregroundColor(.toyText)
-                    Text(tierStatusText)
+                    Text(subtitleText)
                         .font(.toyCaption())
                         .foregroundColor(.toyTextSecondary)
                 }
@@ -35,6 +31,7 @@ struct TierIndicatorView: View {
                     .foregroundColor(.toyTextSecondary)
             }
             .padding(TOYSpacing.md)
+            .contentShape(Rectangle())
             .background(
                 Rectangle()
                     .stroke(Color.toyDivider, lineWidth: 1)

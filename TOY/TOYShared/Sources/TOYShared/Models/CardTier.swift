@@ -3,22 +3,26 @@ import Foundation
 /// Pure value type for tier logic. No persistence, no service dependency.
 /// Maps between clip counts, tier names, and maxParticipants column values.
 public enum CardTier: Int, CaseIterable, Comparable, Sendable {
-    case free = 0       // up to 5 clips (new default)
-    case starter = 1    // up to 10 clips
-    case group = 2      // up to 25 clips
-    case mega = 3       // unlimited (999 in database)
+    case free = 0       // up to 5 clips (default)
+    case card10 = 1     // up to 10 clips
+    case card25 = 2     // up to 25 clips
+    case card50 = 3     // up to 50 clips
+    case card100 = 4    // up to 100 clips
+    case card150 = 5    // up to 150 clips
+    case card200 = 6    // up to 200 clips
 
     /// The clip limit for this tier (used for display and pricing, NOT for enforcement).
     ///
     /// For enforcement of clip limits, always compare against `card.maxParticipants` directly.
-    /// This avoids breaking grandfathered cards (e.g., legacy cards with maxParticipants=8 should
-    /// allow 8 clips, not 5).
     public var clipLimit: Int {
         switch self {
         case .free: return 5
-        case .starter: return 10
-        case .group: return 25
-        case .mega: return .max
+        case .card10: return 10
+        case .card25: return 25
+        case .card50: return 50
+        case .card100: return 100
+        case .card150: return 150
+        case .card200: return 200
         }
     }
 
@@ -26,22 +30,38 @@ public enum CardTier: Int, CaseIterable, Comparable, Sendable {
     public var displayName: String {
         switch self {
         case .free: return "Free"
-        case .starter: return "Starter"
-        case .group: return "Group"
-        case .mega: return "Mega"
+        case .card10: return "Up to 10 People"
+        case .card25: return "Up to 25 People"
+        case .card50: return "Up to 50 People"
+        case .card100: return "Up to 100 People"
+        case .card150: return "Up to 150 People"
+        case .card200: return "Up to 200 People"
         }
     }
 
     /// The `maxParticipants` value to store in Supabase when this tier is purchased.
-    ///
-    /// This is the canonical database value for each tier:
-    /// - free: 5, starter: 10, group: 25, mega: 999
     public var maxParticipantsValue: Int {
         switch self {
         case .free: return 5
-        case .starter: return 10
-        case .group: return 25
-        case .mega: return 999
+        case .card10: return 10
+        case .card25: return 25
+        case .card50: return 50
+        case .card100: return 100
+        case .card150: return 150
+        case .card200: return 200
+        }
+    }
+
+    /// Fallback price string used when RevenueCat packages aren't available yet.
+    public var fallbackPrice: String {
+        switch self {
+        case .free: return "Free"
+        case .card10: return "$1.99"
+        case .card25: return "$4.99"
+        case .card50: return "$14.99"
+        case .card100: return "$29.99"
+        case .card150: return "$49.99"
+        case .card200: return "$69.99"
         }
     }
 
@@ -53,9 +73,12 @@ public enum CardTier: Int, CaseIterable, Comparable, Sendable {
     public var packageIdentifier: String? {
         switch self {
         case .free: return nil
-        case .starter: return "starter"
-        case .group: return "group"
-        case .mega: return "mega"
+        case .card10: return "toy_card_10"
+        case .card25: return "toy_card_25"
+        case .card50: return "toy_card_50"
+        case .card100: return "toy_card_100"
+        case .card150: return "toy_card_150"
+        case .card200: return "toy_card_200"
         }
     }
 
@@ -70,33 +93,25 @@ public enum CardTier: Int, CaseIterable, Comparable, Sendable {
         for tier in CardTier.allCases {
             if clipCount <= tier.clipLimit { return tier }
         }
-        return .mega
+        return .card200
     }
 
     /// Maps a database `maxParticipants` column value to a `CardTier` for display purposes.
     ///
-    /// **Grandfathering behavior:** Cards created before the tier system may have
-    /// `maxParticipants = 8` (the old free tier default). These map to `.free` for display,
-    /// even though `.free.clipLimit` is 5. This is intentional -- for display and pricing UI,
-    /// these cards appear as "Free" tier. For **enforcement** (determining whether a card can
-    /// publish), always compare `clips.count` against `card.maxParticipants` directly, NOT
-    /// against `CardTier.clipLimit`. This ensures legacy cards with 6-8 clips are not
-    /// incorrectly prompted to upgrade.
-    ///
-    /// Mapping:
-    /// - `...8` -> `.free` (covers new default 5 AND legacy grandfathered 8)
-    /// - `9...10` -> `.starter`
-    /// - `11...25` -> `.group`
-    /// - `>25` (including 999) -> `.mega`
+    /// For **enforcement** (determining whether a card can publish), always compare
+    /// `clips.count` against `card.maxParticipants` directly, NOT against `CardTier.clipLimit`.
     ///
     /// - Parameter maxParticipants: The value from the `cards.max_participants` database column.
     /// - Returns: The corresponding `CardTier` for display purposes.
     public static func fromMaxParticipants(_ maxParticipants: Int) -> CardTier {
         switch maxParticipants {
-        case ...8: return .free
-        case 9...10: return .starter
-        case 11...25: return .group
-        default: return .mega
+        case ...5: return .free
+        case 6...10: return .card10
+        case 11...25: return .card25
+        case 26...50: return .card50
+        case 51...100: return .card100
+        case 101...150: return .card150
+        default: return .card200
         }
     }
 

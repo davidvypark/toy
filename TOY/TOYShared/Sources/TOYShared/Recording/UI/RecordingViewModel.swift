@@ -284,9 +284,9 @@ public final class RecordingViewModel: ObservableObject {
                 #endif
                 return nil
             }
-            // Round to 1 decimal place for cleaner display
-            let rounded = Double(round(seconds * 10) / 10)
-            let decimal = Decimal(rounded)
+            // Round to 1 decimal place — use String conversion to avoid Decimal(Double) precision noise
+            let rounded = round(seconds * 10) / 10
+            let decimal = Decimal(string: String(format: "%.1f", rounded)) ?? Decimal(Int(rounded))
             #if DEBUG
             print("[DURATION DEBUG] Rounded: \(rounded), Decimal: \(decimal)")
             #endif

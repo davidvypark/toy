@@ -53,10 +53,18 @@ struct MontagePreviewView: View {
         return [hostClip].compactMap { $0 } + participantClips
     }
 
+    /// The clip count used for tier logic — respects debug override.
+    private var effectiveClipCount: Int {
+        #if DEBUG
+        if let override = CardDetailViewModel.debugClipCount { return override }
+        #endif
+        return sortedClips.count
+    }
+
     /// Whether this publish attempt needs a tier upgrade.
     /// Uses card.maxParticipants directly (not CardTier comparison) to respect grandfathered cards.
     private var needsUpgrade: Bool {
-        sortedClips.count > card.maxParticipants
+        effectiveClipCount > card.maxParticipants
     }
 
     var body: some View {
@@ -223,10 +231,25 @@ struct MontagePreviewView: View {
                 }
             }
         }
+        .onChange(of: showCheckout) { _, isShowing in
+            if isShowing {
+                queuePlayer?.pause()
+            } else if !isPlaybackFinished {
+                // Force player layer to re-render after sheet dismiss
+                Task {
+                    if let player = queuePlayer {
+                        await player.seek(to: player.currentTime())
+                        if !isPaused {
+                            player.play()
+                        }
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showCheckout) {
             CheckoutSheet(
                 card: card,
-                clipCount: sortedClips.count,
+                clipCount: effectiveClipCount,
                 onPurchaseComplete: {
                     hasPurchased = true
                     Task {

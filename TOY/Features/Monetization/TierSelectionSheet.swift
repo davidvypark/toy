@@ -13,12 +13,8 @@ struct TierSelectionSheet: View {
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
 
-    private var requiredTier: CardTier {
-        CardTier.requiredTier(for: clipCount)
-    }
-
     private var currentTier: CardTier {
-        CardTier.fromMaxParticipants(card.maxParticipants)
+        CardTier.requiredTier(for: clipCount)
     }
 
     var body: some View {
@@ -34,8 +30,10 @@ struct TierSelectionSheet: View {
                     .padding(.horizontal, TOYSpacing.lg)
                     .padding(.vertical, TOYSpacing.lg)
                 }
+                .scrollBounceBehavior(.basedOnSize)
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.toyBackground, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") { dismiss() }
@@ -74,9 +72,7 @@ struct TierSelectionSheet: View {
                     TierRowView(
                         tier: tier,
                         priceString: priceString(for: tier),
-                        isRequired: tier == requiredTier,
-                        isCurrentTier: tier == currentTier,
-                        clipCount: clipCount
+                        isCurrentTier: tier == currentTier
                     )
                 }
             }
@@ -88,7 +84,7 @@ struct TierSelectionSheet: View {
     private func priceString(for tier: CardTier) -> String? {
         guard let identifier = tier.packageIdentifier,
               let package = packages[identifier] else {
-            return tier == .free ? "Free" : nil
+            return tier.fallbackPrice
         }
         return package.localizedPriceString
     }
@@ -105,41 +101,17 @@ struct TierSelectionSheet: View {
 
 // MARK: - Tier Row View
 
-/// A single row displaying a tier's name, clip limit, price, and status.
+/// A single row displaying a tier's name, price, and status.
 private struct TierRowView: View {
     let tier: CardTier
     let priceString: String?
-    let isRequired: Bool
     let isCurrentTier: Bool
-    let clipCount: Int
-
-    private var clipLimitText: String {
-        if tier == .mega {
-            return "Unlimited clips"
-        }
-        return "Up to \(tier.clipLimit) clips"
-    }
-
-    private var statusLabel: String {
-        if isCurrentTier {
-            return "Current"
-        }
-        if isRequired && !isCurrentTier {
-            return "Required"
-        }
-        return ""
-    }
 
     var body: some View {
         HStack(spacing: TOYSpacing.md) {
-            VStack(alignment: .leading, spacing: TOYSpacing.xs) {
-                Text(tier.displayName)
-                    .font(.toyBodyMedium())
-                    .foregroundColor(.toyText)
-                Text(clipLimitText)
-                    .font(.toyCaption())
-                    .foregroundColor(.toyTextSecondary)
-            }
+            Text(tier.displayName)
+                .font(.toyBodyMedium())
+                .foregroundColor(.toyText)
 
             Spacer()
 
@@ -147,8 +119,8 @@ private struct TierRowView: View {
                 Text(priceString ?? "\u{2014}")
                     .font(.toyBodyMedium())
                     .foregroundColor(.toyText)
-                if !statusLabel.isEmpty {
-                    Text(statusLabel)
+                if isCurrentTier {
+                    Text("Current")
                         .font(.toyCaption())
                         .foregroundColor(.toyTextSecondary)
                 }
@@ -157,7 +129,7 @@ private struct TierRowView: View {
         .padding(TOYSpacing.md)
         .background(
             Rectangle()
-                .stroke(isRequired ? Color.toyText : Color.toyDivider, lineWidth: 1)
+                .stroke(isCurrentTier ? Color.toyText : Color.toyDivider, lineWidth: isCurrentTier ? 2 : 1)
         )
     }
 }
