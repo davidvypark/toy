@@ -231,12 +231,7 @@ struct HomeView: View {
     // MARK: - Loading View
 
     private var loadingView: some View {
-        VStack {
-            Spacer()
-            ProgressView()
-                .scaleEffect(1.2)
-            Spacer()
-        }
+        Spacer()
     }
 
     // MARK: - Empty State

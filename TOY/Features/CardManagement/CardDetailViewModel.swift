@@ -211,7 +211,7 @@ final class CardDetailViewModel {
     #if DEBUG
     /// Set to a number to spoof clip count for tier testing.
     /// Set to nil for normal behavior. NEVER commit with a non-nil value.
-    static let debugClipCount: Int? = 6 // e.g. 7, 12, 50, 150
+    static let debugClipCount: Int? = 3 // e.g. 7, 12, 50, 150
     #endif
 
     /// The effective clip count for tier calculations and display.

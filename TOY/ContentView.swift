@@ -15,13 +15,7 @@ struct ContentView: View {
         Group {
             switch authViewModel.authState {
             case .unknown:
-                // Loading state
-                VStack {
-                    ProgressView()
-                    TOYLabel("Loading...", style: .caption, color: .toyTextSecondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.toyBackground)
+                TOYBackground()
 
             case .signedOut:
                 // TODO: Uncomment to skip onboarding for returning users
