@@ -209,6 +209,11 @@ struct TOYApp: App {
 
         switch action {
         case .recordNow(let card):
+            // Add card to home page immediately (same as save for later)
+            NotificationCenter.default.post(
+                name: .cardSavedForLater,
+                object: card
+            )
             // Small delay to let sheet dismiss before showing full screen cover
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 cardToRecord = card

@@ -80,17 +80,19 @@ struct SettingsView: View {
                             .fill(Color.toyDivider)
                             .frame(height: 1)
 
-                        // Sign Out
-                        Button {
-                            Task {
-                                await authViewModel.signOut()
-                                dismiss()
-                            }
+                        // Settings
+                        NavigationLink {
+                            AccountSettingsView(authViewModel: authViewModel, onSignedOut: { dismiss() })
                         } label: {
-                            Text("Sign Out")
-                                .font(.toyBody())
-                                .foregroundColor(.toyDestructive)
-                                .underline()
+                            HStack {
+                                Text("Settings")
+                                    .font(.toyBody())
+                                    .foregroundColor(.toyText)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.toyTextSecondary)
+                            }
                         }
 
                         Spacer()

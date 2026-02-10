@@ -4,12 +4,10 @@ public enum Configuration {
     // MARK: - Supabase
 
     public static var supabaseURL: String {
-        // Hardcoded for now - TODO: restore Info.plist logic later
         return "https://wlsaolscclwarmxzqjqs.supabase.co"
     }
 
     public static var supabaseAnonKey: String {
-        // Hardcoded for now - TODO: restore Info.plist logic later
         return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indsc2FvbHNjY2x3YXJteHpxanFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NTExMDksImV4cCI6MjA4NTUyNzEwOX0.jByHR8TuH6ghNI6-zq7giusgvcAN8CRebTUtBFmUYhc"
     }
 
@@ -41,5 +39,5 @@ public enum Configuration {
 
     /// RevenueCat API key - replace with your key from RevenueCat Dashboard
     /// Dashboard -> API Keys -> Public App-Specific API Keys -> iOS
-    public static let revenueCatAPIKey = "test_DPeFpcaJgDSjkeMkilxMVppyqqf"
+    public static let revenueCatAPIKey = "appl_lMyGGRakeffiDSpEUHzrRgMbBpq"
 }

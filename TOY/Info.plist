@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>TOY needs camera access to record video messages for your cards.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>TOY needs microphone access to record audio with your video messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>TOY needs photo library access to set your profile picture.</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_URL</key>

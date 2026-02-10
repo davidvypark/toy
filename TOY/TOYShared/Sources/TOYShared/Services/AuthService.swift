@@ -67,6 +67,9 @@ public protocol AuthServiceProtocol: Sendable {
 
     /// Update user's avatar image
     func updateAvatar(_ imageData: Data, for userId: UUID) async throws -> URL
+
+    /// Delete the current user's account
+    func deleteAccount() async throws
 }
 
 // MARK: - Supabase Implementation
@@ -276,6 +279,51 @@ public final class SupabaseAuthService: AuthServiceProtocol {
         #endif
 
         return publicURL
+    }
+
+    // MARK: - Account Deletion
+
+    public func deleteAccount() async throws {
+        let session = try await supabase.auth.session
+        let userId = session.user.id
+
+        // 1. Gather clip paths for storage cleanup (while still authenticated)
+        struct ClipPaths: Decodable {
+            let id: UUID
+            let videoUrl: String
+            let thumbnailUrl: String?
+            enum CodingKeys: String, CodingKey {
+                case id
+                case videoUrl = "video_url"
+                case thumbnailUrl = "thumbnail_url"
+            }
+        }
+        let clips: [ClipPaths] = (try? await supabase
+            .from("clips")
+            .select("id, video_url, thumbnail_url")
+            .eq("participant_id", value: userId)
+            .execute()
+            .value) ?? []
+
+        // 2. Delete clip files from storage (best effort)
+        let clipsBucket = supabase.storage.from("clips")
+        for clip in clips {
+            try? await clipsBucket.remove(paths: [clip.videoUrl])
+            if let thumbnail = clip.thumbnailUrl {
+                try? await clipsBucket.remove(paths: [thumbnail])
+            }
+        }
+
+        // 3. Delete avatar from storage (best effort)
+        let avatarBucket = supabase.storage.from("avatars")
+        try? await avatarBucket.remove(paths: ["\(userId.uuidString)/avatar.jpg"])
+
+        // 4. Delete DB records via RPC (transfers published cards to system user,
+        //    then cascades: profile, clips, unpublished cards, participant refs)
+        try await supabase.rpc("delete_own_account").execute()
+
+        // 5. Sign out locally
+        try await supabase.auth.signOut()
     }
 
     // MARK: - Private Helpers

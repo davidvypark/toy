@@ -94,11 +94,13 @@ struct InviteReceivedSheet: View {
             // Actions
             VStack(spacing: TOYSpacing.md) {
                 TOYButton.primary("Record Now") {
+                    joinCardInBackground()
                     onAction(.recordNow(card))
                 }
 
                 Button {
-                    saveForLater()
+                    joinCardInBackground()
+                    onAction(.savedForLater(card))
                 } label: {
                     Text("Save for Later")
                         .font(.toyBody())
@@ -153,13 +155,9 @@ struct InviteReceivedSheet: View {
         isLoading = false
     }
 
-    private func saveForLater() {
+    private func joinCardInBackground() {
         guard let card else { return }
 
-        // Optimistic UI - dismiss immediately with card
-        onAction(.savedForLater(card))
-
-        // Detached task continues running after view dismisses
         let service = cardService
         let token = shareToken
         let uid = userId

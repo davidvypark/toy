@@ -114,6 +114,21 @@ final class AuthViewModel {
         isLoading = false
     }
 
+    // MARK: - Delete Account
+
+    func deleteAccount() async {
+        isLoading = true
+
+        do {
+            try await authService.deleteAccount()
+            authState = .signedOut
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+
     // MARK: - Profile Updates
 
     /// Updates user's display name with optimistic UI
