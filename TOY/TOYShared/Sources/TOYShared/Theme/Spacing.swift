@@ -33,8 +33,8 @@ public extension TOYSpacing {
     /// Extended horizontal padding for headlines
     static let headlinePadding: CGFloat = xl
 
-    /// Standard corner radius (when used - prefer sharp edges)
-    static let cornerRadius: CGFloat = 0
+    /// Standard corner radius for buttons
+    static let cornerRadius: CGFloat = 12
 
     /// Pill button corner radius
     static let pillRadius: CGFloat = 28
