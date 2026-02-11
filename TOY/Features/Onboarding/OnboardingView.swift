@@ -100,7 +100,7 @@ struct OnboardingView: View {
                 .overlay {
                     Image(slide.imageName)
                         .resizable()
-                        .scaledToFill()
+                        .scaledToFit()
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 48)
