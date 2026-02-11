@@ -91,7 +91,7 @@ public final class RecordingViewModel: ObservableObject {
     private func checkAndRequestPermissions() async {
         let cameraStatus = AVCaptureDevice.authorizationStatus(for: .video)
         let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-        
+
         // Check if already granted
         if cameraStatus == .authorized && micStatus == .authorized {
             permissionStatus = .granted
@@ -134,7 +134,6 @@ public final class RecordingViewModel: ObservableObject {
         do {
             try await recorder.setupSession()
         } catch {
-            // Handle setup error
             print("Failed to setup recorder: \(error)")
         }
     }

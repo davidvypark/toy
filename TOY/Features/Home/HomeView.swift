@@ -34,6 +34,7 @@ struct HomeView: View {
     @State private var publishedVideoURLCache: [UUID: URL] = [:]
     @State private var prefetchedVideoAssets: [UUID: AVURLAsset] = [:]
     @State private var publishedThumbnailURLCache: [UUID: URL] = [:]
+    @State private var pendingCardForRecording: Card?
     @State private var hostRecordingViewModel: RecordingViewModel?
     @State private var participantRecordingViewModel: RecordingViewModel?
     @State private var isPreparingHostCamera = false
@@ -122,13 +123,16 @@ struct HomeView: View {
                     }
                 )
             }
-            .sheet(isPresented: $showCreateCard) {
+            .sheet(isPresented: $showCreateCard, onDismiss: {
+                if let card = pendingCardForRecording {
+                    pendingCardForRecording = nil
+                    cardInProgress = card
+                }
+            }) {
                 if let user = viewModel.authState.user {
                     CreateCardView(hostId: user.id) { createdCard in
+                        pendingCardForRecording = createdCard
                         showCreateCard = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            cardInProgress = createdCard
-                        }
                     }
                 }
             }

@@ -40,6 +40,7 @@ public final class VideoRecorder: ObservableObject {
     // MARK: - Session Management
 
     public func setupSession() async throws {
+        guard !isSessionReady else { return }
         try captureSession.configure()
         captureSession.start()
         isSessionReady = true
