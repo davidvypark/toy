@@ -6,6 +6,7 @@
 //  Offers options to record immediately or save for later.
 //
 
+import Kingfisher
 import SwiftUI
 import TOYShared
 
@@ -18,6 +19,8 @@ struct InviteReceivedSheet: View {
     @State private var card: Card?
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var hostDisplayName: String?
+    @State private var hostAvatarURL: URL?
 
     private let cardService = CardService()
 
@@ -61,31 +64,48 @@ struct InviteReceivedSheet: View {
 
     @ViewBuilder
     private func contentView(card: Card) -> some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             Spacer()
 
-            // Invitation message
             VStack(alignment: .leading, spacing: TOYSpacing.lg) {
-                Text("You're invited!")
-                    .font(.toyTitle())
-                    .foregroundColor(.toyText)
-
-                VStack(alignment: .leading, spacing: TOYSpacing.sm) {
-                    Text(card.title)
-                        .font(.toyHeadline())
-                        .foregroundColor(.toyText)
-
-                    Text("For \(card.recipientName)")
-                        .font(.toyBody())
-                        .foregroundColor(.toyTextSecondary)
+                // Host avatar
+                if let avatarURL = hostAvatarURL {
+                    KFImage(avatarURL)
+                        .placeholder {
+                            Circle()
+                                .fill(Color.toyDivider)
+                        }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 56, height: 56)
+                        .clipShape(Circle())
+                } else {
+                    Circle()
+                        .fill(Color.toyDivider)
+                        .frame(width: 56, height: 56)
+                        .overlay {
+                            Image(systemName: "person.fill")
+                                .foregroundColor(.toyTextSecondary)
+                        }
                 }
 
-                Text("Record a video message to be included in this card.")
+                // Invitation text
+                Text("\(hostDisplayName ?? "Someone") has invited you to record a 7 second video message to be included in this card.")
                     .font(.toyBody())
                     .foregroundColor(.toyTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                // Card title and recipient
+                VStack(alignment: .leading, spacing: TOYSpacing.sm) {
+                    Text(card.title)
+                        .font(.toyTitle())
+                        .foregroundColor(.toyText)
+
+                    Text("For \(card.recipientName)")
+                        .font(.toyTitle2())
+                        .foregroundColor(.toyTextSecondary)
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, TOYSpacing.lg)
 
             Spacer()
@@ -147,7 +167,15 @@ struct InviteReceivedSheet: View {
         errorMessage = nil
 
         do {
-            card = try await cardService.fetchCardByShareToken(shareToken: shareToken)
+            let fetchedCard = try await cardService.fetchCardByShareToken(shareToken: shareToken)
+            card = fetchedCard
+
+            // Fetch host profile
+            let profiles = try await cardService.fetchProfiles(userIds: [fetchedCard.hostId])
+            if let profile = profiles[fetchedCard.hostId] {
+                hostDisplayName = profile.displayName
+                hostAvatarURL = profile.avatarURL
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -156,7 +184,7 @@ struct InviteReceivedSheet: View {
     }
 
     private func joinCardInBackground() {
-        guard let card else { return }
+        guard card != nil else { return }
 
         let service = cardService
         let token = shareToken

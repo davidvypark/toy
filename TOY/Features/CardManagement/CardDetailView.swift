@@ -402,7 +402,7 @@ struct CardDetailView: View {
             ShareLink(
                 item: url,
                 subject: Text("Join my TOY card!"),
-                message: Text("Record a video message for \(card.recipientName)")
+                message: Text("Record up to a 7 second video message for \(card.recipientName)")
             ) {
                 HStack(spacing: TOYSpacing.md) {
                     VStack(alignment: .leading, spacing: TOYSpacing.xs) {

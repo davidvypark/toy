@@ -58,7 +58,7 @@ struct CardCreatedView: View {
                     ShareLink(
                         item: inviteURL,
                         subject: Text("Join my TOY card!"),
-                        message: Text("Record a video message for \(card.recipientName)")
+                        message: Text("Record up to a 7 second video message for \(card.recipientName)")
                     ) {
                         HStack(spacing: TOYSpacing.sm) {
                             Image(systemName: "square.and.arrow.up")
