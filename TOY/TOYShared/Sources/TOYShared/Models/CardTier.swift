@@ -29,7 +29,7 @@ public enum CardTier: Int, CaseIterable, Comparable, Sendable {
     /// Human-readable tier name for display in UI.
     public var displayName: String {
         switch self {
-        case .free: return "Free"
+        case .free: return "Up to 5 People"
         case .card10: return "Up to 10 People"
         case .card25: return "Up to 25 People"
         case .card50: return "Up to 50 People"

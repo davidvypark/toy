@@ -78,6 +78,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
 extension Notification.Name {
     static let cardSavedForLater = Notification.Name("cardSavedForLater")
+    static let participantDidRecord = Notification.Name("participantDidRecord")
 }
 
 // MARK: - Pending Invite
@@ -167,6 +168,12 @@ struct TOYApp: App {
                                 )
                             }
                         )
+                        .onDisappear {
+                            NotificationCenter.default.post(
+                                name: .participantDidRecord,
+                                object: card
+                            )
+                        }
                     }
                 }
                 .alert("Stay in the loop", isPresented: $showParticipantNotificationPrompt) {

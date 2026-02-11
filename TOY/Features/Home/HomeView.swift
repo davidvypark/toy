@@ -175,6 +175,13 @@ struct HomeView: View {
                     }
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .participantDidRecord)) { notification in
+                // Optimistic UI - mark card as submitted immediately
+                if let card = notification.object as? Card,
+                   let index = participatingCardsData.firstIndex(where: { $0.card.id == card.id }) {
+                    participatingCardsData[index] = (card: card, hasSubmitted: true)
+                }
+            }
         }
     }
 
