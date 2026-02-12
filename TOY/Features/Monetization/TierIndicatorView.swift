@@ -33,7 +33,7 @@ struct TierIndicatorView: View {
             .padding(TOYSpacing.md)
             .contentShape(Rectangle())
             .background(
-                Rectangle()
+                RoundedRectangle(cornerRadius: TOYSpacing.cornerRadius)
                     .stroke(Color.toyDivider, lineWidth: 1)
             )
         }

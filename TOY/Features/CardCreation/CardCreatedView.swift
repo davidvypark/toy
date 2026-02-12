@@ -56,9 +56,8 @@ struct CardCreatedView: View {
                 // ShareLink button - primary CTA
                 if let inviteURL = inviteURL(for: card) {
                     ShareLink(
-                        item: inviteURL,
-                        subject: Text("Join my TOY card!"),
-                        message: Text("Record up to a 7 second video message for \(card.recipientName)")
+                        item: "Record up to a 7 second video message for \(card.recipientName)\n\(inviteURL.absoluteString)",
+                        subject: Text("Join my TOY card!")
                     ) {
                         HStack(spacing: TOYSpacing.sm) {
                             Image(systemName: "square.and.arrow.up")
@@ -68,7 +67,10 @@ struct CardCreatedView: View {
                         .foregroundColor(.toyBackground)
                         .frame(maxWidth: .infinity)
                         .frame(height: TOYSpacing.buttonHeight)
-                        .background(Color.toyText)
+                        .background(
+                            RoundedRectangle(cornerRadius: TOYSpacing.cornerRadius)
+                                .fill(Color.toyText)
+                        )
                     }
                 }
 

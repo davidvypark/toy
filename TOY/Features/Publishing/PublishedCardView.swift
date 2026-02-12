@@ -61,9 +61,8 @@ struct PublishedCardView: View {
                     VStack(spacing: TOYSpacing.md) {
                         if let url = recipientURL {
                             ShareLink(
-                                item: url,
-                                subject: Text("A video message for \(card.recipientName)"),
-                                message: Text("Someone made a special video card for you!")
+                                item: "Someone made a special video card for you!\n\(url.absoluteString)",
+                                subject: Text("A video message for \(card.recipientName)")
                             ) {
                                 HStack(spacing: TOYSpacing.sm) {
                                     Image(systemName: "square.and.arrow.up")
@@ -73,7 +72,10 @@ struct PublishedCardView: View {
                                 .foregroundColor(.toyBackground)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: TOYSpacing.buttonHeight)
-                                .background(Color.toyText)
+                                .background(
+                                    RoundedRectangle(cornerRadius: TOYSpacing.cornerRadius)
+                                        .fill(Color.toyText)
+                                )
                             }
                         }
 

@@ -9,9 +9,8 @@ struct TierSelectionSheet: View {
     let clipCount: Int
 
     @State private var packages: [String: Package] = [:]
-    @State private var isLoading = true
-    @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     private var currentTier: CardTier {
         CardTier.requiredTier(for: clipCount)
@@ -26,6 +25,14 @@ struct TierSelectionSheet: View {
                     VStack(alignment: .leading, spacing: TOYSpacing.xl) {
                         headerView
                         tierListView
+
+                        Button("Terms of Service") {
+                            openURL(URL(string: "https://sendtoycard.com/terms")!)
+                        }
+                        .font(.toyCaption())
+                        .foregroundColor(.toyTextSecondary)
+                        .underline()
+                        .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .padding(.horizontal, TOYSpacing.lg)
                     .padding(.vertical, TOYSpacing.lg)
@@ -60,21 +67,14 @@ struct TierSelectionSheet: View {
 
     // MARK: - Tier List
 
-    @ViewBuilder
     private var tierListView: some View {
-        if isLoading {
-            ProgressView()
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, TOYSpacing.xl)
-        } else {
-            VStack(spacing: TOYSpacing.md) {
-                ForEach(CardTier.allCases, id: \.self) { tier in
-                    TierRowView(
-                        tier: tier,
-                        priceString: priceString(for: tier),
-                        isCurrentTier: tier == currentTier
-                    )
-                }
+        VStack(spacing: TOYSpacing.md) {
+            ForEach(CardTier.allCases, id: \.self) { tier in
+                TierRowView(
+                    tier: tier,
+                    priceString: priceString(for: tier),
+                    isCurrentTier: tier == currentTier
+                )
             }
         }
     }
@@ -90,12 +90,16 @@ struct TierSelectionSheet: View {
     }
 
     private func loadPrices() async {
+        #if DEBUG
+        await PurchaseService.shared.debugFetchProducts()
+        #endif
         do {
             packages = try await PurchaseService.shared.fetchTierPackages()
         } catch {
-            errorMessage = "Unable to load prices"
+            #if DEBUG
+            print("[Purchase] loadPrices error: \(error)")
+            #endif
         }
-        isLoading = false
     }
 }
 

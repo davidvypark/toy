@@ -1,5 +1,6 @@
 import Foundation
 import RevenueCat
+import StoreKit
 
 /// Errors that can occur during purchase operations
 public enum PurchaseError: LocalizedError, Sendable {
@@ -56,7 +57,28 @@ public actor PurchaseService {
     /// - Returns: Dictionary of packages keyed by identifier string
     /// - Throws: PurchaseError.noOfferings if no current offering exists
     public func fetchTierPackages() async throws -> [String: Package] {
-        let offerings = try await Purchases.shared.offerings()
+        let offerings: Offerings
+        do {
+            offerings = try await Purchases.shared.offerings()
+        } catch {
+            #if DEBUG
+            print("[Purchase] ❌ offerings() threw: \(error)")
+            print("[Purchase] ❌ Error type: \(type(of: error))")
+            #endif
+            throw error
+        }
+
+        #if DEBUG
+        print("[Purchase] All offerings: \(Array(offerings.all.keys))")
+        print("[Purchase] Current offering: \(offerings.current?.identifier ?? "nil")")
+        if let current = offerings.current {
+            print("[Purchase] Available packages: \(current.availablePackages.count)")
+            for pkg in current.availablePackages {
+                print("[Purchase]   Package: \(pkg.identifier), Product: \(pkg.storeProduct.productIdentifier)")
+            }
+        }
+        #endif
+
         guard let offering = offerings.current else {
             throw PurchaseError.noOfferings
         }
@@ -128,5 +150,28 @@ public actor PurchaseService {
             return false
         }
     }
+
+    // MARK: - Diagnostics
+
+    #if DEBUG
+    /// Fetches products directly via StoreKit 2, bypassing RevenueCat.
+    /// Use to determine if StoreKit itself can see the products.
+    public func debugFetchProducts() async {
+        let ids = ["toy_card_10", "toy_card_25", "toy_card_50", "toy_card_100", "toy_card_150", "toy_card_200"]
+        print("[StoreKit2] Fetching products directly: \(ids)")
+        do {
+            let products = try await Product.products(for: Set(ids))
+            print("[StoreKit2] Found \(products.count) products:")
+            for p in products {
+                print("[StoreKit2]   \(p.id) — \(p.displayPrice)")
+            }
+            if products.isEmpty {
+                print("[StoreKit2] ⚠️ No products found — StoreKit config file may not be loading")
+            }
+        } catch {
+            print("[StoreKit2] ❌ Direct fetch failed: \(error)")
+        }
+    }
+    #endif
 
 }

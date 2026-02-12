@@ -11,6 +11,7 @@ struct CardDetailView: View {
     var initialThumbnailURLs: [UUID: URL] = [:]  // clipId -> signedURL
     var currentUser: User?
     var onClipsChanged: (([Clip]) -> Void)?
+    var popToRoot: (() -> Void)?
 
     @State private var viewModel = CardDetailViewModel()
     @State private var selectedClip: Clip?
@@ -224,7 +225,7 @@ struct CardDetailView: View {
                     cardViewModel: viewModel
                 ) {
                     showMontagePreview = false
-                    Task { await viewModel.loadData(for: card.id, hostId: card.hostId) }
+                    popToRoot?() ?? dismiss()
                 }
             }
         }
@@ -352,7 +353,10 @@ struct CardDetailView: View {
                 }
             }
             .padding(TOYSpacing.md)
-            .background(Color.toyText)
+            .background(
+                RoundedRectangle(cornerRadius: TOYSpacing.cornerRadius)
+                    .fill(Color.toyText)
+            )
         }
         .buttonStyle(.plain)
         .disabled(isPreparingCamera)
@@ -400,9 +404,8 @@ struct CardDetailView: View {
     private var inviteLinkView: some View {
         if let url = inviteURL {
             ShareLink(
-                item: url,
-                subject: Text("Join my TOY card!"),
-                message: Text("Record up to a 7 second video message for \(card.recipientName)")
+                item: "Record up to a 7 second video message for \(card.recipientName)\n\(url.absoluteString)",
+                subject: Text("Join my TOY card!")
             ) {
                 HStack(spacing: TOYSpacing.md) {
                     VStack(alignment: .leading, spacing: TOYSpacing.xs) {
@@ -422,7 +425,7 @@ struct CardDetailView: View {
                 }
                 .padding(TOYSpacing.md)
                 .background(
-                    Rectangle()
+                    RoundedRectangle(cornerRadius: TOYSpacing.cornerRadius)
                         .stroke(Color.toyText, lineWidth: 1)
                 )
             }
@@ -480,7 +483,7 @@ struct CardDetailView: View {
             }
             .padding(TOYSpacing.md)
             .background(
-                Rectangle()
+                RoundedRectangle(cornerRadius: TOYSpacing.cornerRadius)
                     .fill(Color.toyText)
             )
         }

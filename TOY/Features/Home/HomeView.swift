@@ -19,6 +19,7 @@ struct HomeView: View {
     @State private var completedCard: Card? = nil
     @State private var showSettings = false
     @State private var publishedCardToPlay: Card? = nil
+    @State private var navigationPath = NavigationPath()
 
     // Participant recording flow state
     @State private var participantRecordingCard: Card? = nil
@@ -74,7 +75,7 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 // Textured background
                 TOYBackground()
@@ -101,6 +102,12 @@ struct HomeView: View {
                     currentUser: viewModel.authState.user,
                     onClipsChanged: { clips in
                         cardClips[card.id] = clips
+                    },
+                    popToRoot: { [self] in
+                        var transaction = Transaction(animation: nil)
+                        withTransaction(transaction) {
+                            navigationPath = NavigationPath()
+                        }
                     }
                 )
                 .onDisappear {

@@ -11,10 +11,10 @@ struct CheckoutSheet: View {
     let onCancel: () -> Void
 
     @State private var packages: [String: Package] = [:]
-    @State private var isLoading = true
     @State private var isPurchasing = false
     @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     /// The minimum tier required for the current clip count.
     private var requiredTier: CardTier {
@@ -54,9 +54,23 @@ struct CheckoutSheet: View {
                     .scrollBounceBehavior(.basedOnSize)
 
                     // Pinned bottom CTA (not in ScrollView)
-                    purchaseButton
-                        .padding(.horizontal, TOYSpacing.lg)
-                        .padding(.bottom, TOYSpacing.xl)
+                    VStack(spacing: TOYSpacing.md) {
+                        purchaseButton
+
+                        HStack(spacing: 0) {
+                            Text("By purchasing, you agree to our ")
+                                .font(.toyCaption())
+                                .foregroundColor(.toyTextSecondary)
+                            Button("Terms") {
+                                openURL(URL(string: "https://sendtoycard.com/terms")!)
+                            }
+                            .font(.toyCaption())
+                            .foregroundColor(.toyTextSecondary)
+                            .underline()
+                        }
+                    }
+                    .padding(.horizontal, TOYSpacing.lg)
+                    .padding(.bottom, TOYSpacing.lg)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -93,23 +107,16 @@ struct CheckoutSheet: View {
 
     // MARK: - Tier List
 
-    @ViewBuilder
     private var tierListView: some View {
-        if isLoading {
-            ProgressView()
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.vertical, TOYSpacing.xl)
-        } else {
-            VStack(spacing: TOYSpacing.md) {
-                ForEach(visibleTiers, id: \.self) { tier in
-                    let isRequired = tier == requiredTier
-                    CheckoutTierRow(
-                        tier: tier,
-                        priceString: priceString(for: tier),
-                        isRequired: isRequired
-                    )
-                    .opacity(isRequired ? 1.0 : 0.4)
-                }
+        VStack(spacing: TOYSpacing.md) {
+            ForEach(visibleTiers, id: \.self) { tier in
+                let isRequired = tier == requiredTier
+                CheckoutTierRow(
+                    tier: tier,
+                    priceString: priceString(for: tier),
+                    isRequired: isRequired
+                )
+                .opacity(isRequired ? 1.0 : 0.4)
             }
         }
     }
@@ -132,7 +139,7 @@ struct CheckoutSheet: View {
         ) {
             Task { await handlePurchase() }
         }
-        .disabled(isPurchasing || isLoading)
+        .disabled(isPurchasing)
     }
 
     // MARK: - Price Helpers
@@ -146,12 +153,16 @@ struct CheckoutSheet: View {
     }
 
     private func loadPrices() async {
+        #if DEBUG
+        await PurchaseService.shared.debugFetchProducts()
+        #endif
         do {
             packages = try await PurchaseService.shared.fetchTierPackages()
         } catch {
-            errorMessage = "Unable to load prices"
+            #if DEBUG
+            print("[Purchase] loadPrices error: \(error)")
+            #endif
         }
-        isLoading = false
     }
 
     // MARK: - Purchase Flow

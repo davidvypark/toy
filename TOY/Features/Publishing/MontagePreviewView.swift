@@ -215,18 +215,25 @@ struct MontagePreviewView: View {
                 cardViewModel.isMontageReady = isPlayerReady
             }
         }
+        .onChange(of: hasPurchased) { _, purchased in
+            if purchased {
+                showPublishedView = true
+            }
+        }
         .onChange(of: publishViewModel.state) { _, newState in
-            if case .success = newState {
+            // For free-tier publish (no purchase), show published view on success
+            if case .success = newState, !hasPurchased {
                 showPublishedView = true
             }
         }
         .fullScreenCover(isPresented: $showPublishedView) {
-            if case .success(let videoURL) = publishViewModel.state {
-                PublishedCardView(card: card, videoURL: videoURL) {
-                    showPublishedView = false
+            PublishingContainerView(
+                card: card,
+                publishViewModel: publishViewModel,
+                onDone: {
                     onPublished()
                 }
-            }
+            )
         }
         .onChange(of: showCheckout) { _, isShowing in
             if isShowing {
@@ -262,7 +269,7 @@ struct MontagePreviewView: View {
             )
         }
         .alert("Error", isPresented: .init(
-            get: { publishViewModel.state.isFailed },
+            get: { publishViewModel.state.isFailed && !showPublishedView },
             set: { if !$0 { publishViewModel.reset() } }
         )) {
             Button("OK") { publishViewModel.reset() }
@@ -507,5 +514,71 @@ private class QueuePlayerUIView: UIView {
 
     deinit {
         layerObserver?.invalidate()
+    }
+}
+
+// MARK: - Publishing Container View
+
+/// Wrapper that shows publishing progress, then transitions to PublishedCardView on success.
+private struct PublishingContainerView: View {
+    let card: Card
+    var publishViewModel: PublishViewModel
+    let onDone: () -> Void
+
+    var body: some View {
+        switch publishViewModel.state {
+        case .success(let videoURL):
+            PublishedCardView(card: card, videoURL: videoURL, onDone: onDone)
+        case .failed(let error):
+            NavigationStack {
+                ZStack {
+                    TOYBackground()
+                    VStack(spacing: TOYSpacing.lg) {
+                        Text("Publishing failed")
+                            .font(.toyHeadline())
+                            .foregroundColor(.toyText)
+                        Text(error)
+                            .font(.toyBody())
+                            .foregroundColor(.toyTextSecondary)
+                        TOYButton("Done", style: .text, action: onDone)
+                    }
+                    .padding(.horizontal, TOYSpacing.lg)
+                }
+            }
+        default:
+            NavigationStack {
+                ZStack {
+                    TOYBackground()
+                    VStack(spacing: TOYSpacing.lg) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(.toyText)
+                        publishingStatusText
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var publishingStatusText: some View {
+        switch publishViewModel.state {
+        case .generating(_, let phase):
+            Text(phase)
+                .font(.toyBody())
+                .foregroundColor(.toyTextSecondary)
+        case .uploading:
+            Text("Uploading video...")
+                .font(.toyBody())
+                .foregroundColor(.toyTextSecondary)
+        case .publishing:
+            Text("Finalizing...")
+                .font(.toyBody())
+                .foregroundColor(.toyTextSecondary)
+        default:
+            Text("Publishing...")
+                .font(.toyBody())
+                .foregroundColor(.toyTextSecondary)
+        }
     }
 }

@@ -528,7 +528,10 @@ private struct DetailsPanel: View {
                 .foregroundColor(.toyBackground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, TOYSpacing.md)
-                .background(Color.toyText)
+                .background(
+                    RoundedRectangle(cornerRadius: TOYSpacing.cornerRadius)
+                        .fill(Color.toyText)
+                )
             }
         }
     }

@@ -73,12 +73,12 @@ public enum CardTier: Int, CaseIterable, Comparable, Sendable {
     public var packageIdentifier: String? {
         switch self {
         case .free: return nil
-        case .card10: return "toy_card_10"
-        case .card25: return "toy_card_25"
-        case .card50: return "toy_card_50"
-        case .card100: return "toy_card_100"
-        case .card150: return "toy_card_150"
-        case .card200: return "toy_card_200"
+        case .card10: return "10"
+        case .card25: return "25"
+        case .card50: return "50"
+        case .card100: return "100"
+        case .card150: return "150"
+        case .card200: return "200"
         }
     }
 
