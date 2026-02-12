@@ -80,8 +80,8 @@ struct HomeView: View {
                 TOYBackground()
 
                 VStack(spacing: 0) {
-                    // Header with cropped title
-                    headerView
+                    // Settings button bar
+                    settingsBar
 
                     if isLoadingCards && !hasCards {
                         loadingView
@@ -187,29 +187,27 @@ struct HomeView: View {
 
     // MARK: - Header
 
-    private var headerView: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Top bar with settings button (top right)
-            HStack {
-                Spacer()
-                Button {
-                    showSettings = true
-                } label: {
-                    profileAvatarView
-                }
+    private var settingsBar: some View {
+        HStack {
+            Spacer()
+            Button {
+                showSettings = true
+            } label: {
+                profileAvatarView
             }
-            .padding(.horizontal, TOYSpacing.lg)
-
-            // Cropped title - extends beyond leading edge
-            Text("Thinking\nOf You")
-                .font(.toyDisplaySmall())
-                .foregroundColor(.toyText)
-                .lineSpacing(-8)
-                .padding(.leading, -8) // Slight crop effect
-                .padding(.top, TOYSpacing.sm)
-                .padding(.bottom, TOYSpacing.sm)
-                .padding(.leading, TOYSpacing.lg)
         }
+        .padding(.horizontal, TOYSpacing.lg)
+    }
+
+    private var titleView: some View {
+        Text("Thinking\nOf You")
+            .font(.toyDisplaySmall())
+            .foregroundColor(.toyText)
+            .lineSpacing(-8)
+            .padding(.leading, -8) // Slight crop effect
+            .padding(.top, TOYSpacing.sm)
+            .padding(.bottom, TOYSpacing.sm)
+            .padding(.leading, TOYSpacing.lg)
     }
 
     @ViewBuilder
@@ -282,6 +280,8 @@ struct HomeView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: TOYSpacing.lg) {
+                    titleView
+
                     // Participating cards needing action (top priority - user needs to do something)
                     if !participatingCardsNeedingAction.isEmpty {
                         ParticipantActionSectionView(
@@ -626,18 +626,25 @@ private struct DirectorSectionView: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: 180)
 
-            // Minimal page indicators
+            // Page indicators
             if cards.count > 1 {
-                HStack(spacing: TOYSpacing.sm) {
-                    ForEach(0..<min(cards.count, 3), id: \.self) { index in
-                        Rectangle()
-                            .fill(index == currentIndex % min(cards.count, 3)
-                                  ? Color.toyText
-                                  : Color.toyDivider)
-                            .frame(width: 24, height: 2)
+                if cards.count <= 7 {
+                    HStack(spacing: TOYSpacing.sm) {
+                        ForEach(0..<cards.count, id: \.self) { index in
+                            Rectangle()
+                                .fill(index == currentIndex
+                                      ? Color.toyText
+                                      : Color.toyDivider)
+                                .frame(width: 24, height: 2)
+                        }
                     }
+                    .padding(.horizontal, TOYSpacing.lg)
+                } else {
+                    Text("\(currentIndex + 1) of \(cards.count)")
+                        .font(.toyCaption())
+                        .foregroundColor(.toyTextSecondary)
+                        .padding(.horizontal, TOYSpacing.lg)
                 }
-                .padding(.horizontal, TOYSpacing.lg)
             }
         }
     }
