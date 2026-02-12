@@ -36,54 +36,64 @@ struct CreateCardView: View {
         ZStack {
             TOYBackground()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: TOYSpacing.xl) {
-                    // Header - large serif title
-                    VStack(alignment: .leading, spacing: TOYSpacing.sm) {
-                        Text("Create a\nCard")
-                            .font(.toyTitle())
-                            .foregroundColor(.toyText)
-                            .lineSpacing(-4)
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: TOYSpacing.xl) {
+                            // Header - large serif title
+                            VStack(alignment: .leading, spacing: TOYSpacing.sm) {
+                                Text("Create a\nCard")
+                                    .font(.toyTitle())
+                                    .foregroundColor(.toyText)
+                                    .lineSpacing(-4)
 
-                        Text("Enter the details for your video card.")
-                            .font(.toySubheadline())
-                            .foregroundColor(.toyTextSecondary)
+                                Text("Enter the details for your video card.")
+                                    .font(.toySubheadline())
+                                    .foregroundColor(.toyTextSecondary)
+                            }
+                            .padding(.top, TOYSpacing.xl)
+
+                            // Form fields - minimal bottom border style
+                            VStack(spacing: TOYSpacing.xl) {
+                                TOYLabeledTextField(
+                                    label: "CARD TITLE",
+                                    placeholder: "Happy Birthday Sarah!",
+                                    text: $title
+                                )
+
+                                TOYLabeledTextField(
+                                    label: "RECIPIENT",
+                                    placeholder: "Who is this card for?",
+                                    text: $recipientName
+                                )
+                                .id("recipient")
+                                .simultaneousGesture(TapGesture().onEnded {
+                                    withAnimation {
+                                        proxy.scrollTo("recipient", anchor: .bottom)
+                                    }
+                                })
+                            }
+
+                            // Error display
+                            if let errorMessage = errorMessage {
+                                Text(errorMessage)
+                                    .font(.toyCaption())
+                                    .foregroundColor(.toyDestructive)
+                            }
+                        }
+                        .padding(.horizontal, TOYSpacing.lg)
                     }
-                    .padding(.top, TOYSpacing.xl)
-
-                    // Form fields - minimal bottom border style
-                    VStack(spacing: TOYSpacing.xl) {
-                        TOYLabeledTextField(
-                            label: "CARD TITLE",
-                            placeholder: "Happy Birthday Sarah!",
-                            text: $title
-                        )
-
-                        TOYLabeledTextField(
-                            label: "RECIPIENT",
-                            placeholder: "Who is this card for?",
-                            text: $recipientName
-                        )
-                    }
-
-                    // Error display
-                    if let errorMessage = errorMessage {
-                        Text(errorMessage)
-                            .font(.toyCaption())
-                            .foregroundColor(.toyDestructive)
-                    }
-
-                    Spacer(minLength: TOYSpacing.xxl)
-
-                    // Continue button
-                    TOYButton.primary(isCreating ? "Creating..." : "Continue", isLoading: isCreating) {
-                        Task { await createCard() }
-                    }
-                    .disabled(!canSubmit)
-                    .opacity(canSubmit ? 1.0 : 0.5)
                 }
+
+                // Continue button - pinned to bottom, keyboard pushes it up
+                TOYButton.primary(isCreating ? "Creating..." : "Continue", isLoading: isCreating) {
+                    Task { await createCard() }
+                }
+                .disabled(!canSubmit)
+                .opacity(canSubmit ? 1.0 : 0.5)
                 .padding(.horizontal, TOYSpacing.lg)
-                .padding(.bottom, TOYSpacing.xl)
+                .padding(.bottom, TOYSpacing.md)
+                .padding(.top, TOYSpacing.md)
             }
         }
         .onChange(of: createdCard) { _, newCard in
