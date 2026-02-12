@@ -167,6 +167,7 @@ struct ParticipantRecordingFlow: View {
             // Sign in anonymously for RLS-protected operations
             let session = try await supabase.auth.signInAnonymously()
             let userId = session.user.id
+            AppClipIdentityStore.storeAnonymousUserId(userId)
 
             #if DEBUG
             print("[AppClip] Signed in anonymously: \(userId)")

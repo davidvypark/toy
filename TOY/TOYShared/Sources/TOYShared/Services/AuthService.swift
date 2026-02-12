@@ -70,6 +70,9 @@ public protocol AuthServiceProtocol: Sendable {
 
     /// Delete the current user's account
     func deleteAccount() async throws
+
+    /// Link anonymous App Clip clips to the current authenticated user
+    func linkAnonymousClips(anonymousUserIds: [UUID]) async throws -> Int
 }
 
 // MARK: - Supabase Implementation
@@ -324,6 +327,31 @@ public final class SupabaseAuthService: AuthServiceProtocol {
 
         // 5. Sign out locally
         try await supabase.auth.signOut()
+    }
+
+    // MARK: - Anonymous Clip Linking
+
+    public func linkAnonymousClips(anonymousUserIds: [UUID]) async throws -> Int {
+        guard !anonymousUserIds.isEmpty else { return 0 }
+
+        struct LinkResult: Decodable {
+            let linked_clips: Int
+        }
+
+        struct LinkParams: Encodable {
+            let anon_ids: [UUID]
+        }
+
+        let result: LinkResult = try await supabase
+            .rpc("link_anonymous_clips", params: LinkParams(anon_ids: anonymousUserIds))
+            .execute()
+            .value
+
+        #if DEBUG
+        print("[Auth] Linked \(result.linked_clips) anonymous clips from \(anonymousUserIds.count) sessions")
+        #endif
+
+        return result.linked_clips
     }
 
     // MARK: - Private Helpers

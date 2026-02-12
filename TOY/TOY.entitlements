@@ -12,5 +12,9 @@
 	<array>
 		<string>applinks:sendtoycard.com</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.kindauseful.TOY</string>
+	</array>
 </dict>
 </plist>

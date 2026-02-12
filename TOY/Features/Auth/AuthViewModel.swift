@@ -81,6 +81,7 @@ final class AuthViewModel {
                     fullName: appleIDCredential.fullName
                 )
                 authState = .signedIn(user)
+                Task { await linkAnonymousClipsIfNeeded() }
             } catch let error as AuthError {
                 errorMessage = error.errorDescription
             } catch {
@@ -225,6 +226,7 @@ final class AuthViewModel {
     func checkAuthState() async {
         if let user = await authService.getCurrentUser() {
             authState = .signedIn(user)
+            Task { await linkAnonymousClipsIfNeeded() }
         } else {
             authState = .signedOut
         }
@@ -233,6 +235,26 @@ final class AuthViewModel {
     func observeAuthChanges() async {
         for await state in authService.observeAuthState() {
             authState = state
+        }
+    }
+
+    // MARK: - Anonymous Clip Linking
+
+    /// Links any App Clip anonymous clips to the current authenticated user.
+    /// Non-fatal: on failure, IDs stay in store and are retried on next launch.
+    private func linkAnonymousClipsIfNeeded() async {
+        let anonymousIds = AppClipIdentityStore.retrieveAnonymousUserIds()
+        guard !anonymousIds.isEmpty else { return }
+        do {
+            let linked = try await authService.linkAnonymousClips(anonymousUserIds: anonymousIds)
+            AppClipIdentityStore.clearAnonymousUserIds()
+            #if DEBUG
+            print("[Auth] Linked \(linked) clips from \(anonymousIds.count) App Clip sessions")
+            #endif
+        } catch {
+            #if DEBUG
+            print("[Auth] Failed to link App Clip clips: \(error)")
+            #endif
         }
     }
 
