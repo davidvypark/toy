@@ -83,6 +83,14 @@
 			);
 			target = FF67B6F62F2F6236007DAF2C /* TOY */;
 		};
+		FF99FB1E2F3DC6B1004FEE3C /* Exceptions for "TOY" folder in "TOYClip" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"DMSerifDisplay-Italic.ttf",
+				"DMSerifDisplay-Regular.ttf",
+			);
+			target = FFB0801C2F30CC1100C5E3B5 /* TOYClip */;
+		};
 		FFB080462F30CC1200C5E3B5 /* Exceptions for "TOYClip" folder in "TOYClip" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -97,6 +105,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				FF67B9002F2F7100007DAF2C /* Exceptions for "TOY" folder in "TOY" target */,
+				FF99FB1E2F3DC6B1004FEE3C /* Exceptions for "TOY" folder in "TOYClip" target */,
 			);
 			path = TOY;
 			sourceTree = "<group>";
@@ -675,7 +684,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TOY/TOY.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"TOY/Preview Content\"";
 				DEVELOPMENT_TEAM = ZH8H29HA3J;
 				ENABLE_PREVIEWS = YES;
@@ -695,7 +704,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -711,7 +720,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TOY/TOY.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"TOY/Preview Content\"";
 				DEVELOPMENT_TEAM = ZH8H29HA3J;
 				ENABLE_PREVIEWS = YES;
@@ -731,7 +740,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -819,7 +828,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TOYClip/TOYClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"TOYClip/Preview Content\"";
 				DEVELOPMENT_TEAM = ZH8H29HA3J;
 				ENABLE_PREVIEWS = YES;
@@ -835,7 +844,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY.Clip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -851,7 +860,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TOYClip/TOYClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"TOYClip/Preview Content\"";
 				DEVELOPMENT_TEAM = ZH8H29HA3J;
 				ENABLE_PREVIEWS = YES;
@@ -867,7 +876,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kindauseful.TOY.Clip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

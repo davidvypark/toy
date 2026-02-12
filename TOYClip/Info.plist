@@ -9,6 +9,11 @@
 		<key>NSAppClipRequestLocationConfirmation</key>
 		<false/>
 	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>DMSerifDisplay-Regular.ttf</string>
+		<string>DMSerifDisplay-Italic.ttf</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>TOY needs camera access to record your video message.</string>
 	<key>NSMicrophoneUsageDescription</key>

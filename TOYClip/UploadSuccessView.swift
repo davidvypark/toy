@@ -32,10 +32,10 @@ struct UploadSuccessView: View {
             Spacer()
 
             VStack(spacing: 12) {
-                Text("Want to create your own cards?")
+                Text("Get the full app")
                     .font(.headline)
 
-                Text("Get the full TOY app to create cards, invite friends, and send heartfelt video messages.")
+                Text("Download the app to add your name and photo to the card, and create your own video cards.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
