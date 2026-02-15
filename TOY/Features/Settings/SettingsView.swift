@@ -73,6 +73,7 @@ struct SettingsView: View {
                                     .font(.toyBody())
                                     .foregroundColor(.toyTextSecondary)
                             }
+
                         }
 
                         // Divider

@@ -20,6 +20,7 @@ struct HomeView: View {
     @State private var showSettings = false
     @State private var publishedCardToPlay: Card? = nil
     @State private var navigationPath = NavigationPath()
+    @Environment(\.requestReview) private var requestReview
 
     // Participant recording flow state
     @State private var participantRecordingCard: Card? = nil
@@ -108,6 +109,7 @@ struct HomeView: View {
                         withTransaction(transaction) {
                             navigationPath = NavigationPath()
                         }
+                        ReviewManager.requestReviewAfterDelay(requestReview: requestReview)
                     }
                 )
                 .onDisappear {
@@ -155,10 +157,11 @@ struct HomeView: View {
                     }
                 }
             }
-            .sheet(item: $completedCard) { card in
+            .sheet(item: $completedCard, onDismiss: {
+                Task { await loadCards() }
+            }) { card in
                 CardCreatedView(card: card) {
                     completedCard = nil
-                    Task { await loadCards() }
                 }
             }
             .fullScreenCover(item: $participantRecordingCard) { card in
@@ -188,6 +191,7 @@ struct HomeView: View {
                    let index = participatingCardsData.firstIndex(where: { $0.card.id == card.id }) {
                     participatingCardsData[index] = (card: card, hasSubmitted: true)
                 }
+                ReviewManager.requestReviewAfterDelay(requestReview: requestReview)
             }
         }
     }

@@ -25,6 +25,11 @@ public enum Configuration {
         Bundle.main.bundleIdentifier ?? "com.unknown.TOY"
     }
 
+    // MARK: - App Store
+
+    /// Numeric App Store ID from App Store Connect.
+    public static let appStoreId = "6758913044"
+
     // MARK: - Feature Flags
 
     public static var isDebug: Bool {
